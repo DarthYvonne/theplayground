@@ -11,22 +11,26 @@
   .hero-img { display: block; width: 100%; max-height: 360px; object-fit: cover; }
   .hero-ph { width: 100%; height: 240px; background: linear-gradient(135deg, var(--accent-soft), #f5f7fb); display: flex; align-items: center; justify-content: center; font-size: 80px; color: var(--accent); }
 
-  .course-body { padding: 22px 24px; }
+  .course-body { padding: 24px; }
   .course-title { font-size: 28px; font-weight: 800; line-height: 1.2; }
-  .course-trainer { display: flex; align-items: center; gap: 10px; margin-top: 14px; color: var(--muted); font-size: 14px; }
-  .course-trainer .name { color: var(--text); font-weight: 600; }
 
-  .meta-strip { display: flex; flex-wrap: wrap; gap: 18px 22px; margin-top: 18px; padding-top: 16px; border-top: 1px solid #f0f2f5; }
-  .meta-strip .item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
-  .meta-strip .item i { color: var(--muted); width: 16px; text-align: center; }
-  .meta-strip .item .val { font-weight: 600; }
-  .meta-strip .item .lbl { color: var(--muted); }
+  .info-ribbon { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; color: var(--muted); font-size: 14px; }
+  .info-ribbon .item { display: inline-flex; align-items: center; gap: 6px; }
+  .info-ribbon .item i { font-size: 12px; opacity: 0.85; }
+  .info-ribbon .item strong { color: var(--text); font-weight: 600; }
+  .info-ribbon .full { color: #b91c1c; font-weight: 700; }
+  .info-ribbon .draft { color: #b91c1c; font-weight: 700; }
 
-  .desc { margin-top: 18px; padding-top: 16px; border-top: 1px solid #f0f2f5; line-height: 1.6; white-space: pre-wrap; color: #3a3d42; }
+  .trainer-line { display: flex; align-items: center; gap: 8px; margin-top: 14px; color: var(--muted); font-size: 13px; }
+  .trainer-line .name { color: var(--text); font-weight: 600; }
 
-  .cta { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .desc { margin-top: 18px; line-height: 1.6; white-space: pre-wrap; color: #3a3d42; }
 
-  .card-footer { background: #fafbfc; border-top: 1px solid #f0f2f5; padding: 16px 24px; }
+  .cta { margin-top: 22px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .cta .afmeld { background: none; border: none; padding: 0; color: var(--muted); font-size: 13px; cursor: pointer; font-family: inherit; text-decoration: underline; text-underline-offset: 3px; }
+  .cta .afmeld:hover { color: var(--danger); }
+
+  .card-footer { background: #fafbfc; border-top: 1px solid #f0f2f5; padding: 14px 24px; }
   .card-footer-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); font-weight: 700; margin-bottom: 10px; }
   .card-footer-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
@@ -35,7 +39,6 @@
     .course-title { font-size: 22px; }
     .cta .btn { width: 100%; justify-content: center; }
     .card-footer { padding: 14px 18px; }
-    .card-footer-actions .btn { flex: 1; justify-content: center; }
   }
 </style>
 @endpush
@@ -57,27 +60,24 @@
     <div class="course-body">
       <h1 class="course-title">{{ $course->title }}</h1>
 
-      <div class="course-trainer">
-        @include('partials.avatar', ['u' => $course->trainer, 'size' => 'sm'])
-        <span>Med <span class="name">{{ $course->trainer->name }}</span></span>
-        <span style="margin-left:auto;">
-          @if ($course->isFull())
-            <span class="tag outline-danger">Fuldt booket</span>
-          @else
-            <span class="tag success">{{ $course->slotsLeft() }} {{ $course->slotsLeft() === 1 ? 'plads' : 'pladser' }} tilbage</span>
-          @endif
+      <div class="info-ribbon">
+        <span class="item"><strong>{{ $course->price() }}</strong></span>
+        @if ($course->scheduleLabel())
+          <span class="item"><i class="fa-regular fa-clock"></i>{{ $course->scheduleLabel() }}</span>
+        @endif
+        <span class="item">
+          <i class="fa-regular fa-user"></i>
+          <strong>{{ $course->activeCount() }}/{{ $course->max_participants }}</strong> tilmeldt
+          @if ($course->isFull())<span class="full">· Fuldt</span>@endif
         </span>
+        @if (auth()->user()?->isOwner() && !$course->is_active)
+          <span class="item draft">Kladde</span>
+        @endif
       </div>
 
-      <div class="meta-strip">
-        <div class="item"><i class="fa-solid fa-tag"></i><span class="val">{{ $course->price() }}</span></div>
-        <div class="item"><i class="fa-regular fa-user"></i><span class="val">{{ $course->activeCount() }}/{{ $course->max_participants }}</span><span class="lbl">tilmeldt</span></div>
-        @if ($course->scheduleLabel())
-          <div class="item"><i class="fa-regular fa-clock"></i><span class="val">{{ $course->scheduleLabel() }}</span></div>
-        @endif
-        @if (auth()->user()?->isOwner() && !$course->is_active)
-          <div class="item"><i class="fa-solid fa-eye-slash"></i><span class="val" style="color:#b91c1c;">Kladde</span></div>
-        @endif
+      <div class="trainer-line">
+        @include('partials.avatar', ['u' => $course->trainer, 'size' => 'sm'])
+        <span>Med <span class="name">{{ $course->trainer->name }}</span></span>
       </div>
 
       @if (trim((string) $course->description) !== '')
@@ -87,17 +87,17 @@
       <div class="cta">
         @auth
           @if ($isEnrolled)
-            <a href="{{ route('chat.course', $course) }}" class="btn btn-primary"><i class="fa-regular fa-comments"></i> Åbn holdets chat</a>
+            <a href="{{ route('chat.course', $course) }}" class="btn btn-primary">Åbn holdets chat</a>
             <form method="POST" action="{{ route('enroll.cancel', $course) }}" onsubmit="return confirm('Afmeld dig dette hold?');">
               @csrf
-              <button class="btn btn-ghost" type="submit" style="color:var(--danger);">Afmeld</button>
+              <button class="afmeld" type="submit">Afmeld</button>
             </form>
           @elseif ($course->isFull())
-            <button class="btn btn-secondary" disabled><i class="fa-solid fa-lock"></i> Holdet er fuldt</button>
+            <button class="btn btn-secondary" disabled>Holdet er fuldt</button>
           @else
             <form method="POST" action="{{ route('enroll', $course) }}">
               @csrf
-              <button class="btn btn-primary" type="submit">Tilmeld dig — {{ $course->price() }}</button>
+              <button class="btn btn-primary" type="submit">Tilmeld dig</button>
             </form>
           @endif
         @else
@@ -113,7 +113,7 @@
           <div class="card-footer-label">Holdadministration</div>
           <div class="card-footer-actions">
             @if (auth()->user()->isOwner())
-              <a href="{{ route('admin.courses.edit', $course) }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-pen"></i> Rediger hold</a>
+              <a href="{{ route('admin.courses.edit', $course) }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-pen"></i> Rediger</a>
             @endif
             <a href="{{ route('trainer.participants', $course) }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-users"></i> Deltagere</a>
             <a href="{{ route('trainer.broadcast', $course) }}" class="btn btn-secondary btn-sm"><i class="fa-regular fa-envelope"></i> Skriv til deltagere</a>
