@@ -73,7 +73,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/courses/{course}/delete', [CourseAdminController::class, 'destroy'])->name('courses.destroy');
         Route::get('/users', [UserAdminController::class, 'index'])->name('users.index');
         Route::post('/users/{user}/role', [UserAdminController::class, 'updateRole'])->name('users.role');
-        Route::get('/settings', [SettingsController::class, 'edit'])->name('settings.edit');
+        Route::get('/settings', [SettingsController::class, 'revenue'])->name('settings.revenue');
+        Route::get('/settings/connections', [SettingsController::class, 'connections'])->name('settings.connections');
         Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');
         Route::post('/settings/test-stripe', [SettingsController::class, 'testStripe'])->name('settings.test');
     });

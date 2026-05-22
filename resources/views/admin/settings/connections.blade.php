@@ -6,6 +6,8 @@
   @include('partials.header-actions')
 </div>
 
+@include('admin.settings._subnav')
+
 <div style="max-width: 760px;">
   <div class="card">
     <div style="padding: 16px 18px; border-bottom: 1px solid #f0f2f5; display:flex; gap:14px; align-items:center;">

@@ -197,7 +197,7 @@
           <div class="nav-section">Admin</div>
           <a href="{{ route('admin.courses.index') }}" class="{{ request()->is('admin/courses*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-clipboard-list"></i></span> Hold</a>
           <a href="{{ route('admin.users.index') }}" class="{{ request()->is('admin/users*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-users"></i></span> Brugere</a>
-          <a href="{{ route('admin.settings.edit') }}" class="{{ request()->is('admin/settings*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
+          <a href="{{ route('admin.settings.revenue') }}" class="{{ request()->is('admin/settings*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
         @endif
       @else
         <a href="{{ url('/') }}" class="{{ request()->is('/') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
