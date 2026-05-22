@@ -2,12 +2,12 @@
 @section('content')
 
 <div class="view-header">
-  <h1>Trainer hub</h1>
+  <h1>Mine hold</h1>
   @include('partials.header-actions')
 </div>
 
 @if ($courses->isEmpty())
-  <div class="card card-pad" style="text-align:center;color:var(--muted);">You're not assigned to any courses yet.</div>
+  <div class="card card-pad" style="text-align:center;color:var(--muted);">Du er ikke tilknyttet nogen hold endnu.</div>
 @else
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;">
     @foreach ($courses as $c)
@@ -19,11 +19,11 @@
         @endif
         <div class="card-pad">
           <div style="font-weight:700;">{{ $c->title }}</div>
-          <div style="color:var(--muted);font-size:13px;margin-top:2px;">{{ $c->activeCount() }}/{{ $c->max_participants }} enrolled · {{ $c->is_active ? 'Active' : 'Draft' }}</div>
+          <div style="color:var(--muted);font-size:13px;margin-top:2px;">{{ $c->activeCount() }}/{{ $c->max_participants }} tilmeldte · {{ $c->is_active ? 'Aktiv' : 'Kladde' }}</div>
           <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap;">
             <a href="{{ route('chat.course', $c) }}" class="btn btn-primary btn-sm"><i class="fa-regular fa-comments"></i> Chat</a>
-            <a href="{{ route('trainer.broadcast', $c) }}" class="btn btn-secondary btn-sm"><i class="fa-regular fa-envelope"></i> Email</a>
-            <a href="{{ route('trainer.participants', $c) }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-users"></i> Roster</a>
+            <a href="{{ route('trainer.broadcast', $c) }}" class="btn btn-secondary btn-sm"><i class="fa-regular fa-envelope"></i> Skriv</a>
+            <a href="{{ route('trainer.participants', $c) }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-users"></i> Deltagere</a>
           </div>
         </div>
       </div>

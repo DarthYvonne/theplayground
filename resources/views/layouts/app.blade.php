@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="da">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -175,40 +175,40 @@
     </div>
     <nav class="nav">
       @auth
-        <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Dashboard</a>
-        <a href="{{ url('/') }}" class="{{ request()->is('/') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Courses</a>
-        <a href="{{ url('/chat') }}" class="{{ request()->is('chat') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-hashtag"></i></span> Platform chat</a>
-        <a href="{{ url('/profile') }}" class="{{ request()->is('profile') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-user"></i></span> My profile</a>
+        <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Oversigt</a>
+        <a href="{{ url('/') }}" class="{{ request()->is('/') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
+        <a href="{{ url('/chat') }}" class="{{ request()->is('chat') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-hashtag"></i></span> Fælles chat</a>
+        <a href="{{ url('/profile') }}" class="{{ request()->is('profile') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-user"></i></span> Min profil</a>
 
         @php $myEnrolled = auth()->user()->activeEnrollments()->with('course')->get()->pluck('course')->filter(); @endphp
         @if ($myEnrolled->count())
-          <div class="nav-section">My courses</div>
+          <div class="nav-section">Mine hold</div>
           @foreach ($myEnrolled as $c)
             <a href="{{ route('chat.course', $c) }}" class="{{ request()->routeIs('chat.course') && request()->route('course')?->id === $c->id ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-comments"></i></span> {{ \Illuminate\Support\Str::limit($c->title, 22) }}</a>
           @endforeach
         @endif
 
         @if (auth()->user()->isTrainer())
-          <div class="nav-section">Trainer</div>
-          <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> My courses</a>
+          <div class="nav-section">Træner</div>
+          <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> Mine hold</a>
         @endif
 
         @if (auth()->user()->isOwner())
           <div class="nav-section">Admin</div>
-          <a href="{{ route('admin.courses.index') }}" class="{{ request()->is('admin/courses*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-clipboard-list"></i></span> Courses</a>
-          <a href="{{ route('admin.users.index') }}" class="{{ request()->is('admin/users*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-users"></i></span> People</a>
-          <a href="{{ route('admin.settings.edit') }}" class="{{ request()->is('admin/settings*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Settings</a>
+          <a href="{{ route('admin.courses.index') }}" class="{{ request()->is('admin/courses*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-clipboard-list"></i></span> Hold</a>
+          <a href="{{ route('admin.users.index') }}" class="{{ request()->is('admin/users*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-users"></i></span> Brugere</a>
+          <a href="{{ route('admin.settings.edit') }}" class="{{ request()->is('admin/settings*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
         @endif
       @else
-        <a href="{{ url('/') }}" class="{{ request()->is('/') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Courses</a>
-        <a href="{{ route('login') }}" class="{{ request()->is('login') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-right-to-bracket"></i></span> Log in</a>
-        <a href="{{ route('register') }}" class="{{ request()->is('register') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-user-plus"></i></span> Sign up</a>
+        <a href="{{ url('/') }}" class="{{ request()->is('/') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
+        <a href="{{ route('login') }}" class="{{ request()->is('login') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-right-to-bracket"></i></span> Log ind</a>
+        <a href="{{ route('register') }}" class="{{ request()->is('register') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-user-plus"></i></span> Opret konto</a>
       @endauth
     </nav>
     @auth
       <form method="POST" action="{{ route('logout') }}" class="logout-form">
         @csrf
-        <button type="submit"><span class="ico"><i class="fa-solid fa-right-from-bracket"></i></span> Log out</button>
+        <button type="submit"><span class="ico"><i class="fa-solid fa-right-from-bracket"></i></span> Log ud</button>
       </form>
     @endauth
   </aside>
@@ -232,7 +232,6 @@
 @auth
 <script>
 (function () {
-  // Sidebar drawer (mobile)
   var toggle = document.getElementById('sidebarToggle');
   var sidebar = document.getElementById('sidebar');
   var backdrop = document.getElementById('sidebarBackdrop');
@@ -244,7 +243,6 @@
     sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', close); });
   }
 
-  // Move view-header H1 text into the mobile topbar title
   var titleEl = document.getElementById('topbarTitle');
   var viewHeader = document.querySelector('.view-header');
   var h1 = viewHeader ? viewHeader.querySelector('h1') : null;
@@ -255,7 +253,6 @@
     if (txt) titleEl.textContent = txt;
   }
 
-  // Move feed-actions + view-header buttons into mobile topbar at small widths
   var topbarActions = document.getElementById('topbarActions');
   var movers = [];
   if (topbarActions) {

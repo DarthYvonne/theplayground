@@ -2,13 +2,13 @@
 @section('content')
 
 <div class="view-header">
-  <h1>Platform chat</h1>
+  <h1>Fælles chat</h1>
   @include('partials.header-actions')
 </div>
 
 @include('chat._room', [
-  'title' => '#all',
-  'sub' => 'Everyone at The Playground hangs out here.',
+  'title' => '#alle',
+  'sub' => 'Alle på The Playground mødes her.',
   'icon' => 'fa-solid fa-hashtag',
   'listUrl' => url('/api/chat/platform'),
   'sendUrl' => url('/api/chat/platform'),

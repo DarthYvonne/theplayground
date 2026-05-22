@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-  .feed-main { max-width: 720px; margin: 0 auto; }
+  .feed-main { max-width: 720px; }
   .greet { padding: 18px 20px; }
   .greet h2 { font-size: 22px; font-weight: 800; }
   .greet p { color: var(--muted); margin-top: 4px; }
@@ -26,20 +26,20 @@
 @endpush
 
 <div class="view-header">
-  <h1>Dashboard</h1>
+  <h1>Oversigt</h1>
   @include('partials.header-actions')
 </div>
 
 <div class="feed-main">
   <div class="card greet">
-    <h2>Hi {{ explode(' ', auth()->user()->name)[0] }} 👋</h2>
-    <p>Welcome back to The Playground. Here's what's happening.</p>
+    <h2>Hej {{ explode(' ', auth()->user()->name)[0] }} 👋</h2>
+    <p>Velkommen tilbage til The Playground.</p>
   </div>
 
   <div class="card">
-    <div class="section-h"><i class="fa-solid fa-dumbbell" style="color:var(--accent)"></i> My courses</div>
+    <div class="section-h"><i class="fa-solid fa-dumbbell" style="color:var(--accent)"></i> Mine hold</div>
     @if ($enrolledCourses->isEmpty())
-      <div class="empty">You're not enrolled in anything yet. <a href="{{ url('/') }}">Browse courses →</a></div>
+      <div class="empty">Du er ikke tilmeldt noget endnu. <a href="{{ url('/') }}">Se hold →</a></div>
     @else
       @foreach ($enrolledCourses as $c)
         <div class="course-mini">
@@ -47,10 +47,11 @@
           <div class="meta">
             <a href="{{ route('courses.show', $c) }}" class="t">{{ $c->title }}</a>
             <div class="sub">{{ $c->trainer->name }} · {{ $c->price() }}</div>
+            @if ($c->scheduleLabel())<div class="sub"><i class="fa-regular fa-clock"></i> {{ $c->scheduleLabel() }}</div>@endif
           </div>
           <div class="actions">
             <a href="{{ route('chat.course', $c) }}" class="btn btn-primary btn-sm"><i class="fa-regular fa-comments"></i> Chat</a>
-            <a href="{{ route('courses.show', $c) }}" class="btn btn-secondary btn-sm">Details</a>
+            <a href="{{ route('courses.show', $c) }}" class="btn btn-secondary btn-sm">Detaljer</a>
           </div>
         </div>
       @endforeach
@@ -59,16 +60,16 @@
 
   @if ($trainerCourses->count())
     <div class="card">
-      <div class="section-h"><i class="fa-solid fa-chalkboard-user" style="color:var(--accent)"></i> Courses I teach</div>
+      <div class="section-h"><i class="fa-solid fa-chalkboard-user" style="color:var(--accent)"></i> Hold jeg underviser</div>
       @foreach ($trainerCourses as $c)
         <div class="course-mini">
           @if ($c->image_path)<img src="{{ $c->imageUrl() }}" alt="">@else<div class="ph"><i class="fa-solid fa-chalkboard-user"></i></div>@endif
           <div class="meta">
             <a href="{{ route('courses.show', $c) }}" class="t">{{ $c->title }}</a>
-            <div class="sub">{{ $c->activeCount() }}/{{ $c->max_participants }} enrolled · {{ $c->is_active ? 'Active' : 'Draft' }}</div>
+            <div class="sub">{{ $c->activeCount() }}/{{ $c->max_participants }} tilmeldte · {{ $c->is_active ? 'Aktiv' : 'Kladde' }}</div>
           </div>
           <div class="actions">
-            <a href="{{ route('trainer.broadcast', $c) }}" class="btn btn-secondary btn-sm"><i class="fa-regular fa-envelope"></i> Email</a>
+            <a href="{{ route('trainer.broadcast', $c) }}" class="btn btn-secondary btn-sm"><i class="fa-regular fa-envelope"></i> Skriv</a>
             <a href="{{ route('chat.course', $c) }}" class="btn btn-primary btn-sm"><i class="fa-regular fa-comments"></i> Chat</a>
           </div>
         </div>

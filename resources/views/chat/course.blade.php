@@ -11,7 +11,7 @@
 
 @include('chat._room', [
   'title' => $course->title,
-  'sub' => 'Course chat · ' . $course->activeCount() . ' members · trainer ' . $course->trainer->name,
+  'sub' => 'Hold-chat · ' . $course->activeCount() . ' deltagere · træner ' . $course->trainer->name,
   'icon' => 'fa-regular fa-comments',
   'listUrl' => url('/api/chat/courses/' . $course->id),
   'sendUrl' => url('/api/chat/courses/' . $course->id),

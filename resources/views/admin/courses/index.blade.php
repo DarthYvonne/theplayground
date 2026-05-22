@@ -17,22 +17,22 @@
 @endpush
 
 <div class="view-header">
-  <h1>Manage courses</h1>
-  <a href="{{ route('admin.courses.create') }}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> New course</a>
+  <h1>Hold</h1>
+  <a href="{{ route('admin.courses.create') }}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Nyt hold</a>
   @include('partials.header-actions')
 </div>
 
 @if ($courses->isEmpty())
   <div class="card card-pad" style="text-align:center;color:var(--muted);">
-    No courses yet. <a href="{{ route('admin.courses.create') }}" style="color:var(--accent);font-weight:600;">Create the first one →</a>
+    Ingen hold endnu. <a href="{{ route('admin.courses.create') }}" style="color:var(--accent);font-weight:600;">Opret det første →</a>
   </div>
 @else
   <div class="courses-table">
     <div class="row">
       <div></div>
-      <div>Title</div>
-      <div class="col-hide-mobile">Trainer</div>
-      <div class="col-hide-mobile">Enrolled</div>
+      <div>Titel</div>
+      <div class="col-hide-mobile">Træner</div>
+      <div class="col-hide-mobile">Tilmeldte</div>
       <div class="col-hide-mobile">Status</div>
       <div></div>
     </div>
@@ -41,12 +41,12 @@
         @if ($c->image_path)<img src="{{ $c->imageUrl() }}" alt="">@else<div class="thumb-ph"><i class="fa-solid fa-dumbbell"></i></div>@endif
         <div>
           <a class="t" href="{{ route('admin.courses.edit', $c) }}">{{ $c->title }}</a>
-          <div class="sub">{{ $c->price() }} · max {{ $c->max_participants }}</div>
+          <div class="sub">{{ $c->price() }} · maks. {{ $c->max_participants }}</div>
         </div>
         <div class="col-hide-mobile">{{ $c->trainer->name }}</div>
         <div class="col-hide-mobile">{{ $c->active_enrollments_count }}/{{ $c->max_participants }}</div>
         <div class="col-hide-mobile">
-          @if ($c->is_active)<span class="tag success">Active</span>@else<span class="tag muted">Draft</span>@endif
+          @if ($c->is_active)<span class="tag success">Aktiv</span>@else<span class="tag muted">Kladde</span>@endif
         </div>
         <div style="display:flex;gap:6px;justify-content:flex-end;">
           <a href="{{ route('admin.courses.edit', $c) }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-pen"></i></a>

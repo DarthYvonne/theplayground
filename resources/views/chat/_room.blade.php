@@ -1,6 +1,6 @@
 @push('styles')
 <style>
-  .chat-shell { max-width: 760px; margin: 0 auto; }
+  .chat-shell { max-width: 760px; }
   .chat-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); display: flex; flex-direction: column; height: calc(100vh - 180px); min-height: 420px; overflow: hidden; }
   .chat-card .head { padding: 14px 18px; border-bottom: 1px solid #f0f2f5; display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
   .chat-card .head h2 { font-size: 16px; font-weight: 700; }
@@ -38,11 +38,11 @@
       </div>
     </div>
     <div class="chat-stream" id="chatStream">
-      <div class="chat-empty">Loading…</div>
+      <div class="chat-empty">Indlæser…</div>
     </div>
     <form class="chat-composer" id="chatComposer" autocomplete="off">
       @csrf
-      <input type="text" name="body" placeholder="Write a message…" maxlength="2000" required autofocus>
+      <input type="text" name="body" placeholder="Skriv en besked…" maxlength="2000" required autofocus>
       <button type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
     </form>
   </div>
@@ -63,8 +63,8 @@
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   function badgeFor(role) {
-    if (role === 'owner') return '<span class="role-badge">Owner</span>';
-    if (role === 'trainer') return '<span class="role-badge">Trainer</span>';
+    if (role === 'owner') return '<span class="role-badge">Ejer</span>';
+    if (role === 'trainer') return '<span class="role-badge">Træner</span>';
     return '';
   }
   function avatar(u) {
@@ -88,13 +88,8 @@
     messages.forEach(function (m) { var el = render(m); if (el) { frag.appendChild(el); added++; } });
     if (added) stream.appendChild(frag);
   }
-
-  function scrollToBottomIfNeeded(force) {
-    if (force || atBottom) stream.scrollTop = stream.scrollHeight;
-  }
-  stream.addEventListener('scroll', function () {
-    atBottom = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60;
-  });
+  function scrollToBottomIfNeeded(force) { if (force || atBottom) stream.scrollTop = stream.scrollHeight; }
+  stream.addEventListener('scroll', function () { atBottom = stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60; });
 
   async function loadInitial() {
     try {
@@ -102,18 +97,17 @@
       var data = await res.json();
       stream.innerHTML = '';
       if (!data.messages.length) {
-        stream.innerHTML = '<div class="chat-empty">No messages yet — be the first to say hi 👋</div>';
+        stream.innerHTML = '<div class="chat-empty">Ingen beskeder endnu — vær den første til at sige hej 👋</div>';
         return;
       }
       appendAll(data.messages);
       scrollToBottomIfNeeded(true);
-    } catch (e) { stream.innerHTML = '<div class="chat-empty" style="color:#b91c1c;">Could not load chat.</div>'; }
+    } catch (e) { stream.innerHTML = '<div class="chat-empty" style="color:#b91c1c;">Kunne ikke hente chatten.</div>'; }
   }
   async function poll() {
     try {
       var res = await fetch(listUrl, { headers: { Accept: 'application/json' }});
       var data = await res.json();
-      // Strip "empty" placeholder if a real message arrived
       var empty = stream.querySelector('.chat-empty');
       if (data.messages.length && empty) empty.remove();
       appendAll(data.messages);
@@ -138,7 +132,7 @@
       var el = render(data.message);
       if (el) { stream.appendChild(el); scrollToBottomIfNeeded(true); }
     } catch (e) {
-      alert('Could not send. Try again.');
+      alert('Kunne ikke sende. Prøv igen.');
       input.value = body;
     }
   });

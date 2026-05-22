@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-  .feed-main { max-width: 620px; margin: 0 auto; }
+  .feed-main { max-width: 620px; }
   .course-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); margin-bottom: 16px; overflow: hidden; }
   .pc-head { display: flex; gap: 10px; align-items: center; padding: 12px 16px 0; }
   .pc-meta { font-weight: 600; line-height: 1.2; }
@@ -34,24 +34,24 @@
 @endpush
 
 <div class="view-header">
-  <h1>Courses</h1>
+  <h1>Hold</h1>
   @include('partials.header-actions')
 </div>
 
 <div class="feed-main">
   @guest
   <div class="hero">
-    <h2>Find your next training course</h2>
-    <p>Browse what's running at The Playground. Sign up to enroll and chat with trainers and other members.</p>
-    <a href="{{ route('register') }}" class="btn">Get started</a>
-    <a href="{{ route('login') }}" class="btn" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.6);margin-left:6px;">Log in</a>
+    <h2>Find dit næste hold</h2>
+    <p>Se hvilke hold der kører på The Playground. Opret en konto for at tilmelde dig og chatte med trænere og andre medlemmer.</p>
+    <a href="{{ route('register') }}" class="btn">Kom i gang</a>
+    <a href="{{ route('login') }}" class="btn" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.6);margin-left:6px;">Log ind</a>
   </div>
   @endguest
 
   @if ($courses->isEmpty())
     <div class="empty-feed">
-      <h3 style="color:var(--text);margin-bottom:6px;">No courses just yet</h3>
-      <p>Check back soon.</p>
+      <h3 style="color:var(--text);margin-bottom:6px;">Ingen hold endnu</h3>
+      <p>Kom tilbage om lidt.</p>
     </div>
   @else
     @foreach ($courses as $course)
@@ -61,17 +61,20 @@
           @include('partials.avatar', ['u' => $course->trainer])
           <div class="pc-meta">
             <a href="{{ route('courses.show', $course) }}">{{ $course->trainer->name }}</a>
-            <small>Trainer · {{ $course->created_at->diffForHumans() }}</small>
+            <small>Træner · {{ $course->created_at->diffForHumans() }}</small>
           </div>
           <div style="margin-left:auto;display:flex;gap:6px;">
-            @if ($full) <span class="tag outline-danger"><i class="fa-solid fa-user-slash"></i> Full</span>
-            @else <span class="tag success">{{ $course->slotsLeft() }} spot{{ $course->slotsLeft() === 1 ? '' : 's' }} left</span>
+            @if ($full) <span class="tag outline-danger"><i class="fa-solid fa-user-slash"></i> Fuldt booket</span>
+            @else <span class="tag success">{{ $course->slotsLeft() }} {{ $course->slotsLeft() === 1 ? 'plads' : 'pladser' }} tilbage</span>
             @endif
           </div>
         </div>
         <a href="{{ route('courses.show', $course) }}">
           <h2 class="pc-title">{{ $course->title }}</h2>
         </a>
+        @if ($course->scheduleLabel())
+          <div style="padding: 0 16px 8px; color: var(--muted); font-size: 13px;"><i class="fa-regular fa-clock" style="margin-right: 4px;"></i> {{ $course->scheduleLabel() }}</div>
+        @endif
         <div class="pc-body">{{ \Illuminate\Support\Str::limit($course->description, 220) }}</div>
         @if ($course->image_path)
           <a href="{{ route('courses.show', $course) }}"><img class="pc-img" src="{{ $course->imageUrl() }}" alt=""></a>
@@ -80,23 +83,23 @@
         @endif
         <div class="pc-stats">
           <span class="price">{{ $course->price() }}</span>
-          <span><i class="fa-regular fa-user"></i> {{ $course->active_enrollments_count }}/{{ $course->max_participants }} enrolled</span>
+          <span><i class="fa-regular fa-user"></i> {{ $course->active_enrollments_count }}/{{ $course->max_participants }} tilmeldt</span>
         </div>
         <div class="pc-actions">
-          <a href="{{ route('courses.show', $course) }}"><i class="fa-regular fa-eye"></i> Details</a>
+          <a href="{{ route('courses.show', $course) }}"><i class="fa-regular fa-eye"></i> Læs mere</a>
           @auth
             @if (auth()->user()->enrolledIn($course))
               <a href="{{ route('chat.course', $course) }}" class="primary"><i class="fa-regular fa-comments"></i> Chat</a>
             @elseif ($full)
-              <button disabled><i class="fa-solid fa-lock"></i> Full</button>
+              <button disabled><i class="fa-solid fa-lock"></i> Fuldt</button>
             @else
               <form method="POST" action="{{ route('enroll', $course) }}" style="flex:1;display:flex;">
                 @csrf
-                <button type="submit" class="primary" style="flex:1;"><i class="fa-solid fa-bolt"></i> Enroll</button>
+                <button type="submit" class="primary" style="flex:1;"><i class="fa-solid fa-bolt"></i> Tilmeld</button>
               </form>
             @endif
           @else
-            <a href="{{ route('login') }}" class="primary"><i class="fa-solid fa-bolt"></i> Enroll</a>
+            <a href="{{ route('login') }}" class="primary"><i class="fa-solid fa-bolt"></i> Tilmeld</a>
           @endauth
         </div>
       </article>

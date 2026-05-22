@@ -42,13 +42,13 @@ class SettingsController extends Controller
         if ($request->boolean('clear_secret')) Setting::put('stripe_secret', null);
         if ($request->boolean('clear_webhook')) Setting::put('stripe_webhook_secret', null);
 
-        return back()->with('status', 'Settings saved.');
+        return back()->with('status', 'Indstillinger gemt.');
     }
 
     public function testStripe(Request $request): RedirectResponse
     {
         if (!StripeConfig::isConfigured()) {
-            return back()->withErrors(['stripe_secret' => 'Set a secret key first.']);
+            return back()->withErrors(['stripe_secret' => 'Indtast en hemmelig nøgle først.']);
         }
         try {
             $res = \Illuminate\Support\Facades\Http::withToken(StripeConfig::secret())
@@ -57,14 +57,14 @@ class SettingsController extends Controller
                 ->get('https://api.stripe.com/v1/account');
             if (!$res->ok()) {
                 $msg = $res->json('error.message') ?? ('HTTP ' . $res->status());
-                return back()->withErrors(['stripe_secret' => 'Stripe rejected the key: ' . $msg]);
+                return back()->withErrors(['stripe_secret' => 'Stripe afviste nøglen: ' . $msg]);
             }
             $data = $res->json();
-            $label = $data['business_profile']['name'] ?? $data['email'] ?? $data['id'] ?? 'account';
+            $label = $data['business_profile']['name'] ?? $data['email'] ?? $data['id'] ?? 'konto';
             $mode = str_starts_with(StripeConfig::secret(), 'sk_live_') ? 'live' : 'test';
-            return back()->with('status', "Stripe OK ({$mode} mode) — connected as {$label}.");
+            return back()->with('status', "Stripe OK ({$mode}-tilstand) — forbundet som {$label}.");
         } catch (\Throwable $e) {
-            return back()->withErrors(['stripe_secret' => 'Network/parse error: ' . $e->getMessage()]);
+            return back()->withErrors(['stripe_secret' => 'Netværks-/parsing-fejl: ' . $e->getMessage()]);
         }
     }
 }

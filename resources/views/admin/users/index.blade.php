@@ -2,7 +2,7 @@
 @section('content')
 
 <div class="view-header">
-  <h1>People</h1>
+  <h1>Brugere</h1>
   @include('partials.header-actions')
 </div>
 
@@ -17,9 +17,9 @@
       <form method="POST" action="{{ route('admin.users.role', $u) }}" style="display:flex;gap:6px;align-items:center;">
         @csrf
         <select name="role" onchange="this.form.submit()" style="width:auto;">
-          <option value="user" {{ $u->role === 'user' ? 'selected' : '' }}>User</option>
-          <option value="trainer" {{ $u->role === 'trainer' ? 'selected' : '' }}>Trainer</option>
-          <option value="owner" {{ $u->role === 'owner' ? 'selected' : '' }}>Owner</option>
+          <option value="user" {{ $u->role === 'user' ? 'selected' : '' }}>Bruger</option>
+          <option value="trainer" {{ $u->role === 'trainer' ? 'selected' : '' }}>Træner</option>
+          <option value="owner" {{ $u->role === 'owner' ? 'selected' : '' }}>Ejer</option>
         </select>
       </form>
     </div>

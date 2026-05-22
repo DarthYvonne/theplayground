@@ -21,7 +21,7 @@ class AuthController extends Controller
             'password' => ['required','string'],
         ]);
         if (!Auth::attempt($data, $request->boolean('remember'))) {
-            return back()->withErrors(['email' => 'Those credentials don\'t match.'])->onlyInput('email');
+            return back()->withErrors(['email' => 'E-mail eller adgangskode passer ikke.'])->onlyInput('email');
         }
         $request->session()->regenerate();
         return redirect()->intended('/dashboard');

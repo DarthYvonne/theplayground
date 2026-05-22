@@ -15,6 +15,7 @@ class Course extends Model
     protected $fillable = [
         'title','description','trainer_id','image_path','price_cents',
         'max_participants','is_active','stripe_product_id','stripe_price_id',
+        'start_time','end_time','weekdays',
     ];
 
     protected function casts(): array
@@ -24,6 +25,51 @@ class Course extends Model
             'price_cents' => 'integer',
             'max_participants' => 'integer',
         ];
+    }
+
+    public const WEEKDAYS = [
+        'mon' => 'Mandag', 'tue' => 'Tirsdag', 'wed' => 'Onsdag',
+        'thu' => 'Torsdag', 'fri' => 'Fredag', 'sat' => 'Lørdag', 'sun' => 'Søndag',
+    ];
+
+    /** @return array<string> */
+    public function weekdaysList(): array
+    {
+        if (!$this->weekdays) return [];
+        return array_values(array_filter(explode(',', $this->weekdays), fn ($d) => isset(self::WEEKDAYS[$d])));
+    }
+
+    public function scheduleLabel(): ?string
+    {
+        $days = $this->weekdaysList();
+        $time = $this->timeRange();
+        if (!$days && !$time) return null;
+        $dayPart = $this->daysLabel($days);
+        return trim(trim($dayPart) . ($time ? ' · ' . $time : ''));
+    }
+
+    public function timeRange(): ?string
+    {
+        if (!$this->start_time && !$this->end_time) return null;
+        $fmt = fn ($t) => $t ? substr((string) $t, 0, 5) : '';
+        if ($this->start_time && $this->end_time) return $fmt($this->start_time) . '–' . $fmt($this->end_time);
+        return $fmt($this->start_time ?: $this->end_time);
+    }
+
+    private function daysLabel(array $days): string
+    {
+        if (!$days) return '';
+        if (count($days) === 7) return 'Hver dag';
+        // Weekdays = mon..fri
+        $weekdays = ['mon','tue','wed','thu','fri'];
+        $weekend = ['sat','sun'];
+        sort($days);
+        if ($days === $weekdays) return 'Hverdage';
+        if ($days === $weekend) return 'Weekend';
+        $names = array_map(fn ($d) => self::WEEKDAYS[$d], $days);
+        if (count($names) === 1) return $names[0];
+        $last = array_pop($names);
+        return implode(', ', $names) . ' og ' . $last;
     }
 
     public function trainer(): BelongsTo { return $this->belongsTo(User::class, 'trainer_id'); }

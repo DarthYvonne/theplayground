@@ -18,9 +18,10 @@ class UserAdminController extends Controller
         $data = $request->validate(['role' => ['required', 'in:user,trainer,owner']]);
         // Refuse to demote the last owner
         if ($user->role === 'owner' && $data['role'] !== 'owner' && User::where('role','owner')->count() <= 1) {
-            return back()->withErrors(['role' => 'Cannot demote the last owner.']);
+            return back()->withErrors(['role' => 'Kan ikke nedgradere den sidste ejer.']);
         }
         $user->update(['role' => $data['role']]);
-        return back()->with('status', $user->name . ' is now ' . $data['role'] . '.');
+        $label = ['user' => 'bruger', 'trainer' => 'træner', 'owner' => 'ejer'][$data['role']] ?? $data['role'];
+        return back()->with('status', $user->name . ' er nu ' . $label . '.');
     }
 }

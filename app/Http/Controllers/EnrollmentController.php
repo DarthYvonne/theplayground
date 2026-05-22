@@ -19,16 +19,16 @@ class EnrollmentController extends Controller
         abort_unless($course->is_active, 404);
 
         if ($user->enrolledIn($course)) {
-            return redirect()->route('courses.show', $course)->with('status', 'Already enrolled.');
+            return redirect()->route('courses.show', $course)->with('status', 'Du er allerede tilmeldt.');
         }
         if ($course->isFull()) {
-            return back()->withErrors(['enroll' => 'Course is full.']);
+            return back()->withErrors(['enroll' => 'Holdet er fuldt booket.']);
         }
 
         // Paid flow when Stripe is configured.
         if (StripeConfig::isConfigured() && $course->price_cents > 0) {
             if (!$course->stripe_price_id) {
-                return back()->withErrors(['enroll' => 'This course is missing its Stripe price. Ask the admin to re-save it.']);
+                return back()->withErrors(['enroll' => 'Holdet mangler en Stripe-pris. Bed admin om at gemme det igen.']);
             }
             try {
                 $session = StripeService::createCheckoutSession(
@@ -44,7 +44,7 @@ class EnrollmentController extends Controller
                 );
                 return redirect()->away($session['url']);
             } catch (\Throwable $e) {
-                return back()->withErrors(['enroll' => 'Stripe error: ' . $e->getMessage()]);
+                return back()->withErrors(['enroll' => 'Stripe-fejl: ' . $e->getMessage()]);
             }
         }
 
@@ -63,20 +63,20 @@ class EnrollmentController extends Controller
         AppNotification::create([
             'user_id' => $course->trainer_id,
             'type' => 'enrollment',
-            'title' => $user->name . ' enrolled in ' . $course->title,
+            'title' => $user->name . ' tilmeldte sig ' . $course->title,
             'link' => route('courses.show', $course),
             'course_id' => $course->id,
             'actor_id' => $user->id,
         ]);
 
-        return redirect()->route('courses.show', $course)->with('status', 'You\'re in. See you in class.');
+        return redirect()->route('courses.show', $course)->with('status', 'Du er tilmeldt. Vi ses!');
     }
 
     public function returnFromCheckout(Request $request, Course $course): RedirectResponse
     {
         // Webhook is the source of truth; this just gives the user instant feedback.
         return redirect()->route('courses.show', $course)
-            ->with('status', 'Payment received. Your enrollment will appear in a moment.');
+            ->with('status', 'Betaling modtaget. Din tilmelding vises om et øjeblik.');
     }
 
     public function cancel(Request $request, Course $course): RedirectResponse
@@ -94,6 +94,6 @@ class EnrollmentController extends Controller
         }
 
         $enrollment->update(['status' => 'canceled', 'canceled_at' => now()]);
-        return back()->with('status', 'Enrollment canceled.');
+        return back()->with('status', 'Tilmelding er annulleret.');
     }
 }

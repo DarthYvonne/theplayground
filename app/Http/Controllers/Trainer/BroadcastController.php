@@ -37,7 +37,7 @@ class BroadcastController extends Controller
             AppNotification::create([
                 'user_id' => $u->id,
                 'type' => 'broadcast',
-                'title' => 'Email from ' . $request->user()->name . ': ' . $data['subject'],
+                'title' => 'E-mail fra ' . $request->user()->name . ': ' . $data['subject'],
                 'body' => mb_substr($data['body'], 0, 200),
                 'link' => route('courses.show', $course),
                 'course_id' => $course->id,
@@ -54,7 +54,8 @@ class BroadcastController extends Controller
             'sent_at' => now(),
         ]);
 
-        return back()->with('status', 'Sent to ' . $recipients->count() . ' recipient(s).');
+        $n = $recipients->count();
+        return back()->with('status', 'Sendt til ' . $n . ' ' . ($n === 1 ? 'modtager' : 'modtagere') . '.');
     }
 
     private function authorize(Request $request, Course $course): void {

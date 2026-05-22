@@ -27,7 +27,7 @@ class CourseAdminController extends Controller
         if ($request->hasFile('image')) $data['image_path'] = $request->file('image')->store('courses', 'public');
         $course = Course::create($data);
         $this->syncStripe($course);
-        return redirect()->route('admin.courses.edit', $course)->with('status', $this->saveMessage($course, 'created'));
+        return redirect()->route('admin.courses.edit', $course)->with('status', $this->saveMessage($course, 'oprettet'));
     }
 
     public function edit(Course $course) {
@@ -43,7 +43,7 @@ class CourseAdminController extends Controller
         $priceChanged = (int) $data['price_cents'] !== (int) $course->price_cents;
         $course->update($data);
         $this->syncStripe($course, $priceChanged);
-        return back()->with('status', $this->saveMessage($course, 'updated'));
+        return back()->with('status', $this->saveMessage($course, 'opdateret'));
     }
 
     public function destroy(Course $course): RedirectResponse {
@@ -53,7 +53,7 @@ class CourseAdminController extends Controller
         }
         if ($course->image_path) Storage::disk('public')->delete($course->image_path);
         $course->delete();
-        return redirect()->route('admin.courses.index')->with('status', 'Course deleted.');
+        return redirect()->route('admin.courses.index')->with('status', 'Holdet er slettet.');
     }
 
     /**
@@ -79,19 +79,19 @@ class CourseAdminController extends Controller
             $course->save();
         } catch (\Throwable $e) {
             // Don't break the admin flow if Stripe is misconfigured; surface via session flash.
-            session()->flash('status', 'Saved locally, but Stripe sync failed: ' . $e->getMessage());
+            session()->flash('status', 'Gemt lokalt, men synkronisering med Stripe fejlede: ' . $e->getMessage());
         }
     }
 
     private function saveMessage(Course $course, string $verb): string
     {
-        if (!StripeConfig::isConfigured()) return ucfirst($verb) . ' (Stripe not configured — local only).';
-        if (!$course->stripe_product_id) return ucfirst($verb) . ' (Stripe sync skipped).';
-        return ucfirst($verb) . ' · Stripe product ' . $course->stripe_product_id . '.';
+        if (!StripeConfig::isConfigured()) return 'Holdet er ' . $verb . ' (Stripe er ikke konfigureret — kun gemt lokalt).';
+        if (!$course->stripe_product_id) return 'Holdet er ' . $verb . ' (Stripe-synkronisering sprunget over).';
+        return 'Holdet er ' . $verb . ' · Stripe-produkt ' . $course->stripe_product_id . '.';
     }
 
     private function validateData(Request $request): array {
-        return $request->validate([
+        $data = $request->validate([
             'title' => ['required','string','max:160'],
             'description' => ['required','string','max:4000'],
             'trainer_id' => ['required','exists:users,id'],
@@ -99,7 +99,14 @@ class CourseAdminController extends Controller
             'price_cents' => ['required','integer','min:0','max:10000000'],
             'max_participants' => ['required','integer','min:1','max:1000'],
             'is_active' => ['nullable','boolean'],
-        ]) + ['is_active' => $request->boolean('is_active')];
+            'start_time' => ['nullable','date_format:H:i'],
+            'end_time' => ['nullable','date_format:H:i'],
+            'weekdays' => ['nullable','array'],
+            'weekdays.*' => ['in:mon,tue,wed,thu,fri,sat,sun'],
+        ]);
+        $data['is_active'] = $request->boolean('is_active');
+        $data['weekdays'] = !empty($data['weekdays']) ? implode(',', $data['weekdays']) : null;
+        return $data;
     }
 
     private function trainers() {

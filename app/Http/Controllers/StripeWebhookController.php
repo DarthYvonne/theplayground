@@ -78,7 +78,7 @@ class StripeWebhookController extends Controller
         AppNotification::create([
             'user_id' => $course->trainer_id,
             'type' => 'enrollment',
-            'title' => ($enrollment->user->name ?? 'A user') . ' enrolled in ' . $course->title,
+            'title' => ($enrollment->user->name ?? 'En bruger') . ' tilmeldte sig ' . $course->title,
             'link' => route('courses.show', $course),
             'course_id' => $course->id,
             'actor_id' => $userId,
