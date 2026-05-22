@@ -14,7 +14,7 @@
   .course-body { padding: 24px; }
   .course-title { font-size: 28px; font-weight: 800; line-height: 1.2; }
 
-  .info-ribbon { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 10px; color: var(--muted); font-size: 14px; }
+  .info-ribbon { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 14px; padding: 12px 0; border-top: 1px solid #f0f2f5; border-bottom: 1px solid #f0f2f5; color: var(--muted); font-size: 14px; }
   .info-ribbon .item { display: inline-flex; align-items: center; gap: 6px; }
   .info-ribbon .item i { font-size: 12px; opacity: 0.85; }
   .info-ribbon .item strong { color: var(--text); font-weight: 600; }
