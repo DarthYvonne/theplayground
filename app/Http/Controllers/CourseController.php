@@ -42,6 +42,10 @@ class CourseController extends Controller
         if (!$course->is_active && !($request->user()?->isOwner())) abort(404);
         $course->load('trainer');
         $isEnrolled = $request->user()?->enrolledIn($course) ?? false;
-        return view('courses.show', compact('course','isEnrolled'));
+        return view('courses.show', [
+            'course' => $course,
+            'isEnrolled' => $isEnrolled,
+            'title' => $course->title,
+        ]);
     }
 }
