@@ -10,8 +10,19 @@
   .hero .btn:hover { background: #f0f4fc; }
   .hero .btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.6); margin-left: 6px; }
   .empty-feed { background: #fff; border-radius: 12px; padding: 60px 20px; text-align: center; color: var(--muted); }
-  .course-tile-sched { color: var(--muted); font-size: 12px; margin-top: 4px; }
-  .course-tile-price { font-weight: 700; color: var(--text); font-size: 14px; margin-top: 6px; }
+
+  /* User-facing course tile overrides */
+  .course-tile { position: relative; transition: transform 0.1s, box-shadow 0.1s; }
+  .course-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+  .course-tile .stretched-link { position: absolute; inset: 0; z-index: 1; }
+  .course-tile .card-pad { position: relative; z-index: 0; }
+  .course-tile .course-tile-actions { position: relative; z-index: 2; }
+  .course-tile .img-wrap { position: relative; }
+  .course-tile-title { font-size: 18px; line-height: 1.25; }
+  .course-tile-sched { color: var(--muted); font-size: 13px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+  .course-tile-price { font-weight: 700; font-size: 15px; margin-top: 10px; color: var(--text); }
+  .course-tile-status { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .course-tile-enrolled-badge { position: absolute; top: 10px; right: 10px; background: #16a34a; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,0.18); display: inline-flex; align-items: center; gap: 5px; }
 </style>
 @endpush
 
@@ -39,43 +50,46 @@
 @else
   <div class="course-grid">
     @foreach ($courses as $course)
-      @php $full = $course->active_enrollments_count >= $course->max_participants; @endphp
+      @php
+        $full = $course->active_enrollments_count >= $course->max_participants;
+        $enrolled = auth()->check() && auth()->user()->enrolledIn($course);
+      @endphp
       <div class="card course-tile">
-        <a href="{{ route('courses.show', $course) }}">
+        <a href="{{ route('courses.show', $course) }}" class="stretched-link" aria-label="{{ $course->title }}"></a>
+        <div class="img-wrap">
           @if ($course->image_path)
             <img src="{{ $course->imageUrl() }}" alt="" class="course-tile-img">
           @else
             <div class="course-tile-img course-tile-img-ph"><i class="fa-solid fa-dumbbell"></i></div>
           @endif
-        </a>
+          @if ($enrolled)
+            <span class="course-tile-enrolled-badge"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>
+          @endif
+        </div>
         <div class="card-pad">
-          <a href="{{ route('courses.show', $course) }}" style="color:inherit;">
-            <div class="course-tile-title">{{ $course->title }}</div>
-          </a>
-          <div class="course-tile-meta">
-            {{ $course->active_enrollments_count }}/{{ $course->max_participants }} tilmeldt ·
-            @if ($full)<span style="color:#b91c1c;font-weight:600;">Fuldt booket</span>
-            @else<span style="color:#166534;font-weight:600;">{{ $course->slotsLeft() }} {{ $course->slotsLeft() === 1 ? 'plads' : 'pladser' }} tilbage</span>@endif
-          </div>
+          <div class="course-tile-title">{{ $course->title }}</div>
           @if ($course->scheduleLabel())
-            <div class="course-tile-sched"><i class="fa-regular fa-clock" style="margin-right:4px;"></i>{{ $course->scheduleLabel() }}</div>
+            <div class="course-tile-sched"><i class="fa-regular fa-clock"></i>{{ $course->scheduleLabel() }}</div>
           @endif
           <div class="course-tile-price">{{ $course->price() }}</div>
+          <div class="course-tile-status">
+            {{ $course->active_enrollments_count }}/{{ $course->max_participants }} tilmeldt
+            @if ($full) · <span style="color:#b91c1c;font-weight:600;">Fuldt</span>@endif
+          </div>
           <div class="course-tile-actions">
-            <a href="{{ route('courses.show', $course) }}" class="btn btn-secondary btn-sm"><i class="fa-regular fa-eye"></i> Læs mere</a>
             @auth
-              @if (auth()->user()->enrolledIn($course))
+              @if ($enrolled)
                 <a href="{{ route('chat.course', $course) }}" class="btn btn-primary btn-sm"><i class="fa-regular fa-comments"></i> Chat</a>
               @elseif ($full)
                 <button class="btn btn-secondary btn-sm" disabled><i class="fa-solid fa-lock"></i> Fuldt</button>
               @else
                 <form method="POST" action="{{ route('enroll', $course) }}" style="display:inline-flex;">
                   @csrf
-                  <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-bolt"></i> Tilmeld</button>
+                  <button type="submit" class="btn btn-primary btn-sm">Tilmeld</button>
                 </form>
               @endif
             @else
-              <a href="{{ route('login') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-bolt"></i> Tilmeld</a>
+              <a href="{{ route('login') }}" class="btn btn-primary btn-sm">Tilmeld</a>
             @endauth
           </div>
         </div>
