@@ -57,7 +57,7 @@
   var sendUrl = card.dataset.sendUrl;
   var stream = document.getElementById('chatStream');
   var composer = document.getElementById('chatComposer');
-  var input = composer.querySelector('input');
+  var input = composer.querySelector('input[name="body"]');
   var seenIds = new Set();
   var atBottom = true;
 

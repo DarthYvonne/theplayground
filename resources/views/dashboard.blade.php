@@ -50,7 +50,6 @@
             @if ($c->scheduleLabel())<div class="sub"><i class="fa-regular fa-clock"></i> {{ $c->scheduleLabel() }}</div>@endif
           </div>
           <div class="actions">
-            <a href="{{ route('chat.course', $c) }}" class="btn btn-primary btn-sm"><i class="fa-regular fa-comments"></i> Chat</a>
             <a href="{{ route('courses.show', $c) }}" class="btn btn-secondary btn-sm">Detaljer</a>
           </div>
         </div>
@@ -69,8 +68,6 @@
             <div class="sub">{{ $c->activeCount() }}/{{ $c->max_participants }} tilmeldte · {{ $c->is_active ? 'Aktiv' : 'Kladde' }}</div>
           </div>
           <div class="actions">
-            <a href="{{ route('trainer.broadcast', $c) }}" class="btn btn-secondary btn-sm"><i class="fa-regular fa-envelope"></i> Skriv</a>
-            <a href="{{ route('chat.course', $c) }}" class="btn btn-primary btn-sm"><i class="fa-regular fa-comments"></i> Chat</a>
           </div>
         </div>
       @endforeach
