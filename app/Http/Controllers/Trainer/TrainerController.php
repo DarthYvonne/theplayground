@@ -16,6 +16,24 @@ class TrainerController extends Controller
         return view('trainer.index', compact('courses'));
     }
 
+    public function calendar(Request $request) {
+        $user = $request->user();
+        $courses = $user->isOwner()
+            ? Course::with('trainer')->where('is_active', true)->orderBy('start_time')->orderBy('title')->get()
+            : Course::with('trainer')->where('trainer_id', $user->id)->where('is_active', true)->orderBy('start_time')->orderBy('title')->get();
+
+        $byDay = [];
+        foreach (array_keys(Course::WEEKDAYS) as $day) $byDay[$day] = [];
+        foreach ($courses as $c) {
+            foreach ($c->weekdaysList() as $day) {
+                if (isset($byDay[$day])) $byDay[$day][] = $c;
+            }
+        }
+        $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
+
+        return view('trainer.calendar', compact('byDay', 'unscheduled'));
+    }
+
     public function participants(Request $request, Course $course) {
         $this->authorize($request, $course);
         $enrollments = $course->enrollments()->with('user')->where('status','active')->orderBy('enrolled_at')->get();

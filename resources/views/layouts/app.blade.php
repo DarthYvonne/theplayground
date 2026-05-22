@@ -74,6 +74,15 @@
   .card { background: var(--card); border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); margin-bottom: 16px; overflow: hidden; }
   .card-pad { padding: 16px 18px; }
 
+  /* Course tile (uniform "hold" card) */
+  .course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .course-tile { margin-bottom: 0; display: flex; flex-direction: column; }
+  .course-tile-img { width: 100%; height: 140px; object-fit: cover; display: block; }
+  .course-tile-img-ph { background: linear-gradient(135deg, var(--accent-soft), #f5f7fb); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 40px; }
+  .course-tile-title { font-weight: 700; }
+  .course-tile-meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .course-tile-actions { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; }
+
   /* Avatar */
   .av { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #a1c4fd, #c2e9fb); display: inline-flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 14px; overflow: hidden; flex-shrink: 0; }
   .av img { width: 100%; height: 100%; object-fit: cover; }

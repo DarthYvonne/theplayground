@@ -58,6 +58,7 @@ Route::middleware('auth')->group(function () {
     // Trainer
     Route::middleware('role:trainer,owner')->prefix('trainer')->name('trainer.')->group(function () {
         Route::get('/', [TrainerController::class, 'index'])->name('index');
+        Route::get('/calendar', [TrainerController::class, 'calendar'])->name('calendar');
         Route::get('/courses/{course}/participants', [TrainerController::class, 'participants'])->name('participants');
         Route::get('/courses/{course}/email', [BroadcastController::class, 'create'])->name('broadcast');
         Route::post('/courses/{course}/email', [BroadcastController::class, 'send'])->name('broadcast.send');
