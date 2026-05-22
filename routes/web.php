@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\Trainer\BroadcastController;
 use App\Http\Controllers\Trainer\TrainerController;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +18,9 @@ use Illuminate\Support\Facades\Route;
 // Public catalog
 Route::get('/', [CourseController::class, 'index'])->name('home');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
+
+// Stripe webhook (no auth, no CSRF — gated by signature verification)
+Route::post('/stripe/webhook', StripeWebhookController::class)->name('stripe.webhook');
 
 // Auth
 Route::middleware('guest')->group(function () {
@@ -35,6 +39,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
 
     Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll');
+    Route::get('/courses/{course}/enroll/return', [EnrollmentController::class, 'returnFromCheckout'])->name('enroll.return');
     Route::post('/courses/{course}/cancel', [EnrollmentController::class, 'cancel'])->name('enroll.cancel');
 
     // Chat

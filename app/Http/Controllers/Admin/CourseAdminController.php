@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\User;
+use App\Support\StripeConfig;
+use App\Support\StripeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -24,7 +26,8 @@ class CourseAdminController extends Controller
         $data = $this->validateData($request);
         if ($request->hasFile('image')) $data['image_path'] = $request->file('image')->store('courses', 'public');
         $course = Course::create($data);
-        return redirect()->route('admin.courses.edit', $course)->with('status', 'Course created.');
+        $this->syncStripe($course);
+        return redirect()->route('admin.courses.edit', $course)->with('status', $this->saveMessage($course, 'created'));
     }
 
     public function edit(Course $course) {
@@ -37,14 +40,54 @@ class CourseAdminController extends Controller
             if ($course->image_path) Storage::disk('public')->delete($course->image_path);
             $data['image_path'] = $request->file('image')->store('courses', 'public');
         }
+        $priceChanged = (int) $data['price_cents'] !== (int) $course->price_cents;
         $course->update($data);
-        return back()->with('status', 'Course updated.');
+        $this->syncStripe($course, $priceChanged);
+        return back()->with('status', $this->saveMessage($course, 'updated'));
     }
 
     public function destroy(Course $course): RedirectResponse {
+        if ($course->stripe_product_id && StripeConfig::isConfigured()) {
+            if ($course->stripe_price_id) StripeService::archivePrice($course->stripe_price_id);
+            StripeService::archiveProduct($course->stripe_product_id);
+        }
         if ($course->image_path) Storage::disk('public')->delete($course->image_path);
         $course->delete();
         return redirect()->route('admin.courses.index')->with('status', 'Course deleted.');
+    }
+
+    /**
+     * Create or update the matching Stripe Product + monthly Price. Stripe
+     * Prices are immutable, so changing the amount means archiving the old
+     * price and creating a new one. No-ops cleanly if Stripe isn't configured.
+     */
+    private function syncStripe(Course $course, bool $priceChanged = true): void
+    {
+        if (!StripeConfig::isConfigured()) return;
+        try {
+            if (!$course->stripe_product_id) {
+                $product = StripeService::createProduct($course->title, $course->description);
+                $course->stripe_product_id = $product['id'];
+            } else {
+                StripeService::updateProduct($course->stripe_product_id, $course->title, $course->description);
+            }
+            if (!$course->stripe_price_id || $priceChanged) {
+                if ($course->stripe_price_id) StripeService::archivePrice($course->stripe_price_id);
+                $price = StripeService::createRecurringMonthlyPrice($course->stripe_product_id, (int) $course->price_cents);
+                $course->stripe_price_id = $price['id'];
+            }
+            $course->save();
+        } catch (\Throwable $e) {
+            // Don't break the admin flow if Stripe is misconfigured; surface via session flash.
+            session()->flash('status', 'Saved locally, but Stripe sync failed: ' . $e->getMessage());
+        }
+    }
+
+    private function saveMessage(Course $course, string $verb): string
+    {
+        if (!StripeConfig::isConfigured()) return ucfirst($verb) . ' (Stripe not configured — local only).';
+        if (!$course->stripe_product_id) return ucfirst($verb) . ' (Stripe sync skipped).';
+        return ucfirst($verb) . ' · Stripe product ' . $course->stripe_product_id . '.';
     }
 
     private function validateData(Request $request): array {
