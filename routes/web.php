@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Route;
 
 // Public catalog
 Route::get('/', [CourseController::class, 'index'])->name('home');
+Route::get('/calendar', [CourseController::class, 'calendar'])->name('home.calendar');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 
 // Stripe webhook (no auth, no CSRF — gated by signature verification)

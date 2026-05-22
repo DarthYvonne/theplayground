@@ -17,6 +17,26 @@ class CourseController extends Controller
         return view('courses.index', compact('courses'));
     }
 
+    public function calendar(Request $request)
+    {
+        $courses = Course::with('trainer')
+            ->where('is_active', true)
+            ->orderBy('start_time')
+            ->orderBy('title')
+            ->get();
+
+        $byDay = [];
+        foreach (array_keys(Course::WEEKDAYS) as $day) $byDay[$day] = [];
+        foreach ($courses as $c) {
+            foreach ($c->weekdaysList() as $day) {
+                if (isset($byDay[$day])) $byDay[$day][] = $c;
+            }
+        }
+        $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
+
+        return view('courses.calendar', compact('byDay', 'unscheduled'));
+    }
+
     public function show(Course $course, Request $request)
     {
         if (!$course->is_active && !($request->user()?->isOwner())) abort(404);

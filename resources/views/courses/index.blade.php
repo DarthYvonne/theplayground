@@ -3,33 +3,15 @@
 
 @push('styles')
 <style>
-  .feed-main { max-width: 620px; }
-  .course-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); margin-bottom: 16px; overflow: hidden; }
-  .pc-head { display: flex; gap: 10px; align-items: center; padding: 12px 16px 0; }
-  .pc-meta { font-weight: 600; line-height: 1.2; }
-  .pc-meta small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; margin-top: 2px; }
-  .pc-meta a { color: inherit; }
-  .pc-title { padding: 10px 16px 6px; font-size: 20px; font-weight: 700; line-height: 1.25; }
-  .pc-body { padding: 0 16px 12px; line-height: 1.45; color: #4b4f56; white-space: pre-wrap; }
-  .pc-img { display: block; width: 100%; max-height: 480px; object-fit: cover; }
-  .pc-img-placeholder { display: block; width: 100%; height: 200px; background: linear-gradient(135deg, var(--accent-soft), #f5f7fb); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 60px; }
-  .pc-stats { display: flex; justify-content: space-between; padding: 10px 16px; font-size: 13px; color: var(--muted); border-top: 1px solid #f0f2f5; gap: 12px; flex-wrap: wrap; }
-  .pc-stats .price { color: var(--text); font-weight: 700; font-size: 15px; }
-  .pc-actions { display: flex; padding: 4px 8px; border-top: 1px solid #f0f2f5; }
-  .pc-actions a, .pc-actions button { flex: 1; text-align: center; padding: 10px; border-radius: 6px; color: var(--muted); font-weight: 600; font-size: 14px; background: none; border: none; cursor: pointer; font-family: inherit; }
-  .pc-actions a:hover, .pc-actions button:hover { background: var(--hover); }
-  .pc-actions .primary { color: var(--accent); }
-  .pc-actions i { margin-right: 6px; }
-  .empty-feed { background: #fff; border-radius: 12px; padding: 60px 20px; text-align: center; color: var(--muted); }
-  .hero { background: linear-gradient(135deg, var(--accent) 0%, #6cabff 100%); color: #fff; padding: 28px 20px; border-radius: 14px; margin-bottom: 18px; }
+  .hero { background: linear-gradient(135deg, var(--accent) 0%, #6cabff 100%); color: #fff; padding: 24px 22px; border-radius: 14px; margin-bottom: 18px; }
   .hero h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; line-height: 1.2; }
   .hero p { font-size: 14px; opacity: 0.95; margin-bottom: 12px; }
   .hero .btn { background: #fff; color: var(--accent); }
   .hero .btn:hover { background: #f0f4fc; }
-  @media (max-width: 767px) {
-    .feed-main { max-width: 100%; }
-    .pc-title { font-size: 18px; }
-  }
+  .hero .btn.ghost { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.6); margin-left: 6px; }
+  .empty-feed { background: #fff; border-radius: 12px; padding: 60px 20px; text-align: center; color: var(--muted); }
+  .course-tile-sched { color: var(--muted); font-size: 12px; margin-top: 4px; }
+  .course-tile-price { font-weight: 700; color: var(--text); font-size: 14px; margin-top: 6px; }
 </style>
 @endpush
 
@@ -38,73 +20,68 @@
   @include('partials.header-actions')
 </div>
 
-<div class="feed-main">
-  @guest
-  <div class="hero">
-    <h2>Find dit næste hold</h2>
-    <p>Se hvilke hold der kører på The Playground. Opret en konto for at tilmelde dig og chatte med trænere og andre medlemmer.</p>
-    <a href="{{ route('register') }}" class="btn">Kom i gang</a>
-    <a href="{{ route('login') }}" class="btn" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.6);margin-left:6px;">Log ind</a>
-  </div>
-  @endguest
+@include('courses._subnav')
 
-  @if ($courses->isEmpty())
-    <div class="empty-feed">
-      <h3 style="color:var(--text);margin-bottom:6px;">Ingen hold endnu</h3>
-      <p>Kom tilbage om lidt.</p>
-    </div>
-  @else
+@guest
+<div class="hero">
+  <h2>Find dit næste hold</h2>
+  <p>Se hvilke hold der kører på The Playground. Opret en konto for at tilmelde dig og chatte med trænere og andre medlemmer.</p>
+  <a href="{{ route('register') }}" class="btn">Kom i gang</a>
+  <a href="{{ route('login') }}" class="btn ghost">Log ind</a>
+</div>
+@endguest
+
+@if ($courses->isEmpty())
+  <div class="empty-feed">
+    <h3 style="color:var(--text);margin-bottom:6px;">Ingen hold endnu</h3>
+    <p>Kom tilbage om lidt.</p>
+  </div>
+@else
+  <div class="course-grid">
     @foreach ($courses as $course)
       @php $full = $course->active_enrollments_count >= $course->max_participants; @endphp
-      <article class="course-card">
-        <div class="pc-head">
-          @include('partials.avatar', ['u' => $course->trainer])
-          <div class="pc-meta">
-            <a href="{{ route('courses.show', $course) }}">{{ $course->trainer->name }}</a>
-            <small>Træner · {{ $course->created_at->diffForHumans() }}</small>
-          </div>
-          <div style="margin-left:auto;display:flex;gap:6px;">
-            @if ($full) <span class="tag outline-danger"><i class="fa-solid fa-user-slash"></i> Fuldt booket</span>
-            @else <span class="tag success">{{ $course->slotsLeft() }} {{ $course->slotsLeft() === 1 ? 'plads' : 'pladser' }} tilbage</span>
-            @endif
-          </div>
-        </div>
+      <div class="card course-tile">
         <a href="{{ route('courses.show', $course) }}">
-          <h2 class="pc-title">{{ $course->title }}</h2>
-        </a>
-        @if ($course->scheduleLabel())
-          <div style="padding: 0 16px 8px; color: var(--muted); font-size: 13px;"><i class="fa-regular fa-clock" style="margin-right: 4px;"></i> {{ $course->scheduleLabel() }}</div>
-        @endif
-        <div class="pc-body">{{ \Illuminate\Support\Str::limit($course->description, 220) }}</div>
-        @if ($course->image_path)
-          <a href="{{ route('courses.show', $course) }}"><img class="pc-img" src="{{ $course->imageUrl() }}" alt=""></a>
-        @else
-          <a href="{{ route('courses.show', $course) }}"><div class="pc-img-placeholder"><i class="fa-solid fa-dumbbell"></i></div></a>
-        @endif
-        <div class="pc-stats">
-          <span class="price">{{ $course->price() }}</span>
-          <span><i class="fa-regular fa-user"></i> {{ $course->active_enrollments_count }}/{{ $course->max_participants }} tilmeldt</span>
-        </div>
-        <div class="pc-actions">
-          <a href="{{ route('courses.show', $course) }}"><i class="fa-regular fa-eye"></i> Læs mere</a>
-          @auth
-            @if (auth()->user()->enrolledIn($course))
-              <a href="{{ route('chat.course', $course) }}" class="primary"><i class="fa-regular fa-comments"></i> Chat</a>
-            @elseif ($full)
-              <button disabled><i class="fa-solid fa-lock"></i> Fuldt</button>
-            @else
-              <form method="POST" action="{{ route('enroll', $course) }}" style="flex:1;display:flex;">
-                @csrf
-                <button type="submit" class="primary" style="flex:1;"><i class="fa-solid fa-bolt"></i> Tilmeld</button>
-              </form>
-            @endif
+          @if ($course->image_path)
+            <img src="{{ $course->imageUrl() }}" alt="" class="course-tile-img">
           @else
-            <a href="{{ route('login') }}" class="primary"><i class="fa-solid fa-bolt"></i> Tilmeld</a>
-          @endauth
+            <div class="course-tile-img course-tile-img-ph"><i class="fa-solid fa-dumbbell"></i></div>
+          @endif
+        </a>
+        <div class="card-pad">
+          <a href="{{ route('courses.show', $course) }}" style="color:inherit;">
+            <div class="course-tile-title">{{ $course->title }}</div>
+          </a>
+          <div class="course-tile-meta">
+            {{ $course->active_enrollments_count }}/{{ $course->max_participants }} tilmeldt ·
+            @if ($full)<span style="color:#b91c1c;font-weight:600;">Fuldt booket</span>
+            @else<span style="color:#166534;font-weight:600;">{{ $course->slotsLeft() }} {{ $course->slotsLeft() === 1 ? 'plads' : 'pladser' }} tilbage</span>@endif
+          </div>
+          @if ($course->scheduleLabel())
+            <div class="course-tile-sched"><i class="fa-regular fa-clock" style="margin-right:4px;"></i>{{ $course->scheduleLabel() }}</div>
+          @endif
+          <div class="course-tile-price">{{ $course->price() }}</div>
+          <div class="course-tile-actions">
+            <a href="{{ route('courses.show', $course) }}" class="btn btn-secondary btn-sm"><i class="fa-regular fa-eye"></i> Læs mere</a>
+            @auth
+              @if (auth()->user()->enrolledIn($course))
+                <a href="{{ route('chat.course', $course) }}" class="btn btn-primary btn-sm"><i class="fa-regular fa-comments"></i> Chat</a>
+              @elseif ($full)
+                <button class="btn btn-secondary btn-sm" disabled><i class="fa-solid fa-lock"></i> Fuldt</button>
+              @else
+                <form method="POST" action="{{ route('enroll', $course) }}" style="display:inline-flex;">
+                  @csrf
+                  <button type="submit" class="btn btn-primary btn-sm"><i class="fa-solid fa-bolt"></i> Tilmeld</button>
+                </form>
+              @endif
+            @else
+              <a href="{{ route('login') }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-bolt"></i> Tilmeld</a>
+            @endauth
+          </div>
         </div>
-      </article>
+      </div>
     @endforeach
-  @endif
-</div>
+  </div>
+@endif
 
 @endsection

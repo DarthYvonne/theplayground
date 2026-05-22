@@ -185,7 +185,7 @@
     <nav class="nav">
       @auth
         <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Oversigt</a>
-        <a href="{{ url('/') }}" class="{{ request()->is('/') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
+        <a href="{{ url('/') }}" class="{{ request()->is('/') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
         <a href="{{ url('/chat') }}" class="{{ request()->is('chat') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-hashtag"></i></span> Fælles chat</a>
         <a href="{{ url('/profile') }}" class="{{ request()->is('profile') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-user"></i></span> Min profil</a>
 
@@ -209,7 +209,7 @@
           <a href="{{ route('admin.settings.revenue') }}" class="{{ request()->is('admin/settings*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
         @endif
       @else
-        <a href="{{ url('/') }}" class="{{ request()->is('/') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
+        <a href="{{ url('/') }}" class="{{ request()->is('/') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
         <a href="{{ route('login') }}" class="{{ request()->is('login') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-right-to-bracket"></i></span> Log ind</a>
         <a href="{{ route('register') }}" class="{{ request()->is('register') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-user-plus"></i></span> Opret konto</a>
       @endauth
