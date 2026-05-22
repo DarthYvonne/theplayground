@@ -67,6 +67,7 @@ Route::middleware('auth')->group(function () {
     // Owner admin
     Route::middleware('role:owner')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/courses', [CourseAdminController::class, 'index'])->name('courses.index');
+        Route::get('/courses/calendar', [CourseAdminController::class, 'calendar'])->name('courses.calendar');
         Route::get('/courses/create', [CourseAdminController::class, 'create'])->name('courses.create');
         Route::post('/courses', [CourseAdminController::class, 'store'])->name('courses.store');
         Route::get('/courses/{course}/edit', [CourseAdminController::class, 'edit'])->name('courses.edit');

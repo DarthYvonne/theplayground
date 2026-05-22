@@ -27,13 +27,14 @@
 @endpush
 
 <div class="view-header">
-  <h1>Mine hold</h1>
+  <h1>Hold</h1>
+  <a href="{{ route('admin.courses.create') }}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Nyt hold</a>
   @include('partials.header-actions')
 </div>
 
-@include('trainer._subnav')
+@include('admin.courses._subnav')
 
-@php $today = strtolower(now()->locale('en')->format('D')); $today = substr($today, 0, 3); @endphp
+@php $today = strtolower(now()->locale('en')->format('D')); @endphp
 
 <div class="cal-grid">
   @foreach (App\Models\Course::WEEKDAYS as $key => $label)
@@ -41,7 +42,7 @@
       <div class="cal-col-head {{ $key === $today ? 'today' : '' }}">{{ $label }}</div>
       <div class="cal-col-body">
         @forelse ($byDay[$key] as $c)
-          <a href="{{ route('courses.show', $c) }}" class="cal-event">
+          <a href="{{ route('admin.courses.edit', $c) }}" class="cal-event">
             <div class="t">{{ $c->title }}</div>
             @if ($c->timeRange())<div class="time"><i class="fa-regular fa-clock"></i> {{ $c->timeRange() }}</div>@endif
           </a>
@@ -58,7 +59,7 @@
     <h3>Uden fast skema</h3>
     <div class="cal-unscheduled-list">
       @foreach ($unscheduled as $c)
-        <a href="{{ route('courses.show', $c) }}" class="tag muted" style="padding:6px 12px;">{{ $c->title }}</a>
+        <a href="{{ route('admin.courses.edit', $c) }}" class="tag muted" style="padding:6px 12px;">{{ $c->title }}</a>
       @endforeach
     </div>
   </div>

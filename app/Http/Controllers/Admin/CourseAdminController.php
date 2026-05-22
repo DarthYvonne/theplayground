@@ -18,6 +18,21 @@ class CourseAdminController extends Controller
         return view('admin.courses.index', compact('courses'));
     }
 
+    public function calendar() {
+        $courses = Course::with('trainer')->where('is_active', true)->orderBy('start_time')->orderBy('title')->get();
+
+        $byDay = [];
+        foreach (array_keys(Course::WEEKDAYS) as $day) $byDay[$day] = [];
+        foreach ($courses as $c) {
+            foreach ($c->weekdaysList() as $day) {
+                if (isset($byDay[$day])) $byDay[$day][] = $c;
+            }
+        }
+        $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
+
+        return view('admin.courses.calendar', compact('byDay', 'unscheduled'));
+    }
+
     public function create() {
         return view('admin.courses.form', ['course' => new Course(['is_active' => false, 'max_participants' => 10]), 'trainers' => $this->trainers()]);
     }

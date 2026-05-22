@@ -7,6 +7,8 @@
   @include('partials.header-actions')
 </div>
 
+@include('admin.courses._subnav')
+
 @if ($courses->isEmpty())
   <div class="card card-pad" style="text-align:center;color:var(--muted);">
     Ingen hold endnu. <a href="{{ route('admin.courses.create') }}" style="color:var(--accent);font-weight:600;">Opret det første →</a>
