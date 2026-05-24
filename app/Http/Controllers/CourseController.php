@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\Enrollment;
+use App\Models\User;
 use Illuminate\Http\Request;
 
 class CourseController extends Controller
@@ -61,6 +63,24 @@ class CourseController extends Controller
         return view('courses.show', [
             'course' => $course,
             'isEnrolled' => $isEnrolled,
+            'title' => $course->title,
+        ]);
+    }
+
+    public function members(Course $course, Request $request)
+    {
+        $u = $request->user();
+        abort_unless($u->isOwner() || $course->trainer_id === $u->id || $u->enrolledIn($course), 403);
+
+        $course->load('trainer');
+        $memberIds = Enrollment::where('course_id', $course->id)
+            ->where('status', 'active')
+            ->pluck('user_id');
+        $members = User::whereIn('id', $memberIds)->orderBy('name')->get();
+
+        return view('courses.members', [
+            'course' => $course,
+            'members' => $members,
             'title' => $course->title,
         ]);
     }

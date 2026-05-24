@@ -30,6 +30,8 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
 Route::get('/hold', [CourseController::class, 'index'])->name('catalog');
 Route::get('/calendar', [CourseController::class, 'calendar'])->name('home.calendar');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
+Route::get('/courses/{course}/medlemmer', [CourseController::class, 'members'])
+    ->middleware('auth')->name('courses.members');
 
 // Stripe webhook (no auth, no CSRF — gated by signature verification)
 Route::post('/stripe/webhook', StripeWebhookController::class)->name('stripe.webhook');

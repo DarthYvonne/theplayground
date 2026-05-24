@@ -44,12 +44,16 @@
 @endpush
 
 <div class="view-header">
+  <h1>
+    <a href="{{ url('/') }}" style="color:inherit;"><i class="fa-solid fa-arrow-left" style="font-size:16px;margin-right:8px;"></i></a>
+    {{ $course->title }}
+  </h1>
   @include('partials.header-actions')
 </div>
 
-<div class="course-detail">
-  <a href="{{ url('/') }}" class="course-back"><i class="fa-solid fa-arrow-left"></i> Tilbage til hold</a>
+@include('partials.course-tabs')
 
+<div class="course-detail">
   <div class="card">
     @if ($course->image_path)
       <img src="{{ $course->imageUrl() }}" alt="" class="hero-img">
@@ -90,7 +94,6 @@
       <div class="cta">
         @auth
           @if ($isEnrolled)
-            <a href="{{ route('chat.course', $course) }}" class="btn btn-primary">Åbn holdets chat</a>
             <form method="POST" action="{{ route('enroll.cancel', $course) }}" onsubmit="return confirm('Afmeld dig dette hold?');">
               @csrf
               <button class="afmeld" type="submit">Afmeld</button>
