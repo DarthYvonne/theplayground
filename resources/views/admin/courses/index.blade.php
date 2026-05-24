@@ -1,13 +1,25 @@
 @extends('layouts.app')
 @section('content')
 
+@push('styles')
+<style>
+  .subnav-row { position: relative; }
+  .subnav-row .subnav-action { position: absolute; top: 0; right: 0; }
+  @media (max-width: 540px) {
+    .subnav-row .subnav-action { position: static; display: inline-flex; margin-bottom: 12px; }
+  }
+</style>
+@endpush
+
 <div class="view-header">
   <h1>Hold</h1>
-  <a href="{{ route('admin.courses.create') }}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Nyt hold</a>
   @include('partials.header-actions')
 </div>
 
-@include('admin.courses._subnav')
+<div class="subnav-row">
+  @include('admin.courses._subnav')
+  <a href="{{ route('admin.courses.create') }}" class="btn btn-primary subnav-action"><i class="fa-solid fa-plus"></i> Nyt hold</a>
+</div>
 
 @if ($courses->isEmpty())
   <div class="card card-pad" style="text-align:center;color:var(--muted);">
