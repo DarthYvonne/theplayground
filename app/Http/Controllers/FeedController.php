@@ -92,56 +92,58 @@ class FeedController extends Controller
             ->take(self::LIMIT)
             ->values();
 
-        $this->attachRespekt($merged, $user->id);
+        $merged = $this->attachRespekt($merged, $user->id);
 
-        $payload = $merged->map(fn ($i) => collect($i)->except('sort_key')->all());
+        $payload = $merged->map(fn ($i) => collect($i)->except('sort_key')->all())->values();
 
         return response()->json(['items' => $payload]);
     }
 
-    private function attachRespekt(\Illuminate\Support\Collection $items, int $viewerId): void
+    private function attachRespekt(\Illuminate\Support\Collection $items, int $viewerId): \Illuminate\Support\Collection
     {
-        if ($items->isEmpty()) return;
+        if ($items->isEmpty()) return $items;
 
         $keysByType = [];
         foreach ($items as $it) {
             $type = $it['type'];
             $rawId = (int) explode('-', $it['id'], 2)[1];
             $keysByType[$type][] = $rawId;
-            // remember raw id on the item for the matcher below
-            $it['_raw_id'] = $rawId;
         }
 
-        // Aggregate counts per (type, id)
         $counts = [];
         $mine = [];
         foreach ($keysByType as $type => $ids) {
             $ids = array_values(array_unique($ids));
-            Respekt::selectRaw('target_id, COUNT(*) as c')
-                ->where('target_type', $type)
-                ->whereIn('target_id', $ids)
-                ->groupBy('target_id')
-                ->get()
-                ->each(function ($row) use (&$counts, $type) {
-                    $counts[$type][(int) $row->target_id] = (int) $row->c;
-                });
-            Respekt::where('user_id', $viewerId)
-                ->where('target_type', $type)
-                ->whereIn('target_id', $ids)
-                ->pluck('target_id')
-                ->each(function ($id) use (&$mine, $type) {
-                    $mine[$type][(int) $id] = true;
-                });
+            foreach (
+                Respekt::selectRaw('target_id, COUNT(*) as c')
+                    ->where('target_type', $type)
+                    ->whereIn('target_id', $ids)
+                    ->groupBy('target_id')
+                    ->get()
+                as $row
+            ) {
+                $counts[$type][(int) $row->target_id] = (int) $row->c;
+            }
+            foreach (
+                Respekt::where('user_id', $viewerId)
+                    ->where('target_type', $type)
+                    ->whereIn('target_id', $ids)
+                    ->pluck('target_id')
+                as $id
+            ) {
+                $mine[$type][(int) $id] = true;
+            }
         }
 
-        foreach ($items as $idx => $it) {
+        return $items->map(function ($it) use ($counts, $mine) {
             $type = $it['type'];
             $rawId = (int) explode('-', $it['id'], 2)[1];
-            $items[$idx]['respekt_count'] = $counts[$type][$rawId] ?? 0;
-            $items[$idx]['you_respekted'] = isset($mine[$type][$rawId]);
-            $items[$idx]['target_type'] = $type;
-            $items[$idx]['target_id'] = $rawId;
-        }
+            $it['respekt_count'] = $counts[$type][$rawId] ?? 0;
+            $it['you_respekted'] = isset($mine[$type][$rawId]);
+            $it['target_type'] = $type;
+            $it['target_id'] = $rawId;
+            return $it;
+        });
     }
 
     private function accessibleCourseIds($user)
