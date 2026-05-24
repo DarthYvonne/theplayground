@@ -49,7 +49,7 @@
   .nav .ico { width: 22px; display: inline-block; text-align: center; color: var(--muted); }
   .nav a.active .ico { color: var(--accent); }
   .nav .badge-pill { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center; }
-  .nav .count-pill { margin-left: auto; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center; }
+  .nav .count-pill { background: #1c1e21; color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center; margin-left: 6px; }
   .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); padding: 16px 12px 6px; }
   .logout-form { margin-top: 2px; }
   .logout-form button { width: 100%; padding: 10px 12px; background: none; border: none; color: var(--muted); cursor: pointer; font-weight: 600; font-size: 14px; text-align: left; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-family: inherit; }
