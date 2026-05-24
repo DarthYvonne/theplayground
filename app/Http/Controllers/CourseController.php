@@ -9,6 +9,9 @@ class CourseController extends Controller
 {
     public function index(Request $request)
     {
+        if ($request->user()) {
+            return redirect('/dashboard');
+        }
         $courses = Course::with('trainer')
             ->where('is_active', true)
             ->withCount(['enrollments as active_enrollments_count' => fn ($q) => $q->where('status','active')])
