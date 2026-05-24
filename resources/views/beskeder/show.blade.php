@@ -9,6 +9,8 @@
   .besk-header-back { color: var(--muted); font-size: 18px; padding: 4px 8px; border-radius: 6px; margin-right: 4px; }
   .besk-header-back:hover { background: var(--hover); color: var(--text); }
 
+  .thread-head-mobile { display: none; }
+
   .thread-stream { background: #fff; border-radius: 12px 12px 0 0; padding: 16px; display: flex; flex-direction: column; gap: 8px; min-height: 300px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
   .thread-stream .empty { text-align: center; color: var(--muted); padding: 40px 20px; }
 
@@ -32,8 +34,9 @@
 
   @media (max-width: 767px) {
     .besk-thread { margin: -14px -14px 0; max-width: none; }
-    .thread-head { border-radius: 0; }
-    .thread-stream { min-height: calc(100dvh - 56px - 70px - 70px); }
+    .thread-head-mobile { display: flex; gap: 10px; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid #f0f2f5; color: var(--text); }
+    .thread-head-mobile .name { font-weight: 700; font-size: 15px; }
+    .thread-stream { border-radius: 0; min-height: calc(100dvh - 56px - 56px - 70px); }
     .thread-reply { border-radius: 0; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
   }
 </style>
@@ -51,6 +54,10 @@
 </div>
 
 <div class="besk-thread">
+  <a href="{{ route('members.show', $other) }}" class="thread-head-mobile">
+    @include('partials.avatar', ['u' => $other, 'size' => 'sm'])
+    <span class="name">{{ $other->name }}</span>
+  </a>
   <div class="thread-stream" id="threadStream">
     @if ($messages->isEmpty())
       <div class="empty">Ingen beskeder endnu — skriv den første.</div>
@@ -106,6 +113,34 @@
       document.getElementById('replyForm').requestSubmit();
     }
   });
+
+  // Mobile: turn burger into back-to-Beskeder, set topbar title to "Beskeder"
+  var toggle = document.getElementById('sidebarToggle');
+  var titleEl = document.getElementById('topbarTitle');
+  if (toggle && titleEl) {
+    var originalToggleHtml = toggle.innerHTML;
+    var BACK_URL = '{{ route('beskeder.index') }}';
+    function goBack(e) {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      window.location.href = BACK_URL;
+    }
+    var mql = window.matchMedia('(max-width: 767px)');
+    function apply(matches) {
+      if (matches) {
+        toggle.innerHTML = '<i class="fa-solid fa-arrow-left"></i>';
+        toggle.setAttribute('aria-label', 'Tilbage til Beskeder');
+        toggle.addEventListener('click', goBack, true);
+        titleEl.textContent = 'Beskeder';
+      } else {
+        toggle.innerHTML = originalToggleHtml;
+        toggle.setAttribute('aria-label', 'Menu');
+        toggle.removeEventListener('click', goBack, true);
+      }
+    }
+    apply(mql.matches);
+    mql.addEventListener('change', function (e) { apply(e.matches); });
+  }
 })();
 </script>
 @endpush
