@@ -26,11 +26,28 @@
      fill whatever vertical space is left. --}}
 @push('styles')
 <style>
-  .main { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
-  .chat-shell { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  /* Viewport-locked chat layout (desktop & mobile):
+       top    — view-header (pinned)
+       middle — chat-stream (flex-grow, scrollable)
+       above bottom — chat-composer (pinned)
+       bottom — course-tabs (pinned) */
+  .main {
+    display: flex; flex-direction: column;
+    height: 100vh; height: 100dvh;
+    padding-bottom: 0;
+    overflow: hidden;
+  }
+  .main > * { flex-shrink: 0; }
+  .view-header { order: 0; }
+  .chat-shell { order: 1; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .course-tabs { order: 2; margin-bottom: 0; }
+
   .chat-card { flex: 1; height: auto; min-height: 0; }
 
   @media (max-width: 767px) {
+    /* course-tabs is position:fixed on mobile — reserve just its actual
+       height in main's bottom padding so the composer ends right above it. */
+    .main { padding-bottom: calc(52px + env(safe-area-inset-bottom)); }
     .chat-composer { padding-bottom: 8px; }
   }
 </style>
