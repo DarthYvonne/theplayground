@@ -109,7 +109,7 @@
 
   /* Forms */
   label { font-size: 13px; font-weight: 600; color: var(--text); display: block; margin-bottom: 6px; }
-  input[type=text], input[type=email], input[type=password], input[type=number], input[type=tel], input[type=file], select, textarea {
+  input[type=text], input[type=email], input[type=password], input[type=number], input[type=tel], input[type=time], input[type=date], input[type=file], select, textarea {
     width: 100%; font-family: inherit; font-size: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; color: var(--text);
   }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }

@@ -25,8 +25,9 @@ class EnrollmentController extends Controller
             return back()->withErrors(['enroll' => 'Holdet er fuldt booket.']);
         }
 
-        // Paid flow when Stripe is configured.
-        if (StripeConfig::isConfigured() && $course->price_cents > 0) {
+        // Paid flow when Stripe is configured. `free_enrollment` lets admins
+        // bypass Stripe entirely (testing/dev) regardless of the price.
+        if (StripeConfig::isConfigured() && $course->price_cents > 0 && !$course->free_enrollment) {
             if (!$course->stripe_price_id) {
                 return back()->withErrors(['enroll' => 'Holdet mangler en Stripe-pris. Bed admin om at gemme det igen.']);
             }

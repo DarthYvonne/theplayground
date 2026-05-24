@@ -111,15 +111,19 @@ class CourseAdminController extends Controller
             'description' => ['required','string','max:4000'],
             'trainer_id' => ['required','exists:users,id'],
             'image' => ['nullable','image','max:16384'],
-            'price_cents' => ['required','integer','min:0','max:10000000'],
+            'price_kr' => ['required','numeric','min:0','max:100000'],
             'max_participants' => ['required','integer','min:1','max:1000'],
             'is_active' => ['nullable','boolean'],
+            'free_enrollment' => ['nullable','boolean'],
             'start_time' => ['nullable','date_format:H:i'],
             'end_time' => ['nullable','date_format:H:i'],
             'weekdays' => ['nullable','array'],
             'weekdays.*' => ['in:mon,tue,wed,thu,fri,sat,sun'],
         ]);
+        $data['price_cents'] = (int) round(((float) $data['price_kr']) * 100);
+        unset($data['price_kr']);
         $data['is_active'] = $request->boolean('is_active');
+        $data['free_enrollment'] = $request->boolean('free_enrollment');
         $data['weekdays'] = !empty($data['weekdays']) ? implode(',', $data['weekdays']) : null;
         return $data;
     }

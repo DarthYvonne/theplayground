@@ -28,11 +28,15 @@
         @endforeach
       </select>
     </div>
+    @php
+      $priceKr = ($course->price_cents ?? 0) / 100;
+      $priceKrDisplay = $priceKr == (int) $priceKr ? (string) (int) $priceKr : rtrim(rtrim(number_format($priceKr, 2, '.', ''), '0'), '.');
+    @endphp
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" class="grid-2">
       <div class="form-row">
-        <label for="price_cents">Pris (øre/måned)</label>
-        <input id="price_cents" type="number" name="price_cents" min="0" value="{{ old('price_cents', $course->price_cents ?? 0) }}" required>
-        <div class="hint">F.eks. 49900 = 499 kr/md.</div>
+        <label for="price_kr">Pris (kr/måned)</label>
+        <input id="price_kr" type="number" name="price_kr" min="0" step="0.01" value="{{ old('price_kr', $priceKrDisplay) }}" required>
+        <div class="hint">Hele kroner pr. måned. Brug 0 hvis holdet er gratis.</div>
       </div>
       <div class="form-row">
         <label for="max_participants">Maks. deltagere</label>
@@ -75,6 +79,13 @@
         <input type="checkbox" name="is_active" value="1" {{ old('is_active', $course->is_active) ? 'checked' : '' }}>
         <span class="knob"></span>
         <span>Aktiv (vises på forsiden)</span>
+      </label>
+    </div>
+    <div class="form-row">
+      <label class="switch">
+        <input type="checkbox" name="free_enrollment" value="1" {{ old('free_enrollment', $course->free_enrollment) ? 'checked' : '' }}>
+        <span class="knob"></span>
+        <span>Gratis tilmelding (spring Stripe over &mdash; mest til test)</span>
       </label>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">

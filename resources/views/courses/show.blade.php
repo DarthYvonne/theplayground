@@ -62,6 +62,9 @@
 
       <div class="info-ribbon">
         <span class="item"><strong>{{ $course->price() }}</strong></span>
+        @if ($course->free_enrollment)
+          <span class="item" style="color:#166534;font-weight:700;"><i class="fa-solid fa-gift"></i> Gratis tilmelding</span>
+        @endif
         @if ($course->scheduleLabel())
           <span class="item"><i class="fa-regular fa-clock"></i>{{ $course->scheduleLabel() }}</span>
         @endif

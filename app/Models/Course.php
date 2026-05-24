@@ -14,7 +14,7 @@ class Course extends Model
 
     protected $fillable = [
         'title','description','trainer_id','image_path','price_cents',
-        'max_participants','is_active','stripe_product_id','stripe_price_id',
+        'max_participants','is_active','free_enrollment','stripe_product_id','stripe_price_id',
         'start_time','end_time','weekdays',
     ];
 
@@ -22,6 +22,7 @@ class Course extends Model
     {
         return [
             'is_active' => 'boolean',
+            'free_enrollment' => 'boolean',
             'price_cents' => 'integer',
             'max_participants' => 'integer',
         ];
