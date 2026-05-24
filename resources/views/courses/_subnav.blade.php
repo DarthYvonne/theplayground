@@ -9,14 +9,19 @@
 </style>
 @endpush
 
+@php
+  $mineCount = auth()->check() ? auth()->user()->activeEnrollments()->count() : 0;
+  $allCount = \App\Models\Course::where('is_active', true)->count();
+@endphp
+
 <nav class="home-tabs" aria-label="Hold">
   @auth
     <a href="{{ route('catalog.mine') }}" class="{{ request()->routeIs('catalog.mine') ? 'active' : '' }}">
-      <i class="fa-solid fa-user-check"></i> Dine hold
+      <i class="fa-solid fa-user-check"></i> Dine hold ({{ $mineCount }})
     </a>
   @endauth
   <a href="{{ route('catalog') }}" class="{{ request()->routeIs('catalog') ? 'active' : '' }}">
-    <i class="fa-solid fa-dumbbell"></i> Alle hold
+    <i class="fa-solid fa-dumbbell"></i> Alle hold ({{ $allCount }})
   </a>
   <a href="{{ route('home.calendar') }}" class="{{ request()->routeIs('home.calendar') ? 'active' : '' }}">
     <i class="fa-regular fa-calendar"></i> Kalender

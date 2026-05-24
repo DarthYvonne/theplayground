@@ -21,29 +21,16 @@
 ])
 
 {{-- This @push must come AFTER the @include above so its rules win
-     over _room.blade.php's pushed styles. The bottom tab bar takes a
-     chunk of the viewport on mobile and pushes the desktop tab strip
-     further down, so the default height calc is too tall on both. --}}
+     over _room.blade.php's pushed styles. Instead of subtracting magic
+     numbers, we make .main a flex-column so the chat-card grows to
+     fill whatever vertical space is left. --}}
 @push('styles')
 <style>
-  /* Desktop: extra room for the inline tab strip above the chat card. */
-  .chat-card {
-    height: calc(100vh - 220px);
-    height: calc(100dvh - 220px);
-    min-height: 360px;
-  }
+  .main { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; }
+  .chat-shell { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .chat-card { flex: 1; height: auto; min-height: 0; }
 
-  /* Mobile: chat-card fills the space between view-header and the fixed
-     bottom tab bar. Chrome budget: main padding-top (70) + view-header h1 (~25)
-     + view-header margin-bottom (18) - chat-card negative top margin (14)
-     + bottom tab bar content (~51) = ~150. Tab bar itself absorbs
-     env(safe-area-inset-bottom), so we add that as well. */
   @media (max-width: 767px) {
-    .chat-card {
-      height: calc(100vh - 150px - env(safe-area-inset-bottom));
-      height: calc(100dvh - 150px - env(safe-area-inset-bottom));
-      min-height: 0;
-    }
     .chat-composer { padding-bottom: 8px; }
   }
 </style>
