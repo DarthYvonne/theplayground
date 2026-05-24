@@ -50,7 +50,7 @@
 @endpush
 
 <div class="view-header">
-  <h1>Beskeder</h1>
+  <h1><i class="fa-regular fa-envelope" style="color:var(--accent);margin-right:8px;"></i>Beskeder</h1>
   @include('partials.header-actions')
 </div>
 
@@ -60,7 +60,7 @@
     <button type="button" class="btn btn-primary" id="composeOpen"><i class="fa-regular fa-pen-to-square"></i> Ny besked</button>
     <form method="POST" action="{{ route('beskeder.settings') }}" class="email-toggle">
       @csrf
-      <span>Send mig en mail når nogen skriver til mig</span>
+      <span>Notificer via email</span>
       <label class="switch">
         <input type="checkbox" name="email_on_message" value="1" onchange="this.form.submit()" {{ auth()->user()->email_on_message ? 'checked' : '' }}>
         <span class="knob"></span>

@@ -2,7 +2,7 @@
 @section('content')
 
 <div class="view-header">
-  <h1>Hold</h1>
+  <h1><i class="fa-solid fa-dumbbell" style="color:var(--accent);margin-right:8px;"></i>Hold</h1>
   <a href="{{ route('admin.courses.create') }}" class="btn btn-primary"><i class="fa-solid fa-plus"></i> Nyt hold</a>
 </div>
 

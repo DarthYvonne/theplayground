@@ -19,6 +19,8 @@
   .dmsg .bubble { background: #fff; padding: 9px 14px; border-radius: 16px; line-height: 1.4; word-break: break-word; box-shadow: 0 1px 1px rgba(0,0,0,0.05); white-space: pre-wrap; }
   .dmsg.mine .bubble { background: var(--accent); color: #fff; }
   .dmsg .time { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .dmsg .time .seen { color: var(--accent); margin-left: 4px; }
+  .dmsg .time .seen i { margin-right: 3px; }
   .dmsg .via { font-size: 11px; color: var(--muted); margin-top: 2px; font-style: italic; }
   .dmsg.mine .via { color: var(--muted); }
 
@@ -76,6 +78,11 @@
               {{ $m->created_at->format('H:i') }}
               @if ($m->viaCourse)
                 · <i class="fa-solid fa-bullhorn" title="Sendt via Hold-besked"></i> {{ $m->viaCourse->title }}
+              @endif
+              @if ($m->sender_id === auth()->id() && $m->read_at)
+                <span class="seen" title="Set {{ $m->read_at->translatedFormat('j. F H:i') }}">
+                  <i class="fa-solid fa-check-double"></i>Set {{ $m->read_at->isToday() ? $m->read_at->format('H:i') : $m->read_at->translatedFormat('j. M H:i') }}
+                </span>
               @endif
             </div>
           </div>
