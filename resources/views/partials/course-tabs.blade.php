@@ -60,16 +60,16 @@
 
 <nav class="course-tabs" aria-label="Hold-faner">
   <a href="{{ route('courses.show', $course) }}" class="{{ request()->routeIs('courses.show') ? 'active' : '' }}">
-    <i class="fa-regular fa-circle-info"></i><span>Om</span>
+    <i class="fa-solid fa-circle-info"></i><span>Om</span>
   </a>
   <a href="{{ route('chat.course', $course) }}" class="{{ request()->routeIs('chat.course') ? 'active' : '' }}">
-    <i class="fa-regular fa-comments"></i><span>Chat</span>
+    <i class="fa-solid fa-comment-dots"></i><span>Chat</span>
     @if ($unreadCount > 0 && !request()->routeIs('chat.course'))
       <span class="tab-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
     @endif
   </a>
   <a href="{{ route('courses.members', $course) }}" class="{{ request()->routeIs('courses.members') ? 'active' : '' }}">
-    <i class="fa-regular fa-user-group"></i><span>Medlemmer</span>
+    <i class="fa-solid fa-users"></i><span>Medlemmer</span>
   </a>
 </nav>
 @endif
