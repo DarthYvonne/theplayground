@@ -20,8 +20,14 @@ use App\Http\Controllers\Trainer\BroadcastController;
 use App\Http\Controllers\Trainer\TrainerController;
 use Illuminate\Support\Facades\Route;
 
+// Root: send logged-in users to their feed; guests see the public catalog
+Route::get('/', function (\Illuminate\Http\Request $request) {
+    if ($request->user()) return redirect('/dashboard');
+    return app(CourseController::class)->index($request);
+})->name('home');
+
 // Public catalog
-Route::get('/', [CourseController::class, 'index'])->name('home');
+Route::get('/hold', [CourseController::class, 'index'])->name('catalog');
 Route::get('/calendar', [CourseController::class, 'calendar'])->name('home.calendar');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 
