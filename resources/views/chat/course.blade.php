@@ -38,9 +38,11 @@
     overflow: hidden;
   }
   .main > * { flex-shrink: 0; }
+  /* Desktop: view-header → course-tabs → chat-shell (DOM order).
+     Mobile: course-tabs is position:fixed at bottom, so order doesn't apply. */
   .view-header { order: 0; }
+  .course-tabs { order: 0; }
   .chat-shell { order: 1; flex: 1; min-height: 0; display: flex; flex-direction: column; }
-  .course-tabs { order: 2; margin-bottom: 0; }
 
   .chat-card { flex: 1; height: auto; min-height: 0; }
 
