@@ -8,7 +8,7 @@
 
 @include('admin.settings._subnav')
 
-<div style="max-width: 760px;">
+<div>
   <div class="card">
     <div style="padding: 16px 18px; border-bottom: 1px solid #f0f2f5; display:flex; gap:14px; align-items:center;">
       <div style="width:48px;height:48px;border-radius:12px;background:#635bff;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;">

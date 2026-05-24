@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-  .feed-shell { max-width: 620px; }
+  .feed-shell { }
 
   /* Composer */
   .composer { margin-bottom: 18px; }

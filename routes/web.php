@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\InboxController;
+use App\Http\Controllers\MembersController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PreviewRoleController;
 use App\Http\Controllers\ProfileController;
@@ -42,6 +43,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/feed', [FeedController::class, 'list']);
 
     Route::get('/indbakke', [InboxController::class, 'index'])->name('inbox');
+
+    Route::get('/medlemmer', [MembersController::class, 'index'])->name('members.index');
+    Route::get('/medlemmer/{user}', [MembersController::class, 'show'])->name('members.show');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');

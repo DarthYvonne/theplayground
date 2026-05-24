@@ -8,7 +8,7 @@
 
 @include('profile._subnav')
 
-<div style="max-width: 620px;">
+<div>
   <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="card card-pad">
     @csrf
     <div style="display:flex;gap:16px;align-items:center;margin-bottom:18px;">

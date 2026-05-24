@@ -1,6 +1,6 @@
 @push('styles')
 <style>
-  .chat-shell { max-width: 760px; }
+  .chat-shell { }
   .chat-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); display: flex; flex-direction: column; height: calc(100vh - 180px); height: calc(100dvh - 180px); min-height: 420px; overflow: hidden; }
   .chat-card .head { padding: 14px 18px; border-bottom: 1px solid #f0f2f5; display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
   .chat-card .head h2 { font-size: 16px; font-weight: 700; }

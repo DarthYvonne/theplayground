@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-  .billing-shell { max-width: 620px; }
+  .billing-shell { }
   .billing-card { padding: 20px 22px; }
   .billing-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
   .billing-card .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }

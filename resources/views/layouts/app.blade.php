@@ -36,6 +36,8 @@
   .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1001; }
   .sidebar-backdrop.open { display: block; }
   .main { padding: 22px 26px 40px; min-width: 0; max-width: 100%; overflow-x: hidden; }
+  /* Uniform content column — wide enough for 2 hold-tiles per row */
+  .main > * { width: 100%; max-width: 720px; margin-left: auto; margin-right: auto; }
 
   /* Sidebar */
   .logo { padding: 6px 8px 18px; }
@@ -202,6 +204,7 @@
         <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Start</a>
         <a href="{{ url('/') }}" class="{{ request()->is('/') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
         <a href="{{ url('/indbakke') }}" class="{{ request()->is('indbakke*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Indbakke</a>
+        <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-users"></i></span> Medlemmer</a>
 
         @php $myEnrolled = auth()->user()->activeEnrollments()->with('course')->get()->pluck('course')->filter(); @endphp
         @if ($myEnrolled->count())
