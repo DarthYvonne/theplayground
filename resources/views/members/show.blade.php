@@ -43,12 +43,14 @@
     <div class="info">
       <div class="name">{{ $member->name }} @if ($isSelf)<span style="color:var(--accent);font-size:14px;font-weight:600;margin-left:6px;">(dig)</span>@endif</div>
       <div class="role">
-        @switch($member->role)
-          @case('owner') Ejer på The Playground @break
-          @case('trainer') Træner @break
-          @case('assistant') Assistent @break
-          @default Medlem
-        @endswitch
+        @php
+          $roleLabel = match ($member->role) {
+            'trainer' => 'Træner',
+            'assistant' => 'Assistent',
+            default => 'Medlem',
+          };
+        @endphp
+        {{ $roleLabel }}
       </div>
     </div>
     <div class="actions">

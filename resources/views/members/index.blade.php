@@ -38,7 +38,7 @@
 @endpush
 
 <div class="view-header">
-  <h1><i class="fa-solid fa-users" style="color:var(--accent);margin-right:8px;"></i>Medlemmer</h1>
+  <h1><i class="fa-solid fa-users" style="color:var(--text);margin-right:8px;"></i>Medlemmer</h1>
   @include('partials.header-actions')
 </div>
 
@@ -51,7 +51,7 @@
 <div class="members-grid" id="membersGrid">
   @foreach ($users as $u)
     @php
-      $roleLabel = ['owner' => 'Ejer', 'trainer' => 'Træner', 'assistant' => 'Assistent'][$u->role] ?? null;
+      $roleLabel = ['trainer' => 'Træner', 'assistant' => 'Assistent'][$u->role] ?? null;
       if (!$roleLabel) {
         if ($u->active_enrollments_count > 0) {
           $roleLabel = $u->active_enrollments_count . ' ' . ($u->active_enrollments_count === 1 ? 'hold' : 'hold');

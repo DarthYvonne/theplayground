@@ -15,7 +15,7 @@
       @include('partials.avatar', ['u' => $user, 'size' => 'xl'])
       <div>
         <div style="font-weight:700;font-size:16px;">{{ $user->name }}</div>
-        <div style="color:var(--muted);font-size:13px;">{{ ['owner' => 'Ejer', 'trainer' => 'Træner', 'user' => 'Bruger'][$user->role] ?? $user->role }}</div>
+        <div style="color:var(--muted);font-size:13px;">{{ ['trainer' => 'Træner'][$user->role] ?? 'Medlem' }}</div>
       </div>
     </div>
 

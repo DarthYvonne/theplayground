@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AppNotification;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\User;
@@ -74,15 +73,6 @@ class StripeWebhookController extends Controller
         $enrollment->stripe_subscription_id = $subId;
         $enrollment->enrolled_at = $enrollment->enrolled_at ?: now();
         $enrollment->save();
-
-        AppNotification::create([
-            'user_id' => $course->trainer_id,
-            'type' => 'enrollment',
-            'title' => ($enrollment->user->name ?? 'En bruger') . ' tilmeldte sig ' . $course->title,
-            'link' => route('courses.show', $course),
-            'course_id' => $course->id,
-            'actor_id' => $userId,
-        ]);
     }
 
     private function syncSubscription(array $sub): void

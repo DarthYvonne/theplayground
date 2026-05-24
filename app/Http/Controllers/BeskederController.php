@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Mail\NewMessageMail;
-use App\Models\AppNotification;
 use App\Models\Course;
 use App\Models\DirectMessage;
 use App\Models\User;
@@ -190,20 +189,6 @@ class BeskederController extends Controller
 
     private function afterSend(DirectMessage $msg, User $sender, User $recipient, ?Course $course): void
     {
-        $title = $course
-            ? 'Besked fra ' . $sender->name . ' (' . $course->title . ')'
-            : 'Besked fra ' . $sender->name;
-
-        AppNotification::create([
-            'user_id' => $recipient->id,
-            'type' => 'message',
-            'title' => $title,
-            'body' => mb_substr($msg->body, 0, 200),
-            'link' => route('beskeder.show', $sender),
-            'course_id' => $course?->id,
-            'actor_id' => $sender->id,
-        ]);
-
         if ($recipient->email_on_message && $recipient->email) {
             try {
                 Mail::to($recipient->email)->queue(new NewMessageMail($msg, $sender, $recipient, $course));
@@ -242,7 +227,6 @@ class BeskederController extends Controller
     private function roleLabel(string $role): string
     {
         return match ($role) {
-            'owner' => 'Ejer',
             'trainer' => 'Træner',
             'assistant' => 'Assistent',
             default => 'Medlem',

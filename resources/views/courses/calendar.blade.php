@@ -37,7 +37,7 @@
 @endpush
 
 <div class="view-header">
-  <h1><i class="fa-solid fa-dumbbell" style="color:var(--accent);margin-right:8px;"></i>Hold</h1>
+  <h1><i class="fa-solid fa-dumbbell" style="color:var(--text);margin-right:8px;"></i>Hold</h1>
   @include('partials.header-actions')
 </div>
 

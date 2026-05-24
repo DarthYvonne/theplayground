@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppNotification;
+use App\Models\Enrollment;
+use App\Models\Message;
 use App\Models\Respekt;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -31,6 +34,7 @@ class RespektController extends Controller
                 'target_id' => $data['target_id'],
             ]);
             $respekted = true;
+            $this->notifyAuthor($request->user(), $data['target_type'], (int) $data['target_id']);
         }
 
         $count = Respekt::where('target_type', $data['target_type'])
@@ -40,6 +44,36 @@ class RespektController extends Controller
         return response()->json([
             'respekted' => $respekted,
             'count' => $count,
+        ]);
+    }
+
+    private function notifyAuthor(User $actor, string $type, int $targetId): void
+    {
+        if ($type === 'enrollment') {
+            $enrollment = Enrollment::with('course')->find($targetId);
+            if (!$enrollment) return;
+            $authorId = $enrollment->user_id;
+            $link = $enrollment->course ? route('courses.show', $enrollment->course) : route('dashboard');
+            $courseId = $enrollment->course_id;
+        } else {
+            $message = Message::find($targetId);
+            if (!$message) return;
+            $authorId = $message->user_id;
+            $courseId = $message->course_id;
+            $link = $type === 'course_message' && $courseId
+                ? route('chat.course', $courseId)
+                : route('chat.platform');
+        }
+
+        if ($authorId === $actor->id) return;
+
+        AppNotification::create([
+            'user_id' => $authorId,
+            'type' => 'respekt',
+            'title' => $actor->name . ' gav dig respekt',
+            'link' => $link,
+            'course_id' => $courseId,
+            'actor_id' => $actor->id,
         ]);
     }
 

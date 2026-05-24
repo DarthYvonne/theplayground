@@ -46,7 +46,7 @@
       <div class="meta">
         <div class="name">
           {{ $course->trainer->name }}
-          <span class="role-pill">{{ $course->trainer->role === 'owner' ? 'Ejer' : 'Træner' }}</span>
+          <span class="role-pill">Træner</span>
         </div>
         @if ($course->trainer->about)
           <div class="sub">{{ \Illuminate\Support\Str::limit($course->trainer->about, 80) }}</div>

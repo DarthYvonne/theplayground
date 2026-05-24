@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AppNotification;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Support\StripeConfig;
@@ -60,15 +59,6 @@ class EnrollmentController extends Controller
                 'enrolled_at' => now(),
             ]);
         });
-
-        AppNotification::create([
-            'user_id' => $course->trainer_id,
-            'type' => 'enrollment',
-            'title' => $user->name . ' tilmeldte sig ' . $course->title,
-            'link' => route('courses.show', $course),
-            'course_id' => $course->id,
-            'actor_id' => $user->id,
-        ]);
 
         return redirect()->route('courses.show', $course)->with('status', 'Du er tilmeldt. Vi ses!');
     }

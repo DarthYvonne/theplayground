@@ -50,7 +50,7 @@
 @endpush
 
 <div class="view-header">
-  <h1><i class="fa-regular fa-envelope" style="color:var(--accent);margin-right:8px;"></i>Beskeder</h1>
+  <h1><i class="fa-regular fa-envelope" style="color:var(--text);margin-right:8px;"></i>Beskeder</h1>
   @include('partials.header-actions')
 </div>
 

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AppNotification;
 use App\Models\Course;
+use App\Models\Enrollment;
 use App\Models\Message;
 use App\Models\MessageRead;
 use Illuminate\Http\JsonResponse;
@@ -54,13 +56,47 @@ class ChatController extends Controller
     {
         $this->authorizeCourse($request, $course);
         $data = $request->validate(['body' => ['required','string','max:2000']]);
+        $sender = $request->user();
         $m = Message::create([
             'channel_type' => 'course',
             'course_id' => $course->id,
-            'user_id' => $request->user()->id,
+            'user_id' => $sender->id,
             'body' => $data['body'],
         ]);
-        return response()->json(['message' => $this->serializeOne($m->load('user'), $request->user()->id)]);
+        $this->notifyHoldMembers($course, $sender, $m);
+        return response()->json(['message' => $this->serializeOne($m->load('user'), $sender->id)]);
+    }
+
+    private function notifyHoldMembers(Course $course, $sender, Message $message): void
+    {
+        $recipientIds = Enrollment::where('course_id', $course->id)
+            ->where('status', 'active')
+            ->pluck('user_id')
+            ->push($course->trainer_id)
+            ->unique()
+            ->reject(fn ($id) => $id === $sender->id)
+            ->values();
+
+        if ($recipientIds->isEmpty()) return;
+
+        $title = $sender->name . ' skrev i ' . $course->title;
+        $body = mb_substr($message->body, 0, 200);
+        $link = route('chat.course', $course);
+        $now = now();
+
+        $rows = $recipientIds->map(fn ($uid) => [
+            'user_id' => $uid,
+            'type' => 'hold_message',
+            'title' => $title,
+            'body' => $body,
+            'link' => $link,
+            'course_id' => $course->id,
+            'actor_id' => $sender->id,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ])->all();
+
+        AppNotification::insert($rows);
     }
 
     private function authorizeCourse(Request $request, Course $course): void

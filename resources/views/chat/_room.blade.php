@@ -6,7 +6,7 @@
   .chat-card .head h2 { font-size: 16px; font-weight: 700; }
   .chat-card .head .sub { color: var(--muted); font-size: 12px; }
   .chat-stream { flex: 1; overflow-y: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 10px; background: #fafbfc; }
-  .msg { display: flex; gap: 8px; align-items: flex-end; max-width: 80%; }
+  .msg { display: flex; gap: 8px; align-items: flex-start; max-width: 80%; }
   .msg.mine { align-self: flex-end; flex-direction: row-reverse; }
   .msg .bubble { background: var(--bubble); padding: 9px 14px; border-radius: 16px; line-height: 1.4; word-break: break-word; }
   .msg .bubble .name { font-weight: 600; font-size: 12px; margin-bottom: 2px; color: var(--muted); }
@@ -75,7 +75,6 @@
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   function badgeFor(role) {
-    if (role === 'owner') return '<span class="role-badge">Ejer</span>';
     if (role === 'trainer') return '<span class="role-badge">Træner</span>';
     return '';
   }
