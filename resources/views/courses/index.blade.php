@@ -12,11 +12,8 @@
   .empty-feed { background: #fff; border-radius: 12px; padding: 60px 20px; text-align: center; color: var(--muted); }
 
   /* User-facing course tile overrides */
-  .course-tile { position: relative; transition: transform 0.1s, box-shadow 0.1s; }
-  .course-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
-  .course-tile .stretched-link { position: absolute; inset: 0; z-index: 1; }
-  .course-tile .card-pad { position: relative; z-index: 0; }
-  .course-tile .course-tile-actions { position: relative; z-index: 2; }
+  a.course-tile { color: inherit; text-decoration: none; transition: transform 0.1s, box-shadow 0.1s; }
+  a.course-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
   .course-tile .img-wrap { position: relative; }
   .course-tile-title { font-size: 18px; line-height: 1.25; }
   .course-tile-sched { color: var(--muted); font-size: 13px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
@@ -83,8 +80,7 @@
         $full = $course->active_enrollments_count >= $course->max_participants;
         $enrolled = auth()->check() && auth()->user()->enrolledIn($course);
       @endphp
-      <div class="card course-tile" data-search="{{ strtolower($course->title . ' ' . $course->trainer->name . ' ' . ($course->scheduleLabel() ?? '')) }}">
-        <a href="{{ route('courses.show', $course) }}" class="stretched-link" aria-label="{{ $course->title }}"></a>
+      <a href="{{ route('courses.show', $course) }}" class="card course-tile" data-search="{{ strtolower($course->title . ' ' . $course->trainer->name . ' ' . ($course->scheduleLabel() ?? '')) }}" aria-label="{{ $course->title }}">
         <div class="img-wrap">
           @if ($course->image_path)
             <img src="{{ $course->imageUrl() }}" alt="" class="course-tile-img">
@@ -105,24 +101,8 @@
             {{ $course->active_enrollments_count }}/{{ $course->max_participants }} tilmeldt
             @if ($full) · <span style="color:#b91c1c;font-weight:600;">Fuldt</span>@endif
           </div>
-          <div class="course-tile-actions">
-            @auth
-              @if ($enrolled)
-                <a href="{{ route('chat.course', $course) }}" class="btn btn-primary btn-sm"><i class="fa-regular fa-comments"></i> Chat</a>
-              @elseif ($full)
-                <button class="btn btn-secondary btn-sm" disabled><i class="fa-solid fa-lock"></i> Fuldt</button>
-              @else
-                <form method="POST" action="{{ route('enroll', $course) }}" style="display:inline-flex;">
-                  @csrf
-                  <button type="submit" class="btn btn-primary btn-sm">Tilmeld</button>
-                </form>
-              @endif
-            @else
-              <a href="{{ route('login') }}" class="btn btn-primary btn-sm">Tilmeld</a>
-            @endauth
-          </div>
         </div>
-      </div>
+      </a>
     @endforeach
   </div>
   <div class="hold-no-results" id="holdNoResults">Ingen hold matcher din søgning.</div>

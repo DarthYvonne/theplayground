@@ -8,6 +8,14 @@
 
 @include('admin.courses._subnav')
 
+@push('styles')
+<style>
+  a.course-tile { color: inherit; text-decoration: none; transition: transform 0.1s, box-shadow 0.1s; }
+  a.course-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+  .course-tile-title { font-size: 18px; line-height: 1.25; }
+</style>
+@endpush
+
 @if ($courses->isEmpty())
   <div class="card card-pad" style="text-align:center;color:var(--muted);">
     Ingen hold endnu. <a href="{{ route('admin.courses.create') }}" style="color:var(--accent);font-weight:600;">Opret det første →</a>
@@ -15,7 +23,7 @@
 @else
   <div class="course-grid">
     @foreach ($courses as $c)
-      <div class="card course-tile">
+      <a href="{{ route('courses.show', $c) }}" class="card course-tile" aria-label="{{ $c->title }}">
         @if ($c->image_path)
           <img src="{{ $c->imageUrl() }}" alt="" class="course-tile-img">
         @else
@@ -29,12 +37,8 @@
             @if ($c->is_active)<span style="color:#166534;font-weight:600;">Aktiv</span>@else<span>Kladde</span>@endif
           </div>
           <div class="course-tile-meta" style="margin-top:4px;"><i class="fa-regular fa-user" style="margin-right:4px;"></i>{{ $c->trainer->name }}</div>
-          <div class="course-tile-actions">
-            <a href="{{ route('admin.courses.edit', $c) }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-pen"></i> Rediger</a>
-            <a href="{{ route('trainer.participants', $c) }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-users"></i> Deltagere</a>
-          </div>
         </div>
-      </div>
+      </a>
     @endforeach
   </div>
 @endif

@@ -3,22 +3,14 @@
 
 @push('styles')
 <style>
-  .mine-main { }
-  .course-mini { display: flex; gap: 14px; padding: 14px 18px; border-top: 1px solid #f0f2f5; }
-  .course-mini:first-child { border-top: none; }
-  .course-mini img, .course-mini .ph { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
-  .course-mini .ph { background: linear-gradient(135deg, var(--accent-soft), #f5f7fb); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 26px; }
-  .course-mini .meta { flex: 1; min-width: 0; }
-  .course-mini .t { font-weight: 700; }
-  .course-mini .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
-  .course-mini .actions { display: flex; flex-direction: column; gap: 6px; }
-  .empty { padding: 24px; text-align: center; color: var(--muted); }
-  .empty a { color: var(--accent); font-weight: 600; }
-  .section-h { padding: 14px 18px 8px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
-  @media (max-width: 767px) {
-    .course-mini .actions { flex-direction: row; }
-    .course-mini { flex-wrap: wrap; }
-  }
+  a.course-tile { color: inherit; text-decoration: none; transition: transform 0.1s, box-shadow 0.1s; }
+  a.course-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+  .course-tile .img-wrap { position: relative; }
+  .course-tile-title { font-size: 18px; line-height: 1.25; }
+  .course-tile-sched { color: var(--muted); font-size: 13px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+  .course-tile-trainer { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .empty-card { padding: 28px 20px; text-align: center; color: var(--muted); }
+  .empty-card a { color: var(--accent); font-weight: 600; }
 </style>
 @endpush
 
@@ -29,28 +21,31 @@
 
 @include('courses._subnav')
 
-<div class="mine-main">
-  @if ($enrolledCourses->isNotEmpty())
-    <div class="card">
-      @foreach ($enrolledCourses as $c)
-        <div class="course-mini">
-          @if ($c->image_path)<img src="{{ $c->imageUrl() }}" alt="">@else<div class="ph"><i class="fa-solid fa-dumbbell"></i></div>@endif
-          <div class="meta">
-            <a href="{{ route('courses.show', $c) }}" class="t">{{ $c->title }}</a>
-            <div class="sub">{{ $c->trainer->name }} · {{ $c->price() }}</div>
-            @if ($c->scheduleLabel())<div class="sub"><i class="fa-regular fa-clock"></i> {{ $c->scheduleLabel() }}</div>@endif
-          </div>
-          <div class="actions">
-            <a href="{{ route('courses.show', $c) }}" class="btn btn-secondary btn-sm">Detaljer</a>
-          </div>
+@if ($enrolledCourses->isEmpty())
+  <div class="card">
+    <div class="empty-card">Du er ikke tilmeldt noget endnu. <a href="{{ route('catalog') }}">Se alle hold →</a></div>
+  </div>
+@else
+  <div class="course-grid">
+    @foreach ($enrolledCourses as $course)
+      <a href="{{ route('courses.show', $course) }}" class="card course-tile" aria-label="{{ $course->title }}">
+        <div class="img-wrap">
+          @if ($course->image_path)
+            <img src="{{ $course->imageUrl() }}" alt="" class="course-tile-img">
+          @else
+            <div class="course-tile-img course-tile-img-ph"><i class="fa-solid fa-dumbbell"></i></div>
+          @endif
         </div>
-      @endforeach
-    </div>
-  @else
-    <div class="card">
-      <div class="empty">Du er ikke tilmeldt noget endnu. <a href="{{ route('catalog') }}">Se alle hold →</a></div>
-    </div>
-  @endif
-</div>
+        <div class="card-pad">
+          <div class="course-tile-title">{{ $course->title }}</div>
+          @if ($course->scheduleLabel())
+            <div class="course-tile-sched"><i class="fa-regular fa-clock"></i>{{ $course->scheduleLabel() }}</div>
+          @endif
+          <div class="course-tile-trainer"><i class="fa-regular fa-user" style="margin-right:4px;"></i>{{ $course->trainer->name }}</div>
+        </div>
+      </a>
+    @endforeach
+  </div>
+@endif
 
 @endsection
