@@ -6,6 +6,8 @@
   @include('partials.header-actions')
 </div>
 
+@include('profile._subnav')
+
 <div style="max-width: 620px;">
   <form method="POST" action="{{ route('profile.update') }}" enctype="multipart/form-data" class="card card-pad">
     @csrf

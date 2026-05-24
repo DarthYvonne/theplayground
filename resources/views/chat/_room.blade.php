@@ -1,7 +1,7 @@
 @push('styles')
 <style>
   .chat-shell { max-width: 760px; }
-  .chat-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); display: flex; flex-direction: column; height: calc(100vh - 180px); min-height: 420px; overflow: hidden; }
+  .chat-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); display: flex; flex-direction: column; height: calc(100vh - 180px); height: calc(100dvh - 180px); min-height: 420px; overflow: hidden; }
   .chat-card .head { padding: 14px 18px; border-bottom: 1px solid #f0f2f5; display: flex; gap: 12px; align-items: center; flex-shrink: 0; }
   .chat-card .head h2 { font-size: 16px; font-weight: 700; }
   .chat-card .head .sub { color: var(--muted); font-size: 12px; }
@@ -21,7 +21,17 @@
   .chat-composer button:hover { background: var(--accent-hover); }
   .chat-empty { text-align: center; color: var(--muted); padding: 40px 20px; }
   @media (max-width: 767px) {
-    .chat-card { height: calc(100vh - 130px); border-radius: 0; box-shadow: none; margin: -14px -14px 0; }
+    .chat-card {
+      height: calc(100vh - 56px);
+      height: calc(100dvh - 56px);
+      min-height: 0;
+      border-radius: 0;
+      box-shadow: none;
+      margin: -14px -14px 0;
+    }
+    .chat-card .head { padding: 12px 14px; }
+    .chat-stream { padding: 12px 14px; }
+    .chat-composer { padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
   }
 </style>
 @endpush

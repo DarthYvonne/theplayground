@@ -48,9 +48,16 @@
   .nav a.active .ico { color: var(--accent); }
   .nav .badge-pill { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center; }
   .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); padding: 16px 12px 6px; }
-  .logout-form { margin-top: 8px; border-top: 1px solid #f0f2f5; padding-top: 8px; }
+  .logout-form { margin-top: 2px; }
   .logout-form button { width: 100%; padding: 10px 12px; background: none; border: none; color: var(--muted); cursor: pointer; font-weight: 600; font-size: 14px; text-align: left; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-family: inherit; }
   .logout-form button:hover { background: var(--hover); color: var(--danger); }
+
+  /* Sidebar profile (avatar + first name above Log ud) */
+  .sidebar-profile-wrap { margin-top: 8px; border-top: 1px solid #f0f2f5; padding-top: 8px; }
+  .sidebar-profile { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--text); font-weight: 600; }
+  .sidebar-profile:hover { background: var(--hover); }
+  .sidebar-profile.active { background: var(--accent-soft); color: var(--accent); }
+  .sidebar-profile .av { flex-shrink: 0; }
 
   /* Preview role switcher (owner only) */
   .preview-role-form { margin-top: 8px; border-top: 1px solid #f0f2f5; padding: 10px 12px 4px; }
@@ -195,7 +202,6 @@
         <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Oversigt</a>
         <a href="{{ url('/') }}" class="{{ request()->is('/') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
         <a href="{{ url('/chat') }}" class="{{ request()->is('chat') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-hashtag"></i></span> Fælles chat</a>
-        <a href="{{ url('/profile') }}" class="{{ request()->is('profile') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-user"></i></span> Min profil</a>
 
         @php $myEnrolled = auth()->user()->activeEnrollments()->with('course')->get()->pluck('course')->filter(); @endphp
         @if ($myEnrolled->count())
@@ -236,6 +242,12 @@
           </select>
         </form>
       @endif
+      <div class="sidebar-profile-wrap">
+        <a href="{{ url('/profile') }}" class="sidebar-profile {{ request()->is('profile*') ? 'active' : '' }}">
+          @include('partials.avatar', ['u' => auth()->user(), 'size' => 'sm'])
+          <span>{{ explode(' ', trim(auth()->user()->name))[0] }}</span>
+        </a>
+      </div>
       <form method="POST" action="{{ route('logout') }}" class="logout-form">
         @csrf
         <button type="submit"><span class="ico"><i class="fa-solid fa-right-from-bracket"></i></span> Log ud</button>

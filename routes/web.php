@@ -39,6 +39,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/profile/betaling', [ProfileController::class, 'billing'])->name('profile.billing');
+    Route::post('/profile/betaling/portal', [ProfileController::class, 'billingPortal'])->name('profile.billing.portal');
 
     Route::post('/preview-role', [PreviewRoleController::class, 'update'])->name('preview.role');
 

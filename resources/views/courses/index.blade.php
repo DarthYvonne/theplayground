@@ -26,9 +26,20 @@
 
   /* Live search */
   .hold-search { position: relative; margin-bottom: 18px; max-width: 420px; }
-  .hold-search input { padding-left: 38px; padding-right: 36px; }
-  .hold-search .icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
-  .hold-search .clear { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; padding: 6px; border-radius: 6px; display: none; font-size: 14px; }
+  .hold-search input[type=search] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; font-family: inherit; font-size: 14px;
+    padding: 10px 38px 10px 38px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: #fff; color: var(--text); line-height: 1.2;
+  }
+  .hold-search input[type=search]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
+  .hold-search input[type=search]::-webkit-search-decoration,
+  .hold-search input[type=search]::-webkit-search-cancel-button,
+  .hold-search input[type=search]::-webkit-search-results-button,
+  .hold-search input[type=search]::-webkit-search-results-decoration { -webkit-appearance: none; display: none; }
+  .hold-search .icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; font-size: 14px; }
+  .hold-search .clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--muted); cursor: pointer; padding: 6px 8px; border-radius: 6px; display: none; font-size: 13px; line-height: 1; }
   .hold-search .clear:hover { background: var(--hover); color: var(--text); }
   .hold-search.has-value .clear { display: block; }
   .hold-no-results { display: none; padding: 32px 20px; text-align: center; color: var(--muted); background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
