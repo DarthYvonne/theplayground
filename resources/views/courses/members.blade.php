@@ -43,10 +43,13 @@
 
 <div class="members-shell">
   <div class="card">
-    @php $isCourseTrainer = auth()->check() && auth()->id() === $course->trainer_id; @endphp
-    <div class="members-sec {{ $isCourseTrainer ? 'has-action' : '' }}">
+    @php
+      $u = auth()->user();
+      $canBroadcastHere = $u && ($u->id === $course->trainer_id || $u->isOwner());
+    @endphp
+    <div class="members-sec {{ $canBroadcastHere ? 'has-action' : '' }}">
       <span>Træner</span>
-      @if ($isCourseTrainer)
+      @if ($canBroadcastHere)
         <a href="{{ route('beskeder.index', ['hold' => $course->id]) }}" class="btn-broadcast"><i class="fa-solid fa-bullhorn"></i> Skriv til alle</a>
       @endif
     </div>
