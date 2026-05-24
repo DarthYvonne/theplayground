@@ -2,9 +2,11 @@
 @section('content')
 
 <div class="view-header">
-  <h1>Brugere</h1>
+  <h1>Indstillinger</h1>
   @include('partials.header-actions')
 </div>
+
+@include('admin.settings._subnav')
 
 <div class="card" style="overflow:hidden;">
   @foreach ($users as $u)

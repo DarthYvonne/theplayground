@@ -23,7 +23,7 @@
   .feed-head { display: flex; gap: 10px; align-items: flex-start; }
   .feed-head .head-text { flex: 1; min-width: 0; }
   .feed-head .action { line-height: 1.35; word-break: break-word; }
-  .feed-head .action a { color: var(--text); font-weight: 700; text-decoration: none; }
+  .feed-head .action a { color: var(--accent); font-weight: 600; text-decoration: none; }
   .feed-head .action a:hover { text-decoration: underline; }
   .feed-head .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .feed-body { margin-top: 10px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
@@ -61,7 +61,7 @@
 @endpush
 
 <div class="view-header">
-  <h1>Feed</h1>
+  <h1><i class="fa-solid fa-heart" style="color:var(--accent);margin-right:8px;"></i>Feed</h1>
   @include('partials.header-actions')
 </div>
 

@@ -16,4 +16,7 @@
   <a href="{{ route('admin.settings.connections') }}" class="{{ request()->routeIs('admin.settings.connections') ? 'active' : '' }}">
     <i class="fa-solid fa-plug"></i> Forbindelser
   </a>
+  <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.index') ? 'active' : '' }}">
+    <i class="fa-solid fa-users"></i> Brugere
+  </a>
 </nav>

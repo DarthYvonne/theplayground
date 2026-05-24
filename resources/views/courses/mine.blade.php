@@ -9,6 +9,7 @@
   .course-tile-title { font-size: 18px; line-height: 1.25; }
   .course-tile-sched { color: var(--muted); font-size: 13px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
   .course-tile-trainer { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .course-tile-enrolled-badge { position: absolute; top: 10px; right: 10px; background: #16a34a; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,0.18); display: inline-flex; align-items: center; gap: 5px; }
   .empty-card { padding: 28px 20px; text-align: center; color: var(--muted); }
   .empty-card a { color: var(--accent); font-weight: 600; }
 </style>
@@ -35,6 +36,7 @@
           @else
             <div class="course-tile-img course-tile-img-ph"><i class="fa-solid fa-dumbbell"></i></div>
           @endif
+          <span class="course-tile-enrolled-badge"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>
         </div>
         <div class="card-pad">
           <div class="course-tile-title">{{ $course->title }}</div>

@@ -51,6 +51,7 @@
   .nav .badge-pill { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center; }
   .nav .count-pill { background: #1c1e21; color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center; margin-left: 6px; }
   .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); padding: 16px 12px 6px; }
+  .nav-divider { height: 1px; background: #f0f2f5; margin: 10px 12px; }
   .logout-form { margin-top: 2px; }
   .logout-form button { width: 100%; padding: 10px 12px; background: none; border: none; color: var(--muted); cursor: pointer; font-weight: 600; font-size: 14px; text-align: left; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-family: inherit; }
   .logout-form button:hover { background: var(--hover); color: var(--danger); }
@@ -202,23 +203,22 @@
     </div>
     <nav class="nav">
       @auth
-        <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Start</a>
+        <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-heart"></i></span> Feed</a>
         @php $myHoldCount = auth()->user()->activeEnrollments()->count(); @endphp
         <a href="{{ route('catalog.mine') }}" class="{{ request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold @if ($myHoldCount > 0)<span class="count-pill">{{ $myHoldCount }}</span>@endif</a>
         @php $beskederUnread = auth()->user()->unreadDirectMessageCount(); @endphp
         <a href="{{ route('beskeder.index') }}" class="{{ request()->is('beskeder*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Beskeder @if ($beskederUnread > 0)<span class="badge-pill">{{ $beskederUnread > 99 ? '99+' : $beskederUnread }}</span>@endif</a>
         <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-users"></i></span> Medlemmer</a>
 
-        @if (auth()->user()->isTrainer())
-          <div class="nav-section">Træner</div>
-          <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> Hold du træner</a>
-        @endif
-
-        @if (auth()->user()->isOwner())
-          <div class="nav-section">Admin</div>
-          <a href="{{ route('admin.courses.index') }}" class="{{ request()->is('admin/courses*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-clipboard-list"></i></span> Alle hold</a>
-          <a href="{{ route('admin.users.index') }}" class="{{ request()->is('admin/users*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-users"></i></span> Brugere</a>
-          <a href="{{ route('admin.settings.revenue') }}" class="{{ request()->is('admin/settings*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
+        @if (auth()->user()->isTrainer() || auth()->user()->isOwner())
+          <div class="nav-divider"></div>
+          @if (auth()->user()->isTrainer())
+            <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> Hold du træner</a>
+          @endif
+          @if (auth()->user()->isOwner())
+            <a href="{{ route('admin.courses.index') }}" class="{{ request()->is('admin/courses*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-clipboard-list"></i></span> Alle hold</a>
+            <a href="{{ route('admin.settings.revenue') }}" class="{{ request()->is('admin/settings*') || request()->is('admin/users*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
+          @endif
         @endif
       @else
         <a href="{{ url('/hold') }}" class="{{ request()->is('/') || request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
