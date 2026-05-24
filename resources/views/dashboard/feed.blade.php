@@ -42,12 +42,13 @@
   .feed-enroll-line .ct .t { font-weight: 700; }
 
   .feed-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f2f5; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .respekt-count { color: var(--text); font-size: 13px; font-weight: 700; }
-  .respekt-count:empty { display: none; }
-  .respekt-btn { background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
-  .respekt-btn:hover { text-decoration: underline; }
+  .respekt-count { color: var(--text); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; min-height: 1em; }
+  .respekt-count i { color: var(--accent); font-size: 13px; }
+  .respekt-btn { background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 400; color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+  .respekt-btn .respekt-text { text-decoration: underline; }
+  .respekt-btn:hover .respekt-text { text-decoration-thickness: 2px; }
   .respekt-btn.active { color: var(--accent); }
-  .respekt-btn i { font-size: 14px; }
+  .respekt-btn i { font-size: 14px; text-decoration: none; }
 
   .feed-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); }
   .feed-loading { color: var(--muted); text-align: center; padding: 20px; font-size: 13px; }
@@ -149,11 +150,11 @@
 
     var footer =
       '<div class="feed-footer">' +
-        '<span class="respekt-count">' + (it.respekt_count > 0 ? (it.respekt_count + ' Respekt') : '') + '</span>' +
+        '<span class="respekt-count">' + (it.respekt_count > 0 ? '<i class="fa-solid fa-hand-fist"></i>' + it.respekt_count : '') + '</span>' +
         '<button type="button" class="respekt-btn ' + (it.you_respekted ? 'active' : '') + '"' +
           ' data-target-type="' + escapeHtml(it.target_type) + '"' +
           ' data-target-id="' + escapeHtml(String(it.target_id)) + '">' +
-          '<i class="fa-solid fa-hand-fist"></i> Respekt' +
+          '<i class="fa-solid fa-hand-fist"></i> <span class="respekt-text">Respekt</span>' +
         '</button>' +
       '</div>';
 
@@ -161,7 +162,7 @@
     return el;
   }
 
-  function respektCountText(n) { return n > 0 ? (n + ' Respekt') : ''; }
+  function respektCountText(n) { return n > 0 ? '<i class="fa-solid fa-hand-fist"></i>' + n : ''; }
   list.addEventListener('click', async function (e) {
     var btn = e.target.closest('.respekt-btn');
     if (!btn) return;
@@ -179,7 +180,7 @@
       var data = await res.json();
       btn.classList.toggle('active', !!data.respekted);
       var counter = btn.parentElement.querySelector('.respekt-count');
-      if (counter) counter.textContent = respektCountText(data.count);
+      if (counter) counter.innerHTML = respektCountText(data.count);
     } catch (err) {
       // silent — user can retry
     } finally {

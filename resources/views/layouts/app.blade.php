@@ -195,7 +195,7 @@
 <div class="app">
   <aside class="sidebar" id="sidebar">
     <div class="logo">
-      <a href="{{ url('/') }}">
+      <a href="{{ auth()->check() ? url('/dashboard') : url('/') }}">
         <img src="{{ asset('img/playground_logo.png') }}" alt="The Playground">
       </a>
     </div>
