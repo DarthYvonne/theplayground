@@ -16,6 +16,22 @@ class ProfileController extends Controller
         return view('profile.edit', ['user' => $request->user()]);
     }
 
+    public function courses(Request $request) {
+        $user = $request->user();
+        $enrolledCourses = \App\Models\Course::with('trainer')
+            ->whereIn('id', $user->activeEnrollments()->pluck('course_id'))
+            ->orderBy('title')
+            ->get();
+        $trainerCourses = $user->isTrainer()
+            ? $user->trainerCourses()->with('trainer')->orderByDesc('is_active')->orderBy('title')->get()
+            : collect();
+        return view('profile.courses', [
+            'user' => $user,
+            'enrolledCourses' => $enrolledCourses,
+            'trainerCourses' => $trainerCourses,
+        ]);
+    }
+
     public function billing(Request $request) {
         $user = $request->user();
         $enrollments = Enrollment::with('course')
@@ -49,7 +65,7 @@ class ProfileController extends Controller
             'email' => ['required','email','unique:users,email,' . $user->id],
             'phone' => ['nullable','string','max:40'],
             'about' => ['nullable','string','max:2000'],
-            'picture' => ['nullable','image','max:4096'],
+            'picture' => ['nullable','image','max:16384'],
             'password' => ['nullable','confirmed','min:8'],
         ]);
 

@@ -42,8 +42,25 @@
   .feed-enroll-line .ct .t { font-weight: 700; }
 
   .feed-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f2f5; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .respekt-count { color: var(--text); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; min-height: 1em; }
+  .respekt-count { color: var(--text); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; min-height: 1em; background: none; border: none; padding: 0; font-family: inherit; cursor: default; }
+  .respekt-count:not(:empty) { cursor: pointer; }
+  .respekt-count:not(:empty):hover { color: var(--accent); }
   .respekt-count i { color: var(--accent); font-size: 13px; }
+
+  /* Respekt modal */
+  .resp-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .resp-backdrop.open { display: flex; }
+  .resp-modal { background: #fff; border-radius: 12px; width: 100%; max-width: 360px; max-height: 70vh; display: flex; flex-direction: column; box-shadow: 0 10px 32px rgba(0,0,0,0.22); overflow: hidden; }
+  .resp-head { padding: 14px 18px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: 10px; }
+  .resp-head .title { font-weight: 700; flex: 1; }
+  .resp-head .title i { color: var(--accent); margin-right: 6px; }
+  .resp-close { background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: 6px; color: var(--muted); font-size: 16px; }
+  .resp-close:hover { background: var(--hover); color: var(--text); }
+  .resp-body { overflow-y: auto; padding: 6px; }
+  .resp-row { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 8px; color: inherit; }
+  .resp-row:hover { background: var(--hover); }
+  .resp-row .nm { font-weight: 600; }
+  .resp-loading, .resp-error { color: var(--muted); padding: 18px; text-align: center; font-size: 13px; }
   .respekt-btn { background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 400; color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
   .respekt-btn .respekt-text { text-decoration: underline; }
   .respekt-btn:hover .respekt-text { text-decoration-thickness: 2px; }
@@ -77,6 +94,18 @@
   <div class="feed-empty" id="feedEmpty" style="display:none;">
     <h3 style="color:var(--text);margin-bottom:6px;">Stille her endnu</h3>
     <p>Skriv det første opslag herover.</p>
+  </div>
+</div>
+
+<div class="resp-backdrop" id="respBackdrop" role="dialog" aria-modal="true" aria-labelledby="respTitle">
+  <div class="resp-modal">
+    <div class="resp-head">
+      <div class="title" id="respTitle"><i class="fa-solid fa-hand-fist"></i> Respekt</div>
+      <button type="button" class="resp-close" id="respClose" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="resp-body" id="respBody">
+      <div class="resp-loading">Indlæser…</div>
+    </div>
   </div>
 </div>
 
@@ -150,7 +179,11 @@
 
     var footer =
       '<div class="feed-footer">' +
-        '<span class="respekt-count">' + (it.respekt_count > 0 ? '<i class="fa-solid fa-hand-fist"></i>' + it.respekt_count : '') + '</span>' +
+        '<button type="button" class="respekt-count"' +
+          ' data-target-type="' + escapeHtml(it.target_type) + '"' +
+          ' data-target-id="' + escapeHtml(String(it.target_id)) + '">' +
+          (it.respekt_count > 0 ? '<i class="fa-solid fa-hand-fist"></i>' + it.respekt_count : '') +
+        '</button>' +
         '<button type="button" class="respekt-btn ' + (it.you_respekted ? 'active' : '') + '"' +
           ' data-target-type="' + escapeHtml(it.target_type) + '"' +
           ' data-target-id="' + escapeHtml(String(it.target_id)) + '">' +
@@ -163,7 +196,46 @@
   }
 
   function respektCountText(n) { return n > 0 ? '<i class="fa-solid fa-hand-fist"></i>' + n : ''; }
+
+  var respBackdrop = document.getElementById('respBackdrop');
+  var respBody = document.getElementById('respBody');
+  var respClose = document.getElementById('respClose');
+  function closeRespModal() { respBackdrop.classList.remove('open'); }
+  respClose.addEventListener('click', closeRespModal);
+  respBackdrop.addEventListener('click', function (e) { if (e.target === respBackdrop) closeRespModal(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeRespModal(); });
+
+  async function openRespModal(type, id) {
+    respBody.innerHTML = '<div class="resp-loading">Indlæser…</div>';
+    respBackdrop.classList.add('open');
+    try {
+      var url = '{{ url('/api/respekt') }}?target_type=' + encodeURIComponent(type) + '&target_id=' + encodeURIComponent(id);
+      var res = await fetch(url, { headers: { Accept: 'application/json' }});
+      if (!res.ok) throw new Error('list failed');
+      var data = await res.json();
+      if (!data.users.length) {
+        respBody.innerHTML = '<div class="resp-loading">Ingen Respekt endnu.</div>';
+        return;
+      }
+      respBody.innerHTML = data.users.map(function (u) {
+        var av = u.picture_url
+          ? '<div class="av sm"><img src="' + escapeHtml(u.picture_url) + '" alt=""></div>'
+          : '<div class="av sm">' + escapeHtml(u.initials) + '</div>';
+        return '<a class="resp-row" href="' + escapeHtml(u.profile_url) + '">' + av + '<span class="nm">' + escapeHtml(u.name) + '</span></a>';
+      }).join('');
+    } catch (err) {
+      respBody.innerHTML = '<div class="resp-error">Kunne ikke hente listen.</div>';
+    }
+  }
+
   list.addEventListener('click', async function (e) {
+    var countBtn = e.target.closest('.respekt-count');
+    if (countBtn) {
+      if (!countBtn.textContent.trim()) return; // empty count — nothing to show
+      e.preventDefault();
+      openRespModal(countBtn.dataset.targetType, countBtn.dataset.targetId);
+      return;
+    }
     var btn = e.target.closest('.respekt-btn');
     if (!btn) return;
     e.preventDefault();

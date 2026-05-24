@@ -13,6 +13,9 @@
   <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.edit') ? 'active' : '' }}">
     <i class="fa-regular fa-user"></i> Profil
   </a>
+  <a href="{{ route('profile.courses') }}" class="{{ request()->routeIs('profile.courses') ? 'active' : '' }}">
+    <i class="fa-solid fa-dumbbell"></i> Mine hold
+  </a>
   <a href="{{ route('profile.billing') }}" class="{{ request()->routeIs('profile.billing') ? 'active' : '' }}">
     <i class="fa-regular fa-credit-card"></i> Betaling
   </a>

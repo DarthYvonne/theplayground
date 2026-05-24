@@ -110,7 +110,7 @@ class CourseAdminController extends Controller
             'title' => ['required','string','max:160'],
             'description' => ['required','string','max:4000'],
             'trainer_id' => ['required','exists:users,id'],
-            'image' => ['nullable','image','max:5120'],
+            'image' => ['nullable','image','max:16384'],
             'price_cents' => ['required','integer','min:0','max:10000000'],
             'max_participants' => ['required','integer','min:1','max:1000'],
             'is_active' => ['nullable','boolean'],

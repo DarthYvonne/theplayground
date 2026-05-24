@@ -42,6 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'feed'])->name('dashboard');
     Route::get('/dashboard/hold', [DashboardController::class, 'hold'])->name('dashboard.hold');
     Route::get('/api/feed', [FeedController::class, 'list']);
+    Route::get('/api/respekt', [RespektController::class, 'list']);
     Route::post('/api/respekt', [RespektController::class, 'toggle']);
 
     Route::get('/indbakke', [InboxController::class, 'index'])->name('inbox');
@@ -51,6 +52,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::get('/profile/hold', [ProfileController::class, 'courses'])->name('profile.courses');
     Route::get('/profile/betaling', [ProfileController::class, 'billing'])->name('profile.billing');
     Route::post('/profile/betaling/portal', [ProfileController::class, 'billingPortal'])->name('profile.billing.portal');
 

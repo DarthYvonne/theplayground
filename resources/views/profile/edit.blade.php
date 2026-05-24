@@ -22,7 +22,7 @@
     <div class="form-row">
       <label for="picture">Profilbillede</label>
       <input id="picture" type="file" name="picture" accept="image/*">
-      <div class="hint">JPG/PNG, op til 4 MB.</div>
+      <div class="hint">JPG/PNG, op til 16 MB.</div>
     </div>
     <div class="form-row">
       <label for="name">Navn</label>
