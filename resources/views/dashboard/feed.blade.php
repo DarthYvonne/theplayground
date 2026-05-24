@@ -6,30 +6,35 @@
   .feed-shell { max-width: 620px; }
 
   /* Composer */
-  .composer { padding: 14px 16px; }
-  .composer-row { display: flex; gap: 12px; align-items: flex-start; }
+  .composer { margin-bottom: 18px; }
   .composer textarea {
-    flex: 1; resize: none; border: none; background: var(--hover); border-radius: 22px;
-    padding: 12px 16px; font-family: inherit; font-size: 15px; line-height: 1.4; min-height: 44px; max-height: 240px;
+    width: 100%; resize: none; border: 1px solid var(--border); background: #fff; border-radius: 14px;
+    padding: 14px 18px; font-family: inherit; font-size: 16px; line-height: 1.45; min-height: 56px; max-height: 280px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
-  .composer textarea:focus { outline: none; box-shadow: 0 0 0 2px rgba(24,119,242,0.15); }
+  .composer textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
   .composer-actions { display: flex; justify-content: flex-end; margin-top: 10px; gap: 8px; }
-  .composer-actions .btn { padding: 8px 18px; }
+  .composer-actions .btn { padding: 9px 22px; }
   .composer-error { color: var(--danger); font-size: 12px; margin-top: 6px; }
 
   /* Feed items */
   .feed-list { display: flex; flex-direction: column; gap: 14px; }
-  .feed-item { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 14px 16px; }
-  .feed-head { display: flex; gap: 10px; align-items: center; }
+  .feed-item { position: relative; background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 14px 16px; }
+  .feed-head { display: flex; gap: 10px; align-items: center; padding-right: 110px; }
   .feed-head .name { font-weight: 700; }
   .feed-head .meta { color: var(--muted); font-size: 12px; margin-top: 1px; }
-  .feed-head .meta a { color: var(--accent); font-weight: 600; }
-  .feed-head .role-pill { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); margin-left: 6px; vertical-align: middle; }
   .feed-body { margin-top: 10px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .feed-type-chip { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .feed-context { position: absolute; top: 14px; right: 14px; }
+  .feed-type-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.3px; text-decoration: none; max-width: 180px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  a.feed-type-chip:hover { filter: brightness(0.96); }
   .feed-type-chip.platform { background: #e0e7ff; color: #3730a3; }
   .feed-type-chip.course { background: #dcfce7; color: #166534; }
   .feed-type-chip.enroll { background: #fef3c7; color: #92400e; }
+  @media (max-width: 540px) {
+    .feed-head { padding-right: 0; }
+    .feed-context { position: static; margin-bottom: 8px; display: block; }
+    .feed-type-chip { max-width: 100%; }
+  }
   .feed-enroll-line { margin-top: 10px; padding: 10px 12px; background: #fafbfc; border-radius: 8px; display: flex; gap: 10px; align-items: center; }
   .feed-enroll-line img, .feed-enroll-line .ph { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
   .feed-enroll-line .ph { background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 14px; }
@@ -49,19 +54,14 @@
 @include('dashboard._subnav')
 
 <div class="feed-shell">
-  <div class="card composer">
-    <form id="feedComposer" autocomplete="off">
-      @csrf
-      <div class="composer-row">
-        @include('partials.avatar', ['u' => $user, 'size' => 'sm'])
-        <textarea id="feedComposerInput" name="body" placeholder="Hvad sker der i klubben, {{ explode(' ', trim($user->name))[0] }}?" maxlength="2000" rows="1"></textarea>
-      </div>
-      <div class="composer-actions">
-        <button type="submit" class="btn btn-primary" id="feedComposerSubmit" disabled>Slå op</button>
-      </div>
-      <div id="feedComposerError" class="composer-error" style="display:none;"></div>
-    </form>
-  </div>
+  <form id="feedComposer" class="composer" autocomplete="off">
+    @csrf
+    <textarea id="feedComposerInput" name="body" placeholder="Hvad sker der i klubben, {{ explode(' ', trim($user->name))[0] }}?" maxlength="2000" rows="1"></textarea>
+    <div class="composer-actions">
+      <button type="submit" class="btn btn-primary" id="feedComposerSubmit" disabled>Slå op</button>
+    </div>
+    <div id="feedComposerError" class="composer-error" style="display:none;"></div>
+  </form>
 
   <div class="feed-loading" id="feedLoading">Indlæser feed…</div>
   <div class="feed-list" id="feedList"></div>
@@ -88,26 +88,25 @@
   var SEND_URL = '{{ url('/api/chat/platform') }}';
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; }); }
-  function roleBadge(role) {
-    if (role === 'owner') return '<span class="role-pill">Ejer</span>';
-    if (role === 'trainer') return '<span class="role-pill">Træner</span>';
-    return '';
-  }
   function avatar(u) {
     var inner = u.picture_url
       ? '<img src="' + escapeHtml(u.picture_url) + '" alt="">'
       : escapeHtml(u.initials);
     return '<div class="av">' + inner + '</div>';
   }
-  function typeChip(type, course) {
-    if (type === 'platform_message') return '<span class="feed-type-chip platform"><i class="fa-solid fa-hashtag"></i> Fælles</span>';
-    if (type === 'course_message') return '<span class="feed-type-chip course"><i class="fa-regular fa-comments"></i> ' + escapeHtml(course ? course.title : 'Hold') + '</span>';
-    if (type === 'enrollment') return '<span class="feed-type-chip enroll"><i class="fa-solid fa-user-plus"></i> Tilmelding</span>';
+  function contextChip(it) {
+    if (it.type === 'platform_message') {
+      return '<span class="feed-type-chip platform"><i class="fa-solid fa-hashtag"></i> Fælles</span>';
+    }
+    if (it.type === 'course_message' && it.course) {
+      return '<a class="feed-type-chip course" href="' + escapeHtml(it.course.chat_url) + '" title="' + escapeHtml(it.course.title) + '">' +
+        '<i class="fa-regular fa-comments"></i> ' + escapeHtml(it.course.title) + '</a>';
+    }
+    if (it.type === 'enrollment' && it.course) {
+      return '<a class="feed-type-chip enroll" href="' + escapeHtml(it.course.url) + '" title="' + escapeHtml(it.course.title) + '">' +
+        '<i class="fa-solid fa-user-plus"></i> ' + escapeHtml(it.course.title) + '</a>';
+    }
     return '';
-  }
-  function courseLink(course) {
-    if (!course) return '';
-    return '<a href="' + escapeHtml(course.chat_url || course.url) + '">' + escapeHtml(course.title) + '</a>';
   }
   function renderItem(it) {
     var el = document.createElement('article');
@@ -115,15 +114,12 @@
     el.dataset.id = it.id;
 
     var head =
+      '<div class="feed-context">' + contextChip(it) + '</div>' +
       '<div class="feed-head">' +
         avatar(it.user) +
         '<div style="flex:1;min-width:0;">' +
-          '<div><span class="name">' + escapeHtml(it.user.name) + '</span>' + roleBadge(it.user.role) + '</div>' +
-          '<div class="meta">' + typeChip(it.type, it.course);
-    if (it.type === 'course_message' && it.course) {
-      head += ' · ' + courseLink(it.course);
-    }
-    head += ' · ' + escapeHtml(it.time_human) + '</div>' +
+          '<div class="name">' + escapeHtml(it.user.name) + '</div>' +
+          '<div class="meta">' + escapeHtml(it.time_human) + '</div>' +
         '</div>' +
       '</div>';
 
