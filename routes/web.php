@@ -4,19 +4,18 @@ use App\Http\Controllers\Admin\CourseAdminController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\BeskederController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\FeedController;
-use App\Http\Controllers\InboxController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PreviewRoleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RespektController;
 use App\Http\Controllers\StripeWebhookController;
-use App\Http\Controllers\Trainer\BroadcastController;
 use App\Http\Controllers\Trainer\TrainerController;
 use Illuminate\Support\Facades\Route;
 
@@ -53,7 +52,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/respekt', [RespektController::class, 'list']);
     Route::post('/api/respekt', [RespektController::class, 'toggle']);
 
-    Route::get('/indbakke', [InboxController::class, 'index'])->name('inbox');
+    Route::get('/beskeder', [BeskederController::class, 'index'])->name('beskeder.index');
+    Route::get('/beskeder/{user}', [BeskederController::class, 'show'])->name('beskeder.show');
+    Route::post('/beskeder', [BeskederController::class, 'store'])->name('beskeder.store');
+    Route::post('/beskeder/settings', [BeskederController::class, 'updateSettings'])->name('beskeder.settings');
+    Route::get('/api/messages/recipients', [BeskederController::class, 'recipients'])->name('beskeder.recipients');
 
     Route::get('/medlemmer', [MembersController::class, 'index'])->name('members.index');
     Route::get('/medlemmer/{user}', [MembersController::class, 'show'])->name('members.show');
@@ -88,8 +91,6 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [TrainerController::class, 'index'])->name('index');
         Route::get('/calendar', [TrainerController::class, 'calendar'])->name('calendar');
         Route::get('/courses/{course}/participants', [TrainerController::class, 'participants'])->name('participants');
-        Route::get('/courses/{course}/email', [BroadcastController::class, 'create'])->name('broadcast');
-        Route::post('/courses/{course}/email', [BroadcastController::class, 'send'])->name('broadcast.send');
     });
 
     // Owner admin

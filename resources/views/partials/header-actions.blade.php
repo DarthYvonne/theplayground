@@ -1,6 +1,6 @@
 @auth
 <div class="feed-actions">
-  <a href="{{ url('/chat') }}" class="feed-iconbtn" title="Beskeder" aria-label="Beskeder">
+  <a href="{{ route('beskeder.index') }}" class="feed-iconbtn" title="Beskeder" aria-label="Beskeder">
     <i class="fa-regular fa-envelope"></i>
     <span class="badge" id="hdrMessagesBadge">0</span>
   </a>

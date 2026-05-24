@@ -205,7 +205,8 @@
         <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Start</a>
         @php $myHoldCount = auth()->user()->activeEnrollments()->count(); @endphp
         <a href="{{ route('catalog.mine') }}" class="{{ request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold @if ($myHoldCount > 0)<span class="count-pill">{{ $myHoldCount }}</span>@endif</a>
-        <a href="{{ url('/indbakke') }}" class="{{ request()->is('indbakke*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Indbakke</a>
+        @php $beskederUnread = auth()->user()->unreadDirectMessageCount(); @endphp
+        <a href="{{ route('beskeder.index') }}" class="{{ request()->is('beskeder*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Beskeder @if ($beskederUnread > 0)<span class="badge-pill">{{ $beskederUnread > 99 ? '99+' : $beskederUnread }}</span>@endif</a>
         <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-users"></i></span> Medlemmer</a>
 
         @if (auth()->user()->isTrainer())

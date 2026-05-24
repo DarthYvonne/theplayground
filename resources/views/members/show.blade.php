@@ -51,11 +51,13 @@
         @endswitch
       </div>
     </div>
-    @if ($isSelf)
-      <div class="actions">
+    <div class="actions">
+      @if ($isSelf)
         <a href="{{ route('profile.edit') }}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-pen"></i> Rediger profil</a>
-      </div>
-    @endif
+      @else
+        <a href="{{ route('beskeder.index', ['til' => $member->id]) }}" class="btn btn-primary btn-sm"><i class="fa-regular fa-envelope"></i> Send besked</a>
+      @endif
+    </div>
   </div>
 
   @if (trim((string) $member->about) !== '')

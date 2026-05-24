@@ -16,6 +16,7 @@ class User extends Authenticatable
         'name', 'email', 'password',
         'role', 'phone', 'about', 'picture_path',
         'stripe_id', 'pm_type', 'pm_last_four', 'trial_ends_at',
+        'email_on_message',
     ];
 
     protected $hidden = ['password', 'remember_token'];
@@ -27,6 +28,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'trial_ends_at' => 'datetime',
             'last_seen_platform_chat_at' => 'datetime',
+            'email_on_message' => 'boolean',
         ];
     }
 
@@ -85,5 +87,10 @@ class User extends Authenticatable
             $total += $q->count();
         }
         return $total;
+    }
+
+    public function unreadDirectMessageCount(): int
+    {
+        return DirectMessage::where('recipient_id', $this->id)->whereNull('read_at')->count();
     }
 }

@@ -13,7 +13,7 @@ class NotificationController extends Controller
         if (!$u) return response()->json(['notifications' => 0, 'messages' => 0]);
         return response()->json([
             'notifications' => $u->unreadNotificationCount(),
-            'messages' => $u->unreadMessageCount(),
+            'messages' => $u->unreadDirectMessageCount(),
         ]);
     }
 
