@@ -18,6 +18,7 @@
         @csrf
         <select name="role" onchange="this.form.submit()" style="width:auto;">
           <option value="user" {{ $u->role === 'user' ? 'selected' : '' }}>Bruger</option>
+          <option value="assistant" {{ $u->role === 'assistant' ? 'selected' : '' }}>Assistent</option>
           <option value="trainer" {{ $u->role === 'trainer' ? 'selected' : '' }}>Træner</option>
           <option value="owner" {{ $u->role === 'owner' ? 'selected' : '' }}>Ejer</option>
         </select>

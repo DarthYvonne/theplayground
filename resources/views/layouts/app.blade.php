@@ -52,6 +52,14 @@
   .logout-form button { width: 100%; padding: 10px 12px; background: none; border: none; color: var(--muted); cursor: pointer; font-weight: 600; font-size: 14px; text-align: left; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-family: inherit; }
   .logout-form button:hover { background: var(--hover); color: var(--danger); }
 
+  /* Preview role switcher (owner only) */
+  .preview-role-form { margin-top: 8px; border-top: 1px solid #f0f2f5; padding: 10px 12px 4px; }
+  .preview-role-form .lbl { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+  .preview-role-form select { width: 100%; padding: 8px 10px; font-size: 13px; }
+  .preview-banner { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+  .preview-banner .stop { margin-left: auto; }
+  .preview-banner .stop button { background: none; border: none; color: inherit; text-decoration: underline; cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 600; padding: 0; }
+
   /* View header */
   .view-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
   .view-header h1 { font-size: 22px; font-weight: 700; }
@@ -215,6 +223,19 @@
       @endauth
     </nav>
     @auth
+      @if (auth()->user()->isActualOwner())
+        @php $previewRole = session('preview_role'); @endphp
+        <form method="POST" action="{{ route('preview.role') }}" class="preview-role-form">
+          @csrf
+          <label class="lbl" for="previewRoleSelect">Log in as</label>
+          <select id="previewRoleSelect" name="role" onchange="this.form.submit()">
+            <option value="owner" {{ !$previewRole ? 'selected' : '' }}>Ejer (mig)</option>
+            <option value="trainer" {{ $previewRole === 'trainer' ? 'selected' : '' }}>Træner</option>
+            <option value="assistant" {{ $previewRole === 'assistant' ? 'selected' : '' }}>Assistent</option>
+            <option value="user" {{ $previewRole === 'user' ? 'selected' : '' }}>Bruger</option>
+          </select>
+        </form>
+      @endif
       <form method="POST" action="{{ route('logout') }}" class="logout-form">
         @csrf
         <button type="submit"><span class="ico"><i class="fa-solid fa-right-from-bracket"></i></span> Log ud</button>
@@ -223,6 +244,21 @@
   </aside>
 
   <main class="main">
+    @auth
+      @if (auth()->user()->isActualOwner() && session('preview_role'))
+        <div class="preview-banner">
+          <i class="fa-solid fa-eye"></i>
+          Viser siden som <strong>{{ ['trainer' => 'Træner', 'assistant' => 'Assistent', 'user' => 'Bruger'][session('preview_role')] ?? session('preview_role') }}</strong>
+          <span class="stop">
+            <form method="POST" action="{{ route('preview.role') }}" style="display:inline;">
+              @csrf
+              <input type="hidden" name="role" value="owner">
+              <button type="submit">Stop preview</button>
+            </form>
+          </span>
+        </div>
+      @endif
+    @endauth
     @if (session('status'))
       <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> {{ session('status') }}</div>
     @endif

@@ -36,11 +36,9 @@
     <p>Velkommen tilbage til The Playground.</p>
   </div>
 
-  <div class="card">
-    <div class="section-h"><i class="fa-solid fa-dumbbell" style="color:var(--accent)"></i> Mine hold</div>
-    @if ($enrolledCourses->isEmpty())
-      <div class="empty">Du er ikke tilmeldt noget endnu. <a href="{{ url('/') }}">Se hold →</a></div>
-    @else
+  @if ($enrolledCourses->isNotEmpty())
+    <div class="card">
+      <div class="section-h"><i class="fa-solid fa-dumbbell" style="color:var(--accent)"></i> Dine hold</div>
       @foreach ($enrolledCourses as $c)
         <div class="course-mini">
           @if ($c->image_path)<img src="{{ $c->imageUrl() }}" alt="">@else<div class="ph"><i class="fa-solid fa-dumbbell"></i></div>@endif
@@ -54,12 +52,17 @@
           </div>
         </div>
       @endforeach
-    @endif
-  </div>
-
-  @if ($trainerCourses->count())
+    </div>
+  @elseif (!auth()->user()->isTrainer())
     <div class="card">
-      <div class="section-h"><i class="fa-solid fa-chalkboard-user" style="color:var(--accent)"></i> Hold jeg underviser</div>
+      <div class="section-h"><i class="fa-solid fa-dumbbell" style="color:var(--accent)"></i> Dine hold</div>
+      <div class="empty">Du er ikke tilmeldt noget endnu. <a href="{{ url('/') }}">Se hold →</a></div>
+    </div>
+  @endif
+
+  @if (auth()->user()->isTrainer() && $trainerCourses->count())
+    <div class="card">
+      <div class="section-h"><i class="fa-solid fa-chalkboard-user" style="color:var(--accent)"></i> Hold du underviser</div>
       @foreach ($trainerCourses as $c)
         <div class="course-mini">
           @if ($c->image_path)<img src="{{ $c->imageUrl() }}" alt="">@else<div class="ph"><i class="fa-solid fa-chalkboard-user"></i></div>@endif
@@ -68,6 +71,7 @@
             <div class="sub">{{ $c->activeCount() }}/{{ $c->max_participants }} tilmeldte · {{ $c->is_active ? 'Aktiv' : 'Kladde' }}</div>
           </div>
           <div class="actions">
+            <a href="{{ route('trainer.participants', $c) }}" class="btn btn-secondary btn-sm">Deltagere</a>
           </div>
         </div>
       @endforeach

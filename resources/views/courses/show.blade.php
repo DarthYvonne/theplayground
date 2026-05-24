@@ -26,7 +26,7 @@
 
   .desc { margin-top: 18px; line-height: 1.6; white-space: pre-wrap; color: #3a3d42; }
 
-  .cta { margin-top: 22px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .cta { margin-top: 22px; padding-top: 18px; border-top: 1px solid #f0f2f5; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
   .cta .afmeld { background: none; border: none; padding: 0; color: var(--muted); font-size: 13px; cursor: pointer; font-family: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .cta .afmeld:hover { color: var(--danger); }
 

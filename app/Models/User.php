@@ -36,9 +36,17 @@ class User extends Authenticatable
     public function messages(): HasMany { return $this->hasMany(Message::class); }
     public function notifications(): HasMany { return $this->hasMany(AppNotification::class)->latest(); }
 
-    public function isOwner(): bool { return $this->role === 'owner'; }
-    public function isTrainer(): bool { return $this->role === 'trainer' || $this->role === 'owner'; }
-    public function isUser(): bool { return $this->role === 'user'; }
+    public function effectiveRole(): string
+    {
+        if ($this->role !== 'owner') return $this->role;
+        return session('preview_role', $this->role);
+    }
+
+    public function isActualOwner(): bool { return $this->role === 'owner'; }
+    public function isOwner(): bool { return $this->effectiveRole() === 'owner'; }
+    public function isTrainer(): bool { $r = $this->effectiveRole(); return $r === 'trainer' || $r === 'owner'; }
+    public function isAssistant(): bool { return $this->effectiveRole() === 'assistant'; }
+    public function isUser(): bool { return $this->effectiveRole() === 'user'; }
 
     public function initials(): string
     {

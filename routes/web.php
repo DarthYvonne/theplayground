@@ -9,6 +9,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PreviewRoleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\Trainer\BroadcastController;
@@ -38,6 +39,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::post('/preview-role', [PreviewRoleController::class, 'update'])->name('preview.role');
 
     Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll');
     Route::get('/courses/{course}/enroll/return', [EnrollmentController::class, 'returnFromCheckout'])->name('enroll.return');
