@@ -7,7 +7,12 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function __invoke(Request $request)
+    public function feed(Request $request)
+    {
+        return view('dashboard.feed', ['user' => $request->user()]);
+    }
+
+    public function hold(Request $request)
     {
         $user = $request->user();
         $enrolledCourses = Course::with('trainer')
@@ -16,6 +21,6 @@ class DashboardController extends Controller
         $trainerCourses = $user->isTrainer()
             ? Course::with('trainer')->where('trainer_id', $user->id)->get()
             : collect();
-        return view('dashboard', compact('enrolledCourses','trainerCourses'));
+        return view('dashboard.hold', compact('enrolledCourses', 'trainerCourses'));
     }
 }

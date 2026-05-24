@@ -8,6 +8,8 @@ use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
+use App\Http\Controllers\FeedController;
+use App\Http\Controllers\InboxController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PreviewRoleController;
 use App\Http\Controllers\ProfileController;
@@ -35,7 +37,11 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 
 // Authenticated
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', DashboardController::class)->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'feed'])->name('dashboard');
+    Route::get('/dashboard/hold', [DashboardController::class, 'hold'])->name('dashboard.hold');
+    Route::get('/api/feed', [FeedController::class, 'list']);
+
+    Route::get('/indbakke', [InboxController::class, 'index'])->name('inbox');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');

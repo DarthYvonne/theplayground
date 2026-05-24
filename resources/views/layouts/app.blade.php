@@ -199,9 +199,9 @@
     </div>
     <nav class="nav">
       @auth
-        <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Oversigt</a>
+        <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Start</a>
         <a href="{{ url('/') }}" class="{{ request()->is('/') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
-        <a href="{{ url('/chat') }}" class="{{ request()->is('chat') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-hashtag"></i></span> Fælles chat</a>
+        <a href="{{ url('/indbakke') }}" class="{{ request()->is('indbakke*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Indbakke</a>
 
         @php $myEnrolled = auth()->user()->activeEnrollments()->with('course')->get()->pluck('course')->filter(); @endphp
         @if ($myEnrolled->count())

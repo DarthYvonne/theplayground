@@ -3,10 +3,7 @@
 
 @push('styles')
 <style>
-  .feed-main { max-width: 720px; }
-  .greet { padding: 18px 20px; }
-  .greet h2 { font-size: 22px; font-weight: 800; }
-  .greet p { color: var(--muted); margin-top: 4px; }
+  .dash-main { max-width: 720px; }
   .course-mini { display: flex; gap: 14px; padding: 14px 18px; border-top: 1px solid #f0f2f5; }
   .course-mini:first-child { border-top: none; }
   .course-mini img, .course-mini .ph { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
@@ -26,16 +23,13 @@
 @endpush
 
 <div class="view-header">
-  <h1>Oversigt</h1>
+  <h1>Start</h1>
   @include('partials.header-actions')
 </div>
 
-<div class="feed-main">
-  <div class="card greet">
-    <h2>Hej {{ explode(' ', auth()->user()->name)[0] }} 👋</h2>
-    <p>Velkommen tilbage til The Playground.</p>
-  </div>
+@include('dashboard._subnav')
 
+<div class="dash-main">
   @if ($enrolledCourses->isNotEmpty())
     <div class="card">
       <div class="section-h"><i class="fa-solid fa-dumbbell" style="color:var(--accent)"></i> Dine hold</div>
