@@ -48,7 +48,7 @@
   .respekt-count i { color: var(--accent); font-size: 13px; }
 
   /* Respekt modal */
-  .resp-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .resp-backdrop { position: fixed; inset: 0; max-width: none; margin: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 20px; }
   .resp-backdrop.open { display: flex; }
   .resp-modal { background: #fff; border-radius: 12px; width: 100%; max-width: 360px; max-height: 70vh; display: flex; flex-direction: column; box-shadow: 0 10px 32px rgba(0,0,0,0.22); overflow: hidden; }
   .resp-head { padding: 14px 18px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: 10px; }

@@ -95,6 +95,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/courses/{course}/delete', [CourseAdminController::class, 'destroy'])->name('courses.destroy');
         Route::get('/users', [UserAdminController::class, 'index'])->name('users.index');
         Route::post('/users/{user}/role', [UserAdminController::class, 'updateRole'])->name('users.role');
+        Route::post('/users/{user}/delete', [UserAdminController::class, 'destroy'])->name('users.destroy');
         Route::get('/settings', [SettingsController::class, 'revenue'])->name('settings.revenue');
         Route::get('/settings/connections', [SettingsController::class, 'connections'])->name('settings.connections');
         Route::post('/settings', [SettingsController::class, 'update'])->name('settings.update');

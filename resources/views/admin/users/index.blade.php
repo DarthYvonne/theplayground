@@ -23,6 +23,16 @@
           <option value="owner" {{ $u->role === 'owner' ? 'selected' : '' }}>Ejer</option>
         </select>
       </form>
+      @if ($u->id !== auth()->id())
+        <form method="POST" action="{{ route('admin.users.destroy', $u) }}"
+              onsubmit="return confirm('Slet {{ addslashes($u->name) }}? Dette kan ikke fortrydes.');"
+              style="display:inline;">
+          @csrf
+          <button type="submit" class="btn btn-danger btn-sm" title="Slet bruger" aria-label="Slet bruger">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </form>
+      @endif
     </div>
   @endforeach
 </div>
