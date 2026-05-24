@@ -202,7 +202,7 @@
     <nav class="nav">
       @auth
         <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Start</a>
-        <a href="{{ url('/hold') }}" class="{{ request()->is('hold') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
+        <a href="{{ route('catalog.mine') }}" class="{{ request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
         <a href="{{ url('/indbakke') }}" class="{{ request()->is('indbakke*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Indbakke</a>
         <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-users"></i></span> Medlemmer</a>
 
@@ -216,7 +216,7 @@
 
         @if (auth()->user()->isTrainer())
           <div class="nav-section">Træner</div>
-          <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> Mine hold</a>
+          <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> Hold du træner</a>
         @endif
 
         @if (auth()->user()->isOwner())
@@ -226,7 +226,7 @@
           <a href="{{ route('admin.settings.revenue') }}" class="{{ request()->is('admin/settings*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
         @endif
       @else
-        <a href="{{ url('/hold') }}" class="{{ request()->is('/') || request()->is('hold') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
+        <a href="{{ url('/hold') }}" class="{{ request()->is('/') || request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
         <a href="{{ route('login') }}" class="{{ request()->is('login') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-right-to-bracket"></i></span> Log ind</a>
         <a href="{{ route('register') }}" class="{{ request()->is('register') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-user-plus"></i></span> Opret konto</a>
       @endauth

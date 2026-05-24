@@ -32,7 +32,6 @@
 <div class="mine-main">
   @if ($enrolledCourses->isNotEmpty())
     <div class="card">
-      <div class="section-h"><i class="fa-solid fa-dumbbell" style="color:var(--accent)"></i> Dine hold</div>
       @foreach ($enrolledCourses as $c)
         <div class="course-mini">
           @if ($c->image_path)<img src="{{ $c->imageUrl() }}" alt="">@else<div class="ph"><i class="fa-solid fa-dumbbell"></i></div>@endif
@@ -47,28 +46,9 @@
         </div>
       @endforeach
     </div>
-  @elseif (!auth()->user()->isTrainer())
+  @else
     <div class="card">
-      <div class="section-h"><i class="fa-solid fa-dumbbell" style="color:var(--accent)"></i> Dine hold</div>
-      <div class="empty">Du er ikke tilmeldt noget endnu. <a href="{{ route('catalog') }}">Se hold →</a></div>
-    </div>
-  @endif
-
-  @if (auth()->user()->isTrainer() && $trainerCourses->count())
-    <div class="card">
-      <div class="section-h"><i class="fa-solid fa-chalkboard-user" style="color:var(--accent)"></i> Hold du underviser</div>
-      @foreach ($trainerCourses as $c)
-        <div class="course-mini">
-          @if ($c->image_path)<img src="{{ $c->imageUrl() }}" alt="">@else<div class="ph"><i class="fa-solid fa-chalkboard-user"></i></div>@endif
-          <div class="meta">
-            <a href="{{ route('courses.show', $c) }}" class="t">{{ $c->title }}</a>
-            <div class="sub">{{ $c->activeCount() }}/{{ $c->max_participants }} tilmeldte · {{ $c->is_active ? 'Aktiv' : 'Kladde' }}</div>
-          </div>
-          <div class="actions">
-            <a href="{{ route('trainer.participants', $c) }}" class="btn btn-secondary btn-sm">Deltagere</a>
-          </div>
-        </div>
-      @endforeach
+      <div class="empty">Du er ikke tilmeldt noget endnu. <a href="{{ route('catalog') }}">Se alle hold →</a></div>
     </div>
   @endif
 </div>

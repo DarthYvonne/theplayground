@@ -45,10 +45,7 @@ class CourseController extends Controller
         $enrolledCourses = Course::with('trainer')
             ->whereIn('id', $user->activeEnrollments()->pluck('course_id'))
             ->get();
-        $trainerCourses = $user->isTrainer()
-            ? Course::with('trainer')->where('trainer_id', $user->id)->get()
-            : collect();
-        return view('courses.mine', compact('enrolledCourses', 'trainerCourses'));
+        return view('courses.mine', compact('enrolledCourses'));
     }
 
     public function show(Course $course, Request $request)
