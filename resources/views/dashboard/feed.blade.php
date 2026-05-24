@@ -19,27 +19,15 @@
 
   /* Feed items */
   .feed-list { display: flex; flex-direction: column; gap: 14px; }
-  .feed-item { position: relative; background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 14px 16px; }
-  .feed-head { display: flex; gap: 10px; align-items: center; padding-right: 110px; }
-  .feed-head .name { font-weight: 700; }
-  .feed-head .meta { color: var(--muted); font-size: 12px; margin-top: 1px; }
+  .feed-item { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 14px 16px; }
+  .feed-head { display: flex; gap: 10px; align-items: flex-start; }
+  .feed-head .head-text { flex: 1; min-width: 0; }
+  .feed-head .action { line-height: 1.35; word-break: break-word; }
+  .feed-head .action a { color: var(--text); font-weight: 700; text-decoration: none; }
+  .feed-head .action a:hover { text-decoration: underline; }
+  .feed-head .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
   .feed-body { margin-top: 10px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .feed-context { position: absolute; top: 14px; right: 14px; }
-  .feed-type-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.3px; text-decoration: none; max-width: 180px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  a.feed-type-chip:hover { filter: brightness(0.96); }
-  .feed-type-chip.platform { background: #e0e7ff; color: #3730a3; }
-  .feed-type-chip.course { background: #dcfce7; color: #166534; }
-  .feed-type-chip.enroll { background: #fef3c7; color: #92400e; }
-  @media (max-width: 540px) {
-    .feed-head { padding-right: 0; }
-    .feed-context { position: static; margin-bottom: 8px; display: block; }
-    .feed-type-chip { max-width: 100%; }
-  }
-  .feed-enroll-line { margin-top: 10px; padding: 10px 12px; background: #fafbfc; border-radius: 8px; display: flex; gap: 10px; align-items: center; }
-  .feed-enroll-line img, .feed-enroll-line .ph { width: 36px; height: 36px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
-  .feed-enroll-line .ph { background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 14px; }
-  .feed-enroll-line .ct { flex: 1; font-size: 13px; }
-  .feed-enroll-line .ct .t { font-weight: 700; }
+  .feed-body-box { margin-top: 10px; padding: 10px 12px; background: #fafbfc; border-radius: 8px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 
   .feed-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f2f5; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .respekt-count { color: var(--text); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; min-height: 1em; background: none; border: none; padding: 0; font-family: inherit; cursor: default; }
@@ -130,50 +118,39 @@
       : escapeHtml(u.initials);
     return '<div class="av">' + inner + '</div>';
   }
-  function contextChip(it) {
-    if (it.type === 'platform_message') {
-      return '<span class="feed-type-chip platform"><i class="fa-solid fa-hashtag"></i> Fælles</span>';
-    }
-    if (it.type === 'course_message' && it.course) {
-      return '<a class="feed-type-chip course" href="' + escapeHtml(it.course.chat_url) + '" title="' + escapeHtml(it.course.title) + '">' +
-        '<i class="fa-regular fa-comments"></i> ' + escapeHtml(it.course.title) + '</a>';
-    }
-    if (it.type === 'enrollment' && it.course) {
-      return '<a class="feed-type-chip enroll" href="' + escapeHtml(it.course.url) + '" title="' + escapeHtml(it.course.title) + '">' +
-        '<i class="fa-solid fa-user-plus"></i> ' + escapeHtml(it.course.title) + '</a>';
-    }
-    return '';
+  function userLink(u) {
+    return '<a href="' + escapeHtml(u.profile_url) + '">' + escapeHtml(u.name) + '</a>';
+  }
+  function courseLink(c, url) {
+    return '<a href="' + escapeHtml(url) + '">' + escapeHtml(c.title) + '</a>';
   }
   function renderItem(it) {
     var el = document.createElement('article');
     el.className = 'feed-item';
     el.dataset.id = it.id;
 
+    var action = '';
+    var body = '';
+
+    if (it.type === 'enrollment' && it.course) {
+      action = userLink(it.user) + ' tilmeldte sig ' + courseLink(it.course, it.course.url);
+    } else if (it.type === 'course_message' && it.course) {
+      action = userLink(it.user) + ' skrev i ' + courseLink(it.course, it.course.chat_url);
+      if (it.body) body = '<div class="feed-body-box">' + escapeHtml(it.body) + '</div>';
+    } else {
+      // platform_message (or fallback)
+      action = userLink(it.user);
+      if (it.body) body = '<div class="feed-body">' + escapeHtml(it.body) + '</div>';
+    }
+
     var head =
-      '<div class="feed-context">' + contextChip(it) + '</div>' +
       '<div class="feed-head">' +
         avatar(it.user) +
-        '<div style="flex:1;min-width:0;">' +
-          '<div class="name">' + escapeHtml(it.user.name) + '</div>' +
+        '<div class="head-text">' +
+          '<div class="action">' + action + '</div>' +
           '<div class="meta">' + escapeHtml(it.time_human) + '</div>' +
         '</div>' +
       '</div>';
-
-    var body = '';
-    if (it.type === 'enrollment' && it.course) {
-      body =
-        '<div class="feed-body">' + escapeHtml(it.user.name) + ' tilmeldte sig <strong>' + escapeHtml(it.course.title) + '</strong>.</div>' +
-        '<a href="' + escapeHtml(it.course.url) + '" style="text-decoration:none;color:inherit;">' +
-          '<div class="feed-enroll-line">' +
-            (it.course.image_url
-              ? '<img src="' + escapeHtml(it.course.image_url) + '" alt="">'
-              : '<div class="ph"><i class="fa-solid fa-dumbbell"></i></div>') +
-            '<div class="ct"><div class="t">' + escapeHtml(it.course.title) + '</div><div style="color:var(--muted);">Se hold →</div></div>' +
-          '</div>' +
-        '</a>';
-    } else if (it.body) {
-      body = '<div class="feed-body">' + escapeHtml(it.body) + '</div>';
-    }
 
     var footer =
       '<div class="feed-footer">' +

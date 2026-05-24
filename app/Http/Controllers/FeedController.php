@@ -165,6 +165,7 @@ class FeedController extends Controller
             'name' => $u->name,
             'initials' => $u->initials(),
             'picture_url' => $u->pictureUrl(),
+            'profile_url' => route('members.show', $u),
             'role' => $u->role,
         ];
     }
