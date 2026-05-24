@@ -53,9 +53,18 @@ class BeskederController extends Controller
             $prefill = User::find((int) $request->query('til'));
         }
 
+        $prefillCourse = null;
+        if ($request->filled('hold')) {
+            $course = Course::find((int) $request->query('hold'));
+            if ($course && $this->canBroadcastTo($me, $course)) {
+                $prefillCourse = $course;
+            }
+        }
+
         return view('beskeder.index', [
             'threads' => array_values($threads),
             'prefill' => $prefill,
+            'prefillCourse' => $prefillCourse,
             'canBroadcast' => $this->broadcastableCourses($me)->isNotEmpty(),
         ]);
     }

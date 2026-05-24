@@ -68,17 +68,31 @@
     </form>
   </div>
 
-  <div class="compose-card" id="composeCard" @if (!$prefill) style="display:none;" @endif>
+  @php
+    $hasPrefill = $prefill || $prefillCourse;
+    $prefillType = $prefillCourse ? 'course' : ($prefill ? 'user' : '');
+    $prefillId = $prefillCourse?->id ?? $prefill?->id ?? '';
+  @endphp
+
+  <div class="compose-card" id="composeCard" @if (!$hasPrefill) style="display:none;" @endif>
     <h2>Ny besked</h2>
     <form method="POST" action="{{ route('beskeder.store') }}" id="composeForm">
       @csrf
-      <input type="hidden" name="recipient_type" id="recipientType" value="{{ $prefill ? 'user' : '' }}">
-      <input type="hidden" name="recipient_id" id="recipientId" value="{{ $prefill->id ?? '' }}">
+      <input type="hidden" name="recipient_type" id="recipientType" value="{{ $prefillType }}">
+      <input type="hidden" name="recipient_id" id="recipientId" value="{{ $prefillId }}">
 
       <div class="compose-row">
         <label for="recipientSearch">Til</label>
-        <div id="recipientChosen" @if (!$prefill) style="display:none;" @endif></div>
-        <input type="text" id="recipientSearch" placeholder="Søg efter person@if ($canBroadcast) eller hold@endif…" autocomplete="off" @if ($prefill) style="display:none;" @endif>
+        <div id="recipientChosen" @if (!$hasPrefill) style="display:none;" @endif>
+          @if ($prefillCourse)
+            <span class="pill course">
+              <i class="fa-solid fa-bullhorn" style="margin-right:2px;"></i>
+              <span>{{ $prefillCourse->title }}</span>
+              <button type="button" id="clearRecipient" aria-label="Fjern">×</button>
+            </span>
+          @endif
+        </div>
+        <input type="text" id="recipientSearch" placeholder="Søg efter person@if ($canBroadcast) eller hold@endif…" autocomplete="off" @if ($hasPrefill) style="display:none;" @endif>
         <div class="ac-results" id="acResults"></div>
       </div>
 
@@ -90,7 +104,7 @@
       <div class="compose-actions">
         <button type="submit" class="btn btn-primary" id="composeSend"><i class="fa-solid fa-paper-plane"></i> Send</button>
         <button type="button" class="btn btn-ghost btn-sm" id="composeCancel">Annullér</button>
-        <span class="hint" id="composeHint"></span>
+        <span class="hint" id="composeHint">@if ($prefillCourse)Sendes som privat besked til hver enkelt på holdet.@endif</span>
       </div>
     </form>
   </div>
@@ -177,6 +191,11 @@
   function closeCompose() { card.style.display = 'none'; clearRecipient(); body.value = ''; }
   openBtn.addEventListener('click', openCompose);
   cancelBtn.addEventListener('click', closeCompose);
+
+  /* When the form was prefilled server-side (e.g. ?hold=ID), the pill is
+     already in the DOM — wire its clear button to clearRecipient. */
+  var initClear = document.getElementById('clearRecipient');
+  if (initClear) initClear.addEventListener('click', clearRecipient);
 
   var t = null;
   search.addEventListener('input', function () {
