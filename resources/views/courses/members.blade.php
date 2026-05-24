@@ -40,11 +40,6 @@
 
 <div class="members-shell">
   <div class="card">
-    <div class="members-head">
-      <h2>Medlemmer</h2>
-      <div class="sub">{{ $members->count() }} aktive · træner {{ $course->trainer->name }}</div>
-    </div>
-
     <div class="members-sec">Træner</div>
     <a href="{{ route('members.show', $course->trainer) }}" class="member-row">
       @include('partials.avatar', ['u' => $course->trainer])
@@ -60,7 +55,7 @@
       <i class="fa-solid fa-chevron-right chev"></i>
     </a>
 
-    <div class="members-sec">Deltagere</div>
+    <div class="members-sec">Deltagere ({{ $members->count() }})</div>
     @if ($members->isEmpty())
       <div class="empty">Ingen tilmeldte endnu.</div>
     @else
