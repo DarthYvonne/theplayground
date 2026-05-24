@@ -41,12 +41,13 @@
   .feed-enroll-line .ct { flex: 1; font-size: 13px; }
   .feed-enroll-line .ct .t { font-weight: 700; }
 
-  .feed-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f2f5; display: flex; align-items: center; gap: 10px; }
-  .respekt-btn { background: none; border: none; padding: 6px 10px; border-radius: 8px; color: var(--muted); font-weight: 600; cursor: pointer; font-family: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 7px; }
-  .respekt-btn:hover { background: var(--hover); color: var(--text); }
+  .feed-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f2f5; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .respekt-count { color: var(--text); font-size: 13px; font-weight: 700; }
+  .respekt-count:empty { display: none; }
+  .respekt-btn { background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+  .respekt-btn:hover { text-decoration: underline; }
   .respekt-btn.active { color: var(--accent); }
   .respekt-btn i { font-size: 14px; }
-  .respekt-count { color: var(--muted); font-size: 12px; }
 
   .feed-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); }
   .feed-loading { color: var(--muted); text-align: center; padding: 20px; font-size: 13px; }
@@ -63,7 +64,7 @@
 <div class="feed-shell">
   <form id="feedComposer" class="composer" autocomplete="off">
     @csrf
-    <textarea id="feedComposerInput" name="body" placeholder="Hvad sker der i klubben, {{ explode(' ', trim($user->name))[0] }}?" maxlength="2000" rows="1"></textarea>
+    <textarea id="feedComposerInput" name="body" placeholder="Hvad sker der, {{ explode(' ', trim($user->name))[0] }}?" maxlength="2000" rows="1"></textarea>
     <div class="composer-actions">
       <button type="submit" class="btn btn-primary" id="feedComposerSubmit" disabled>Slå op</button>
     </div>
@@ -148,12 +149,12 @@
 
     var footer =
       '<div class="feed-footer">' +
+        '<span class="respekt-count">' + (it.respekt_count > 0 ? (it.respekt_count + ' Respekt') : '') + '</span>' +
         '<button type="button" class="respekt-btn ' + (it.you_respekted ? 'active' : '') + '"' +
           ' data-target-type="' + escapeHtml(it.target_type) + '"' +
           ' data-target-id="' + escapeHtml(String(it.target_id)) + '">' +
           '<i class="fa-solid fa-hand-fist"></i> Respekt' +
         '</button>' +
-        '<span class="respekt-count">' + (it.respekt_count > 0 ? (it.respekt_count + ' Respekt') : '') + '</span>' +
       '</div>';
 
     el.innerHTML = head + body + footer;
