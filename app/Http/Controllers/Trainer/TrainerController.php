@@ -10,17 +10,22 @@ class TrainerController extends Controller
 {
     public function index(Request $request) {
         $user = $request->user();
-        $courses = $user->isOwner()
-            ? Course::with('trainer')->orderByDesc('is_active')->orderBy('title')->get()
-            : Course::with('trainer')->where('trainer_id', $user->id)->get();
+        $courses = Course::with('trainer')
+            ->where('trainer_id', $user->id)
+            ->orderByDesc('is_active')
+            ->orderBy('title')
+            ->get();
         return view('trainer.index', compact('courses'));
     }
 
     public function calendar(Request $request) {
         $user = $request->user();
-        $courses = $user->isOwner()
-            ? Course::with('trainer')->where('is_active', true)->orderBy('start_time')->orderBy('title')->get()
-            : Course::with('trainer')->where('trainer_id', $user->id)->where('is_active', true)->orderBy('start_time')->orderBy('title')->get();
+        $courses = Course::with('trainer')
+            ->where('trainer_id', $user->id)
+            ->where('is_active', true)
+            ->orderBy('start_time')
+            ->orderBy('title')
+            ->get();
 
         $byDay = [];
         foreach (array_keys(Course::WEEKDAYS) as $day) $byDay[$day] = [];
