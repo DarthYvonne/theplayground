@@ -6,7 +6,6 @@
   .besk-thread { max-width: 720px; }
 
   .besk-header-id { display: inline-flex; align-items: center; gap: 10px; color: inherit; }
-  .besk-header-id .role { color: var(--muted); font-size: 12px; font-weight: 400; margin-left: 6px; }
   .besk-header-back { color: var(--muted); font-size: 18px; padding: 4px 8px; border-radius: 6px; margin-right: 4px; }
   .besk-header-back:hover { background: var(--hover); color: var(--text); }
 
@@ -46,7 +45,6 @@
     <a href="{{ route('members.show', $other) }}" class="besk-header-id">
       @include('partials.avatar', ['u' => $other, 'size' => 'sm'])
       <span>{{ $other->name }}</span>
-      <span class="role">@switch($other->role)@case('owner')Ejer@break @case('trainer')Træner@break @case('assistant')Assistent@break @default Medlem @endswitch</span>
     </a>
   </h1>
   @include('partials.header-actions')
