@@ -3,16 +3,23 @@
 
 @push('styles')
 <style>
-  .members-filter { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; align-items: stretch; }
-  .members-search { position: relative; flex: 1; min-width: 220px; max-width: 420px; }
+  .members-filter {
+    display: flex; align-items: stretch;
+    margin-bottom: 18px; max-width: 620px;
+    background: #fff; border: 1px solid var(--border); border-radius: 8px;
+    transition: border-color 0.12s, box-shadow 0.12s;
+  }
+  .members-filter:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
+
+  .members-search { position: relative; flex: 1; min-width: 0; }
   .members-search input[type=search] {
     -webkit-appearance: none; appearance: none;
     width: 100%; font-family: inherit; font-size: 14px;
     padding: 10px 38px 10px 38px;
-    border: 1px solid var(--border); border-radius: 8px;
-    background: #fff; color: var(--text); line-height: 1.2;
+    border: none; border-radius: 8px 0 0 8px;
+    background: transparent; color: var(--text); line-height: 1.2;
   }
-  .members-search input[type=search]:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
+  .members-search input[type=search]:focus { outline: none; }
   .members-search input[type=search]::-webkit-search-decoration,
   .members-search input[type=search]::-webkit-search-cancel-button { -webkit-appearance: none; display: none; }
   .members-search .icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; font-size: 14px; }
@@ -20,21 +27,31 @@
   .members-search .clear:hover { background: var(--hover); color: var(--text); }
   .members-search.has-value .clear { display: block; }
 
+  .members-filter .divider { width: 1px; background: var(--border); flex-shrink: 0; }
+
   .members-hold-select {
     -webkit-appearance: none; appearance: none;
     font-family: inherit; font-size: 14px; line-height: 1.2;
-    padding: 10px 34px 10px 14px;
-    border: 1px solid var(--border); border-radius: 8px;
-    background: #fff; color: var(--text);
+    padding: 10px 32px 10px 14px;
+    border: none; border-radius: 0 8px 8px 0;
+    background: transparent; color: var(--text);
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath fill='%2365676b' d='M6 8 0 0h12z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
     background-size: 10px 7px;
     cursor: pointer;
-    min-width: 180px;
+    min-width: 160px;
+    flex-shrink: 0;
   }
-  .members-hold-select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
-  .members-hold-select.active { border-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .members-hold-select:focus { outline: none; }
+  .members-hold-select.active { color: var(--accent); font-weight: 600; }
+
+  @media (max-width: 520px) {
+    .members-filter { flex-direction: column; }
+    .members-search input[type=search] { border-radius: 8px 8px 0 0; }
+    .members-filter .divider { width: auto; height: 1px; }
+    .members-hold-select { border-radius: 0 0 8px 8px; width: 100%; min-width: 0; }
+  }
 
   .members-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
   .member-card {
@@ -65,6 +82,7 @@
     <input type="search" id="membersSearchInput" placeholder="Søg efter medlem …" autocomplete="off">
     <button type="button" class="clear" id="membersSearchClear" aria-label="Ryd"><i class="fa-solid fa-xmark"></i></button>
   </div>
+  <div class="divider" aria-hidden="true"></div>
   <select class="members-hold-select" id="membersHoldSelect" aria-label="Filtrér på hold">
     <option value="">Alle hold</option>
     @foreach ($courses as $c)
