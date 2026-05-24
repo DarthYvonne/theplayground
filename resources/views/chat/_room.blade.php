@@ -38,15 +38,17 @@
 
 <div class="chat-shell">
   <div class="chat-card" data-list-url="{{ $listUrl }}" data-send-url="{{ $sendUrl }}">
-    <div class="head">
-      <div style="width:42px;height:42px;background:var(--accent-soft);color:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
-        <i class="{{ $icon ?? 'fa-solid fa-hashtag' }}"></i>
+    @if ($showHead ?? true)
+      <div class="head">
+        <div style="width:42px;height:42px;background:var(--accent-soft);color:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+          <i class="{{ $icon ?? 'fa-solid fa-hashtag' }}"></i>
+        </div>
+        <div>
+          <h2>{{ $title }}</h2>
+          <div class="sub">{{ $sub }}</div>
+        </div>
       </div>
-      <div>
-        <h2>{{ $title }}</h2>
-        <div class="sub">{{ $sub }}</div>
-      </div>
-    </div>
+    @endif
     <div class="chat-stream" id="chatStream">
       <div class="chat-empty">Indlæser…</div>
     </div>

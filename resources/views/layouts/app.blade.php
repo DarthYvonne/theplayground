@@ -49,6 +49,7 @@
   .nav .ico { width: 22px; display: inline-block; text-align: center; color: var(--muted); }
   .nav a.active .ico { color: var(--accent); }
   .nav .badge-pill { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center; }
+  .nav .count-pill { margin-left: auto; background: var(--accent-soft); color: var(--accent); font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center; }
   .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); padding: 16px 12px 6px; }
   .logout-form { margin-top: 2px; }
   .logout-form button { width: 100%; padding: 10px 12px; background: none; border: none; color: var(--muted); cursor: pointer; font-weight: 600; font-size: 14px; text-align: left; border-radius: 8px; display: flex; align-items: center; gap: 12px; font-family: inherit; }
@@ -202,17 +203,10 @@
     <nav class="nav">
       @auth
         <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-newspaper"></i></span> Start</a>
-        <a href="{{ route('catalog.mine') }}" class="{{ request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
+        @php $myHoldCount = auth()->user()->activeEnrollments()->count(); @endphp
+        <a href="{{ route('catalog.mine') }}" class="{{ request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold @if ($myHoldCount > 0)<span class="count-pill">{{ $myHoldCount }}</span>@endif</a>
         <a href="{{ url('/indbakke') }}" class="{{ request()->is('indbakke*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Indbakke</a>
         <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-users"></i></span> Medlemmer</a>
-
-        @php $myEnrolled = auth()->user()->activeEnrollments()->with('course')->get()->pluck('course')->filter(); @endphp
-        @if ($myEnrolled->count())
-          <div class="nav-section">Mine hold</div>
-          @foreach ($myEnrolled as $c)
-            <a href="{{ route('chat.course', $c) }}" class="{{ request()->routeIs('chat.course') && request()->route('course')?->id === $c->id ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-comments"></i></span> {{ \Illuminate\Support\Str::limit($c->title, 22) }}</a>
-          @endforeach
-        @endif
 
         @if (auth()->user()->isTrainer())
           <div class="nav-section">Træner</div>
