@@ -30,4 +30,9 @@ class SettingsController extends Controller
             'perCourse' => $perCourse,
         ]);
     }
+
+    public function other()
+    {
+        return view('admin.settings.other');
+    }
 }

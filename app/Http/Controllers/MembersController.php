@@ -13,9 +13,15 @@ class MembersController extends Controller
         $users = User::orderBy('name')
             ->withCount(['enrollments as active_enrollments_count' => fn ($q) => $q->where('status', 'active')])
             ->withCount('trainerCourses')
+            ->with([
+                'activeEnrollments:id,user_id,course_id',
+                'trainerCourses:id,trainer_id',
+            ])
             ->get();
 
-        return view('members.index', compact('users'));
+        $courses = Course::where('is_active', true)->orderBy('title')->get(['id', 'title']);
+
+        return view('members.index', compact('users', 'courses'));
     }
 
     public function show(Request $request, User $user)

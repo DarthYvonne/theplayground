@@ -24,15 +24,22 @@
   .desc { margin-top: 18px; line-height: 1.6; white-space: pre-wrap; color: #3a3d42; }
 
   .card-footer { background: #fafbfc; border-top: 1px solid #f0f2f5; padding: 16px 24px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .card-footer .footer-left { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
   .card-footer .afmeld { background: none; border: none; padding: 0; color: var(--muted); font-size: 13px; cursor: pointer; font-family: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .card-footer .afmeld:hover { color: var(--danger); }
   .card-footer .enrolled-note { display: inline-flex; align-items: center; gap: 6px; color: #166534; font-weight: 700; font-size: 14px; }
+
+  .card-footer .owner-actions { display: inline-flex; gap: 4px; margin-left: auto; }
+  .cf-iconbtn { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 8px; cursor: pointer; font-size: 14px; padding: 0; }
+  .cf-iconbtn:hover { background: var(--hover); color: var(--text); border-color: var(--muted); }
+  .cf-iconbtn.danger:hover { background: #fef2f2; color: var(--danger); border-color: var(--danger); }
+  .card-footer .owner-actions form { display: inline-flex; margin: 0; }
 
   @media (max-width: 767px) {
     .course-body { padding: 18px; }
     .course-title { font-size: 22px; }
     .card-footer { padding: 14px 18px; }
-    .card-footer .btn { width: 100%; justify-content: center; }
+    .card-footer .footer-left .btn { width: 100%; justify-content: center; }
   }
 </style>
 @endpush
@@ -87,23 +94,37 @@
     </div>
 
     <div class="card-footer">
-      @auth
-        @if ($isEnrolled)
-          <span class="enrolled-note"><i class="fa-solid fa-circle-check"></i> Du er tilmeldt</span>
-          <form method="POST" action="{{ route('enroll.cancel', $course) }}" onsubmit="return confirm('Afmeld dig dette hold?');" style="margin-left:auto;">
-            @csrf
-            <button class="afmeld" type="submit">Afmeld</button>
-          </form>
-        @elseif ($course->isFull())
-          <button class="btn btn-secondary" disabled>Holdet er fuldt</button>
+      <div class="footer-left">
+        @auth
+          @if ($isEnrolled)
+            <form method="POST" action="{{ route('enroll.cancel', $course) }}" onsubmit="return confirm('Afmeld dig dette hold?');">
+              @csrf
+              <button class="afmeld" type="submit">Afmeld</button>
+            </form>
+            <span class="enrolled-note"><i class="fa-solid fa-circle-check"></i> Du er tilmeldt</span>
+          @elseif ($course->isFull())
+            <button class="btn btn-secondary" disabled>Holdet er fuldt</button>
+          @else
+            <form method="POST" action="{{ route('enroll', $course) }}">
+              @csrf
+              <button class="btn btn-primary" type="submit">Tilmeld dig</button>
+            </form>
+          @endif
         @else
-          <form method="POST" action="{{ route('enroll', $course) }}">
-            @csrf
-            <button class="btn btn-primary" type="submit">Tilmeld dig</button>
-          </form>
+          <a href="{{ route('login') }}" class="btn btn-primary">Log ind for at tilmelde dig</a>
+        @endauth
+      </div>
+
+      @auth
+        @if (auth()->user()->isOwner())
+          <div class="owner-actions">
+            <a href="{{ route('admin.courses.edit', $course) }}" class="cf-iconbtn" title="Rediger hold" aria-label="Rediger hold"><i class="fa-solid fa-pen"></i></a>
+            <form method="POST" action="{{ route('admin.courses.destroy', $course) }}" onsubmit="return confirm('Slet dette hold? Det kan ikke fortrydes.');">
+              @csrf
+              <button class="cf-iconbtn danger" type="submit" title="Slet hold" aria-label="Slet hold"><i class="fa-solid fa-trash"></i></button>
+            </form>
+          </div>
         @endif
-      @else
-        <a href="{{ route('login') }}" class="btn btn-primary">Log ind for at tilmelde dig</a>
       @endauth
     </div>
   </div>

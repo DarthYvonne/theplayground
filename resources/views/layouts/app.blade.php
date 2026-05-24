@@ -64,9 +64,6 @@
   .sidebar-profile .av { flex-shrink: 0; }
 
   /* Preview role switcher (owner only) */
-  .preview-role-form { margin-top: 8px; border-top: 1px solid #f0f2f5; padding: 10px 12px 4px; }
-  .preview-role-form .lbl { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
-  .preview-role-form select { width: 100%; padding: 8px 10px; font-size: 13px; }
   .preview-banner { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; border-radius: 8px; padding: 8px 12px; margin-bottom: 14px; font-size: 13px; display: flex; align-items: center; gap: 8px; }
   .preview-banner .stop { margin-left: auto; }
   .preview-banner .stop button { background: none; border: none; color: inherit; text-decoration: underline; cursor: pointer; font-size: 13px; font-family: inherit; font-weight: 600; padding: 0; }
@@ -227,19 +224,6 @@
       @endauth
     </nav>
     @auth
-      @if (auth()->user()->isActualOwner())
-        @php $previewRole = session('preview_role'); @endphp
-        <form method="POST" action="{{ route('preview.role') }}" class="preview-role-form">
-          @csrf
-          <label class="lbl" for="previewRoleSelect">Log in as</label>
-          <select id="previewRoleSelect" name="role" onchange="this.form.submit()">
-            <option value="owner" {{ !$previewRole ? 'selected' : '' }}>Ejer (mig)</option>
-            <option value="trainer" {{ $previewRole === 'trainer' ? 'selected' : '' }}>Træner</option>
-            <option value="assistant" {{ $previewRole === 'assistant' ? 'selected' : '' }}>Assistent</option>
-            <option value="user" {{ $previewRole === 'user' ? 'selected' : '' }}>Bruger</option>
-          </select>
-        </form>
-      @endif
       <div class="sidebar-profile-wrap">
         <a href="{{ url('/profile') }}" class="sidebar-profile {{ request()->is('profile*') ? 'active' : '' }}">
           @include('partials.avatar', ['u' => auth()->user(), 'size' => 'sm'])
