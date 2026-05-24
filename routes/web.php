@@ -14,6 +14,7 @@ use App\Http\Controllers\MembersController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PreviewRoleController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\RespektController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\Trainer\BroadcastController;
 use App\Http\Controllers\Trainer\TrainerController;
@@ -41,6 +42,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'feed'])->name('dashboard');
     Route::get('/dashboard/hold', [DashboardController::class, 'hold'])->name('dashboard.hold');
     Route::get('/api/feed', [FeedController::class, 'list']);
+    Route::post('/api/respekt', [RespektController::class, 'toggle']);
 
     Route::get('/indbakke', [InboxController::class, 'index'])->name('inbox');
 

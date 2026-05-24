@@ -41,6 +41,13 @@
   .feed-enroll-line .ct { flex: 1; font-size: 13px; }
   .feed-enroll-line .ct .t { font-weight: 700; }
 
+  .feed-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f2f5; display: flex; align-items: center; gap: 10px; }
+  .respekt-btn { background: none; border: none; padding: 6px 10px; border-radius: 8px; color: var(--muted); font-weight: 600; cursor: pointer; font-family: inherit; font-size: 13px; display: inline-flex; align-items: center; gap: 7px; }
+  .respekt-btn:hover { background: var(--hover); color: var(--text); }
+  .respekt-btn.active { color: var(--accent); }
+  .respekt-btn i { font-size: 14px; }
+  .respekt-count { color: var(--muted); font-size: 12px; }
+
   .feed-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); }
   .feed-loading { color: var(--muted); text-align: center; padding: 20px; font-size: 13px; }
 </style>
@@ -139,9 +146,45 @@
       body = '<div class="feed-body">' + escapeHtml(it.body) + '</div>';
     }
 
-    el.innerHTML = head + body;
+    var footer =
+      '<div class="feed-footer">' +
+        '<button type="button" class="respekt-btn ' + (it.you_respekted ? 'active' : '') + '"' +
+          ' data-target-type="' + escapeHtml(it.target_type) + '"' +
+          ' data-target-id="' + escapeHtml(String(it.target_id)) + '">' +
+          '<i class="fa-solid fa-hand-fist"></i> Respekt' +
+        '</button>' +
+        '<span class="respekt-count">' + (it.respekt_count > 0 ? (it.respekt_count + ' Respekt') : '') + '</span>' +
+      '</div>';
+
+    el.innerHTML = head + body + footer;
     return el;
   }
+
+  function respektCountText(n) { return n > 0 ? (n + ' Respekt') : ''; }
+  list.addEventListener('click', async function (e) {
+    var btn = e.target.closest('.respekt-btn');
+    if (!btn) return;
+    e.preventDefault();
+    var type = btn.dataset.targetType;
+    var id = btn.dataset.targetId;
+    btn.disabled = true;
+    try {
+      var res = await fetch('{{ url('/api/respekt') }}', {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target_type: type, target_id: id }),
+      });
+      if (!res.ok) throw new Error('Respekt failed');
+      var data = await res.json();
+      btn.classList.toggle('active', !!data.respekted);
+      var counter = btn.parentElement.querySelector('.respekt-count');
+      if (counter) counter.textContent = respektCountText(data.count);
+    } catch (err) {
+      // silent — user can retry
+    } finally {
+      btn.disabled = false;
+    }
+  });
 
   function paint(items) {
     var frag = document.createDocumentFragment();
