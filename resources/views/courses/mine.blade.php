@@ -3,7 +3,7 @@
 
 @push('styles')
 <style>
-  .dash-main { max-width: 720px; }
+  .mine-main { }
   .course-mini { display: flex; gap: 14px; padding: 14px 18px; border-top: 1px solid #f0f2f5; }
   .course-mini:first-child { border-top: none; }
   .course-mini img, .course-mini .ph { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
@@ -23,13 +23,13 @@
 @endpush
 
 <div class="view-header">
-  <h1>Start</h1>
+  <h1>Hold</h1>
   @include('partials.header-actions')
 </div>
 
-@include('dashboard._subnav')
+@include('courses._subnav')
 
-<div class="dash-main">
+<div class="mine-main">
   @if ($enrolledCourses->isNotEmpty())
     <div class="card">
       <div class="section-h"><i class="fa-solid fa-dumbbell" style="color:var(--accent)"></i> Dine hold</div>
@@ -50,7 +50,7 @@
   @elseif (!auth()->user()->isTrainer())
     <div class="card">
       <div class="section-h"><i class="fa-solid fa-dumbbell" style="color:var(--accent)"></i> Dine hold</div>
-      <div class="empty">Du er ikke tilmeldt noget endnu. <a href="{{ url('/') }}">Se hold →</a></div>
+      <div class="empty">Du er ikke tilmeldt noget endnu. <a href="{{ route('catalog') }}">Se hold →</a></div>
     </div>
   @endif
 

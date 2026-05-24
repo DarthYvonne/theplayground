@@ -10,8 +10,13 @@
 @endpush
 
 <nav class="home-tabs" aria-label="Hold">
-  <a href="{{ route('home') }}" class="{{ request()->routeIs('home') ? 'active' : '' }}">
-    <i class="fa-solid fa-dumbbell"></i> Hold
+  @auth
+    <a href="{{ route('catalog.mine') }}" class="{{ request()->routeIs('catalog.mine') ? 'active' : '' }}">
+      <i class="fa-solid fa-user-check"></i> Dine hold
+    </a>
+  @endauth
+  <a href="{{ route('catalog') }}" class="{{ request()->routeIs('catalog') ? 'active' : '' }}">
+    <i class="fa-solid fa-dumbbell"></i> Alle hold
   </a>
   <a href="{{ route('home.calendar') }}" class="{{ request()->routeIs('home.calendar') ? 'active' : '' }}">
     <i class="fa-regular fa-calendar"></i> Kalender

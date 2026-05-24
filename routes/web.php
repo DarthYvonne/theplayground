@@ -46,7 +46,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 // Authenticated
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'feed'])->name('dashboard');
-    Route::get('/dashboard/hold', [DashboardController::class, 'hold'])->name('dashboard.hold');
+    Route::get('/hold/dine', [CourseController::class, 'mine'])->name('catalog.mine');
     Route::get('/api/feed', [FeedController::class, 'list']);
     Route::get('/api/respekt', [RespektController::class, 'list']);
     Route::post('/api/respekt', [RespektController::class, 'toggle']);

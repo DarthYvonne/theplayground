@@ -34,7 +34,21 @@ class CourseController extends Controller
         }
         $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
 
-        return view('courses.calendar', compact('byDay', 'unscheduled'));
+        $enrolledIds = $request->user()?->activeEnrollments()->pluck('course_id')->all() ?? [];
+
+        return view('courses.calendar', compact('byDay', 'unscheduled', 'enrolledIds'));
+    }
+
+    public function mine(Request $request)
+    {
+        $user = $request->user();
+        $enrolledCourses = Course::with('trainer')
+            ->whereIn('id', $user->activeEnrollments()->pluck('course_id'))
+            ->get();
+        $trainerCourses = $user->isTrainer()
+            ? Course::with('trainer')->where('trainer_id', $user->id)->get()
+            : collect();
+        return view('courses.mine', compact('enrolledCourses', 'trainerCourses'));
     }
 
     public function show(Course $course, Request $request)
