@@ -13,7 +13,4 @@
   <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
     <i class="fa-regular fa-newspaper"></i> Feed
   </a>
-  <a href="{{ route('dashboard.hold') }}" class="{{ request()->routeIs('dashboard.hold') ? 'active' : '' }}">
-    <i class="fa-solid fa-dumbbell"></i> Dine hold
-  </a>
 </nav>

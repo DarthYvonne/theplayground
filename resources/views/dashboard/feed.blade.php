@@ -73,11 +73,9 @@
 @endpush
 
 <div class="view-header">
-  <h1>Start</h1>
+  <h1>Feed</h1>
   @include('partials.header-actions')
 </div>
-
-@include('dashboard._subnav')
 
 <div class="feed-shell">
   <form id="feedComposer" class="composer" autocomplete="off">
