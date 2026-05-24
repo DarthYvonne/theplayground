@@ -34,7 +34,7 @@
   .main {
     display: flex; flex-direction: column;
     height: 100vh; height: 100dvh;
-    padding-bottom: 0;
+    padding-bottom: 15px;
     overflow: hidden;
   }
   .main > * { flex-shrink: 0; }

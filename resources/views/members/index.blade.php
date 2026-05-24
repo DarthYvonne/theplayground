@@ -38,7 +38,7 @@
 @endpush
 
 <div class="view-header">
-  <h1><i class="fa-solid fa-users" style="color:var(--text);margin-right:8px;"></i>Medlemmer</h1>
+  <h1><i class="fa-solid fa-circle-user" style="color:var(--text);margin-right:8px;"></i>Medlemmer</h1>
   @include('partials.header-actions')
 </div>
 
