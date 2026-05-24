@@ -7,7 +7,7 @@
      have room for long course titles. */
   .main > * { max-width: 1400px; }
 
-  .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
   .cal-col { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); display: flex; flex-direction: column; min-height: 240px; overflow: hidden; }
   .cal-col-head { padding: 10px 12px; background: #fafbfc; border-bottom: 1px solid #f0f2f5; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); text-align: center; }
   .cal-col-head.today { background: var(--accent-soft); color: var(--accent); }
@@ -48,8 +48,10 @@
   $enrolledSet = array_flip($enrolledIds ?? []);
 @endphp
 
+@php $weekdayLabels = ['mon' => 'Mandag', 'tue' => 'Tirsdag', 'wed' => 'Onsdag', 'thu' => 'Torsdag', 'fri' => 'Fredag']; @endphp
+
 <div class="cal-grid">
-  @foreach (App\Models\Course::WEEKDAYS as $key => $label)
+  @foreach ($weekdayLabels as $key => $label)
     <div class="cal-col">
       <div class="cal-col-head {{ $key === $today ? 'today' : '' }}">{{ $label }}</div>
       <div class="cal-col-body">
@@ -65,6 +67,17 @@
     </div>
   @endforeach
 </div>
+
+@if ($weekendCourses->isNotEmpty())
+  <div class="cal-unscheduled">
+    <h3>Weekend</h3>
+    <div class="cal-unscheduled-list">
+      @foreach ($weekendCourses as $c)
+        <a href="{{ route('courses.show', $c) }}" class="tag muted" style="padding:6px 12px;">{{ $c->title }}</a>
+      @endforeach
+    </div>
+  </div>
+@endif
 
 @if ($unscheduled->isNotEmpty())
   <div class="cal-unscheduled">

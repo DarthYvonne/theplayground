@@ -25,18 +25,23 @@ class CourseController extends Controller
             ->orderBy('title')
             ->get();
 
-        $byDay = [];
-        foreach (array_keys(Course::WEEKDAYS) as $day) $byDay[$day] = [];
+        $weekdayKeys = ['mon','tue','wed','thu','fri'];
+        $byDay = array_fill_keys($weekdayKeys, []);
+        $weekendCourses = collect();
         foreach ($courses as $c) {
-            foreach ($c->weekdaysList() as $day) {
+            $days = $c->weekdaysList();
+            foreach ($days as $day) {
                 if (isset($byDay[$day])) $byDay[$day][] = $c;
+            }
+            if (array_intersect($days, ['sat','sun']) && !array_intersect($days, $weekdayKeys)) {
+                $weekendCourses->push($c);
             }
         }
         $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
 
         $enrolledIds = $request->user()?->activeEnrollments()->pluck('course_id')->all() ?? [];
 
-        return view('courses.calendar', compact('byDay', 'unscheduled', 'enrolledIds'));
+        return view('courses.calendar', compact('byDay', 'unscheduled', 'weekendCourses', 'enrolledIds'));
     }
 
     public function mine(Request $request)
