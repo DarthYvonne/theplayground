@@ -39,18 +39,18 @@
     .course-tabs a {
       flex: 1;
       flex-direction: column;
-      gap: 3px;
-      padding: 8px 4px 6px;
+      gap: 0;
+      padding: 14px 4px;
       border-bottom: none;
       margin-bottom: 0;
       text-align: center;
-      font-size: 11px;
       justify-content: center;
     }
-    .course-tabs a i { font-size: 19px; }
+    .course-tabs a span:not(.tab-badge):not(.tab-dot) { display: none; }
+    .course-tabs a i { font-size: 24px; }
     .course-tabs a.active { color: var(--accent); border-bottom: none; }
-    .course-tabs .tab-badge { position: absolute; top: 4px; right: calc(50% - 22px); }
-    .course-tabs .tab-dot { position: absolute; top: 6px; right: calc(50% - 16px); }
+    .course-tabs .tab-badge { position: absolute; top: 6px; right: calc(50% - 20px); }
+    .course-tabs .tab-dot { position: absolute; top: 8px; right: calc(50% - 14px); }
 
     /* Keep page content clear of the fixed tab bar. */
     .main { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
@@ -59,16 +59,16 @@
 @endpush
 
 <nav class="course-tabs" aria-label="Hold-faner">
-  <a href="{{ route('courses.show', $course) }}" class="{{ request()->routeIs('courses.show') ? 'active' : '' }}">
-    <i class="fa-solid fa-circle-info"></i><span>Om</span>
+  <a href="{{ route('courses.show', $course) }}" class="{{ request()->routeIs('courses.show') ? 'active' : '' }}" aria-label="Om">
+    <i class="fa-solid fa-house"></i><span>Om</span>
   </a>
-  <a href="{{ route('chat.course', $course) }}" class="{{ request()->routeIs('chat.course') ? 'active' : '' }}">
-    <i class="fa-solid fa-comment-dots"></i><span>Chat</span>
+  <a href="{{ route('chat.course', $course) }}" class="{{ request()->routeIs('chat.course') ? 'active' : '' }}" aria-label="Chat">
+    <i class="fa-regular fa-comment"></i><span>Chat</span>
     @if ($unreadCount > 0 && !request()->routeIs('chat.course'))
       <span class="tab-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
     @endif
   </a>
-  <a href="{{ route('courses.members', $course) }}" class="{{ request()->routeIs('courses.members') ? 'active' : '' }}">
+  <a href="{{ route('courses.members', $course) }}" class="{{ request()->routeIs('courses.members') ? 'active' : '' }}" aria-label="Medlemmer">
     <i class="fa-solid fa-users"></i><span>Medlemmer</span>
   </a>
 </nav>

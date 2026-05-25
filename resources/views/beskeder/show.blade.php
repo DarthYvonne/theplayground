@@ -33,11 +33,30 @@
   .thread-reply button:hover { background: var(--accent-hover); }
 
   @media (max-width: 767px) {
-    .besk-thread { margin: -14px -14px 0; max-width: none; }
-    .thread-head-mobile { display: flex; gap: 10px; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid #f0f2f5; color: var(--text); }
+    /* Hard-lock the page so the keyboard can't scroll the body underneath. */
+    html, body { height: 100%; height: 100dvh; overflow: hidden; overscroll-behavior: none; }
+    .app { min-height: 0; height: 100%; }
+    .main { padding: 0; }
+
+    /* Pin the thread to the visible area between the mobile-topbar (56px)
+       and the bottom of the viewport (or the keyboard, when open).
+       Override .main > * { max-width: 720px; margin-right: auto; } so it
+       spans edge-to-edge instead of being squeezed into the content column. */
+    .besk-thread {
+      position: fixed;
+      top: 56px; left: 0; right: 0;
+      bottom: var(--kb-h, 0px);
+      max-width: none; margin: 0;
+      display: flex; flex-direction: column;
+    }
+
+    .thread-head-mobile { display: flex; gap: 10px; align-items: center; padding: 12px 16px; background: #fff; border-bottom: 1px solid #f0f2f5; color: var(--text); flex-shrink: 0; }
     .thread-head-mobile .name { font-weight: 700; font-size: 15px; }
-    .thread-stream { border-radius: 0; min-height: calc(100dvh - 56px - 56px - 70px); }
-    .thread-reply { border-radius: 0; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+
+    .thread-stream { flex: 1; min-height: 0; overflow-y: auto; border-radius: 0; box-shadow: none; }
+    .thread-reply { border-radius: 0; padding-bottom: max(12px, env(safe-area-inset-bottom)); flex-shrink: 0; }
+    /* iOS zooms inputs with font-size < 16px on focus. */
+    .thread-reply textarea { font-size: 16px; }
   }
 </style>
 @endpush
@@ -112,6 +131,27 @@
       document.getElementById('replyForm').requestSubmit();
     }
   });
+
+  /* Mobile: track keyboard height so the thread (position:fixed) can pin
+     to the keyboard top instead of being pushed under it. Mirror of the
+     logic in chat/course.blade.php. */
+  var vpMeta = document.querySelector('meta[name="viewport"]');
+  if (vpMeta && !/interactive-widget/.test(vpMeta.content)) {
+    vpMeta.setAttribute('content', vpMeta.content + ', interactive-widget=resizes-content');
+  }
+  var vv = window.visualViewport;
+  function syncKb() {
+    var kb = 0;
+    if (vv) kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    document.documentElement.style.setProperty('--kb-h', kb + 'px');
+    if (stream) stream.scrollTop = stream.scrollHeight;
+  }
+  syncKb();
+  window.addEventListener('resize', syncKb);
+  window.addEventListener('orientationchange', syncKb);
+  if (vv) { vv.addEventListener('resize', syncKb); vv.addEventListener('scroll', syncKb); }
+  ta.addEventListener('focus', syncKb);
+  ta.addEventListener('blur', syncKb);
 
   // Mobile: turn burger into back-to-Beskeder, set topbar title to "Beskeder"
   var toggle = document.getElementById('sidebarToggle');
