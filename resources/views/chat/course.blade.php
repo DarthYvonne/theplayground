@@ -64,7 +64,7 @@
     .chat-composer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     /* iOS zooms inputs with font-size < 16px on focus — that's what
        causes the page to "jump around" when you tap the input. */
-    .chat-composer input { font-size: 16px; }
+    .chat-composer textarea { font-size: 16px; }
   }
 </style>
 @endpush
@@ -83,7 +83,7 @@
 
   var bar = document.querySelector('.course-tabs');
   var vv = window.visualViewport;
-  var input = document.querySelector('.chat-composer input');
+  var input = document.querySelector('.chat-composer textarea');
 
   function syncBar() {
     if (bar && getComputedStyle(bar).position === 'fixed') {

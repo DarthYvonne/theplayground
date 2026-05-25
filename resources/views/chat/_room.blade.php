@@ -15,9 +15,9 @@
   .msg .time { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .msg .role-badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 8px; margin-left: 4px; vertical-align: middle; background: var(--accent-soft); color: var(--accent); }
   .msg.mine .role-badge { background: rgba(255,255,255,0.25); color: #fff; }
-  .chat-composer { padding: 12px 14px; border-top: 1px solid #f0f2f5; display: flex; gap: 8px; flex-shrink: 0; background: #fff; }
-  .chat-composer input { flex: 1; border: 1px solid var(--border); border-radius: 22px; padding: 10px 16px; font-size: 14px; }
-  .chat-composer button { background: var(--accent); color: #fff; border: none; border-radius: 22px; padding: 0 18px; cursor: pointer; font-weight: 600; }
+  .chat-composer { padding: 12px 14px; border-top: 1px solid #f0f2f5; display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0; background: #fff; }
+  .chat-composer textarea { flex: 1; border: 1px solid var(--border); border-radius: 22px; padding: 10px 16px; font-family: inherit; font-size: 14px; line-height: 1.4; min-height: 40px; max-height: 140px; resize: none; }
+  .chat-composer button { background: var(--accent); color: #fff; border: none; border-radius: 22px; padding: 0 18px; height: 40px; cursor: pointer; font-weight: 600; flex-shrink: 0; }
   .chat-composer button:hover { background: var(--accent-hover); }
   .chat-empty { text-align: center; color: var(--muted); padding: 40px 20px; }
   @media (max-width: 767px) {
@@ -52,16 +52,12 @@
     <div class="chat-stream" id="chatStream">
       <div class="chat-empty">Indlæser…</div>
     </div>
+    {{-- No @csrf and a <textarea> (not <input>) — Chrome's password/payment
+         autofill heuristic only fires on inputs in form-with-csrf. The fetch
+         below carries the X-CSRF-TOKEN header, so the hidden field isn't needed. --}}
     <form class="chat-composer" id="chatComposer" autocomplete="off">
-      @csrf
-      {{-- readonly + onfocus-clear: Chrome skips the autofill scan for readonly
-           inputs at page load, then doesn't re-scan when readonly is removed.
-           Without this, Chrome offers saved passwords / cards / addresses
-           because it (incorrectly) classifies the form-with-csrf as a checkout. --}}
-      <input type="text" name="body" placeholder="Skriv en besked…" maxlength="2000" required autofocus
-             readonly onfocus="this.removeAttribute('readonly')"
-             autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true"
-             data-1p-ignore data-lpignore="true" data-form-type="other">
+      <textarea name="body" id="chatComposerBody" placeholder="Skriv en besked…" maxlength="2000" rows="1" required autofocus
+                autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true"></textarea>
       <button type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
     </form>
   </div>
@@ -76,9 +72,18 @@
   var sendUrl = card.dataset.sendUrl;
   var stream = document.getElementById('chatStream');
   var composer = document.getElementById('chatComposer');
-  var input = composer.querySelector('input[name="body"]');
+  var input = composer.querySelector('textarea[name="body"]');
   var seenIds = new Set();
   var atBottom = true;
+
+  function autosize() { input.style.height = 'auto'; input.style.height = Math.min(input.scrollHeight, 140) + 'px'; }
+  input.addEventListener('input', autosize);
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      composer.requestSubmit();
+    }
+  });
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   function badgeFor(role) {
@@ -137,6 +142,7 @@
     var body = input.value.trim();
     if (!body) return;
     input.value = '';
+    autosize();
     try {
       var res = await fetch(sendUrl, {
         method: 'POST',
@@ -152,6 +158,7 @@
     } catch (e) {
       alert('Kunne ikke sende. Prøv igen.');
       input.value = body;
+      autosize();
     }
   });
 
