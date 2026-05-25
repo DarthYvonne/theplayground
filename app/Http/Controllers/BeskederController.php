@@ -98,8 +98,10 @@ class BeskederController extends Controller
     {
         $me = $request->user();
         $data = $request->validate([
-            'recipient_type' => ['required', 'in:user,course'],
-            'recipient_id' => ['required', 'integer'],
+            'recipient_users' => ['nullable', 'array'],
+            'recipient_users.*' => ['integer'],
+            'recipient_courses' => ['nullable', 'array'],
+            'recipient_courses.*' => ['integer'],
             'body' => ['required', 'string', 'max:8000'],
         ]);
 
@@ -108,46 +110,64 @@ class BeskederController extends Controller
             return back()->withErrors(['body' => 'Skriv en besked.'])->withInput();
         }
 
-        if ($data['recipient_type'] === 'course') {
-            $course = Course::findOrFail($data['recipient_id']);
-            abort_unless($this->canBroadcastTo($me, $course), 403);
+        $userIds = collect($data['recipient_users'] ?? [])->map(fn ($i) => (int) $i)->filter()->unique()->values();
+        $courseIds = collect($data['recipient_courses'] ?? [])->map(fn ($i) => (int) $i)->filter()->unique()->values();
 
-            $recipients = $course->activeEnrollments()->with('user')->get()->pluck('user')->filter();
+        if ($userIds->isEmpty() && $courseIds->isEmpty()) {
+            return back()->withErrors(['recipients' => 'Vælg mindst én modtager.'])->withInput();
+        }
+
+        // Build [user_id => ['user' => User, 'course' => Course|null]].
+        // Course fan-out wins over a direct user pick so the message is tagged with the course.
+        $targets = [];
+
+        foreach ($courseIds as $cid) {
+            $course = Course::find($cid);
+            if (!$course || !$this->canBroadcastTo($me, $course)) continue;
+            $members = $course->activeEnrollments()->with('user')->get()->pluck('user')->filter();
             if ($course->trainer_id && $course->trainer_id !== $me->id) {
-                $recipients->push($course->trainer);
+                $members->push($course->trainer);
             }
-            $recipients = $recipients->unique('id')->reject(fn ($u) => $u->id === $me->id)->values();
-
-            $sent = 0;
-            foreach ($recipients as $u) {
-                $msg = DirectMessage::create([
-                    'sender_id' => $me->id,
-                    'recipient_id' => $u->id,
-                    'via_course_id' => $course->id,
-                    'body' => $body,
-                ]);
-                $this->afterSend($msg, $me, $u, $course);
-                $sent++;
+            foreach ($members as $u) {
+                if ($u->id === $me->id) continue;
+                if (!isset($targets[$u->id])) {
+                    $targets[$u->id] = ['user' => $u, 'course' => $course];
+                }
             }
-
-            $word = $sent === 1 ? 'modtager' : 'modtagere';
-            return redirect()->route('beskeder.index')
-                ->with('status', "Beskeden er sendt til {$sent} {$word} på {$course->title}.");
         }
 
-        $recipient = User::findOrFail($data['recipient_id']);
-        if ($recipient->id === $me->id) {
-            return back()->withErrors(['recipient_id' => 'Du kan ikke sende til dig selv.'])->withInput();
+        foreach ($userIds as $uid) {
+            if ($uid === $me->id) continue;
+            if (isset($targets[$uid])) continue;
+            $u = User::find($uid);
+            if (!$u) continue;
+            $targets[$uid] = ['user' => $u, 'course' => null];
         }
 
-        $msg = DirectMessage::create([
-            'sender_id' => $me->id,
-            'recipient_id' => $recipient->id,
-            'body' => $body,
-        ]);
-        $this->afterSend($msg, $me, $recipient, null);
+        $sent = 0;
+        foreach ($targets as $t) {
+            $msg = DirectMessage::create([
+                'sender_id' => $me->id,
+                'recipient_id' => $t['user']->id,
+                'via_course_id' => $t['course']?->id,
+                'body' => $body,
+            ]);
+            $this->afterSend($msg, $me, $t['user'], $t['course']);
+            $sent++;
+        }
 
-        return redirect()->route('beskeder.show', $recipient)->with('status', 'Besked sendt.');
+        if ($sent === 0) {
+            return back()->withErrors(['recipients' => 'Ingen gyldige modtagere.'])->withInput();
+        }
+
+        // Single direct-user pick → drop straight into the thread.
+        if ($sent === 1 && $courseIds->isEmpty() && $userIds->count() === 1) {
+            $only = User::find($userIds->first());
+            return redirect()->route('beskeder.show', $only)->with('status', 'Besked sendt.');
+        }
+
+        $word = $sent === 1 ? 'modtager' : 'modtagere';
+        return redirect()->route('beskeder.index')->with('status', "Beskeden er sendt til {$sent} {$word}.");
     }
 
     public function updateSettings(Request $request)
@@ -163,32 +183,41 @@ class BeskederController extends Controller
     {
         $me = $request->user();
         $q = trim((string) $request->query('q', ''));
+        $type = $request->query('type'); // null = mixed (legacy autocomplete), 'user', or 'course'
 
-        $users = User::where('id', '!=', $me->id)
-            ->when($q !== '', fn ($qq) => $qq->where('name', 'like', "%{$q}%"))
-            ->orderBy('name')
-            ->limit(8)
-            ->get(['id', 'name', 'picture_path', 'role'])
-            ->map(fn (User $u) => [
-                'type' => 'user',
-                'id' => $u->id,
-                'label' => $u->name,
-                'sub' => $this->roleLabel($u->role),
-                'picture_url' => $u->pictureUrl(),
-                'initials' => $u->initials(),
-            ])->all();
+        $users = [];
+        if ($type !== 'course') {
+            $userLimit = $type === 'user' ? 200 : 8;
+            $users = User::where('id', '!=', $me->id)
+                ->when($q !== '', fn ($qq) => $qq->where('name', 'like', "%{$q}%"))
+                ->orderBy('name')
+                ->limit($userLimit)
+                ->get(['id', 'name', 'picture_path', 'role'])
+                ->map(fn (User $u) => [
+                    'type' => 'user',
+                    'id' => $u->id,
+                    'label' => $u->name,
+                    'sub' => $this->roleLabel($u->role),
+                    'picture_url' => $u->pictureUrl(),
+                    'initials' => $u->initials(),
+                ])->all();
+        }
 
-        $courses = $this->broadcastableCourses($me)
-            ->when($q !== '', fn ($c) => $c->filter(fn ($x) => stripos($x->title, $q) !== false))
-            ->take(6)
-            ->map(fn (Course $c) => [
-                'type' => 'course',
-                'id' => $c->id,
-                'label' => $c->title,
-                'sub' => 'Hold · ' . $c->activeCount() . ' deltagere',
-                'picture_url' => $c->imageUrl(),
-                'initials' => mb_strtoupper(mb_substr($c->title, 0, 2)),
-            ])->values()->all();
+        $courses = [];
+        if ($type !== 'user') {
+            $courseLimit = $type === 'course' ? 200 : 6;
+            $courses = $this->broadcastableCourses($me)
+                ->when($q !== '', fn ($c) => $c->filter(fn ($x) => stripos($x->title, $q) !== false))
+                ->take($courseLimit)
+                ->map(fn (Course $c) => [
+                    'type' => 'course',
+                    'id' => $c->id,
+                    'label' => $c->title,
+                    'sub' => 'Hold · ' . $c->activeCount() . ' deltagere',
+                    'picture_url' => $c->imageUrl(),
+                    'initials' => mb_strtoupper(mb_substr($c->title, 0, 2)),
+                ])->values()->all();
+        }
 
         return response()->json([
             'results' => array_merge($courses, $users),

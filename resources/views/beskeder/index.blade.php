@@ -29,23 +29,46 @@
   /* Compose */
   .compose-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 16px 18px; margin-bottom: 14px; }
   .compose-card h2 { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
-  .compose-row { position: relative; margin-bottom: 12px; }
-  .compose-row .pill { display: inline-flex; align-items: center; gap: 8px; background: var(--accent-soft); color: var(--accent); padding: 6px 10px 6px 6px; border-radius: 999px; font-weight: 600; font-size: 13px; }
-  .compose-row .pill button { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; }
-  .compose-row .pill .av { width: 22px; height: 22px; font-size: 10px; }
-  .compose-row .pill.course { background: #fef3c7; color: #92400e; }
-
-  .ac-results { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid var(--border); border-top: none; border-radius: 0 0 10px 10px; max-height: 280px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 6px 16px rgba(0,0,0,0.08); }
-  .ac-results.open { display: block; }
-  .ac-item { display: flex; gap: 10px; align-items: center; padding: 8px 12px; cursor: pointer; font-size: 13px; }
-  .ac-item + .ac-item { border-top: 1px solid #f0f2f5; }
-  .ac-item:hover, .ac-item.focus { background: var(--accent-soft); }
-  .ac-item .sub { color: var(--muted); font-size: 12px; }
-  .ac-item .course-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; font-weight: 700; }
-  .ac-empty { padding: 14px; color: var(--muted); font-size: 13px; text-align: center; }
+  .compose-row { margin-bottom: 12px; }
+  .compose-row > label { display: inline-block; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
+  .compose-row .find-link { margin-left: 8px; font-size: 13px; color: var(--accent); font-weight: 600; background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline; }
+  .compose-row .find-link:hover { text-decoration-thickness: 2px; }
+  .chips-area { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+  .chips-area:empty::before { content: 'Ingen modtagere valgt.'; color: var(--muted); font-size: 13px; font-style: italic; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent); padding: 4px 8px 4px 4px; border-radius: 999px; font-weight: 600; font-size: 13px; }
+  .pill button { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; }
+  .pill .av { width: 22px; height: 22px; font-size: 10px; }
+  .pill.course { background: #fef3c7; color: #92400e; padding-left: 8px; }
 
   .compose-actions { display: flex; gap: 8px; align-items: center; }
   .compose-actions .hint { color: var(--muted); font-size: 12px; }
+
+  /* Recipient picker modal */
+  .pick-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .pick-backdrop.open { display: flex; }
+  .pick-modal { background: #fff; border-radius: 12px; width: 100%; max-width: 480px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 32px rgba(0,0,0,0.22); overflow: hidden; }
+  .pick-head { padding: 14px 18px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: 10px; }
+  .pick-head .title { font-weight: 700; flex: 1; font-size: 15px; }
+  .pick-close { background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: 6px; color: var(--muted); font-size: 16px; }
+  .pick-close:hover { background: var(--hover); color: var(--text); }
+  .pick-tabs { display: flex; border-bottom: 1px solid #f0f2f5; }
+  .pick-tab { flex: 1; background: none; border: none; cursor: pointer; padding: 12px 16px; font-size: 14px; font-weight: 600; color: var(--muted); border-bottom: 2px solid transparent; }
+  .pick-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .pick-tab:hover:not(.active) { color: var(--text); }
+  .pick-search { padding: 10px 14px; border-bottom: 1px solid #f0f2f5; }
+  .pick-search input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+  .pick-body { flex: 1; overflow-y: auto; padding: 6px 0; }
+  .pick-row { display: flex; gap: 10px; align-items: center; padding: 8px 14px; cursor: pointer; font-size: 14px; }
+  .pick-row:hover { background: var(--hover); }
+  .pick-row.selected { background: var(--accent-soft); }
+  .pick-row input[type=checkbox] { flex-shrink: 0; width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+  .pick-row .meta { flex: 1; min-width: 0; }
+  .pick-row .nm { font-weight: 600; line-height: 1.2; }
+  .pick-row .sub { color: var(--muted); font-size: 12px; margin-top: 1px; }
+  .pick-row .course-icon { width: 32px; height: 32px; border-radius: 8px; background: #fef3c7; color: #92400e; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+  .pick-empty, .pick-loading { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
+  .pick-foot { padding: 12px 14px; border-top: 1px solid #f0f2f5; display: flex; gap: 8px; align-items: center; }
+  .pick-foot .count { flex: 1; color: var(--muted); font-size: 13px; }
 </style>
 @endpush
 
@@ -70,30 +93,29 @@
 
   @php
     $hasPrefill = $prefill || $prefillCourse;
-    $prefillType = $prefillCourse ? 'course' : ($prefill ? 'user' : '');
-    $prefillId = $prefillCourse?->id ?? $prefill?->id ?? '';
+    $prefillData = [
+      'users' => $prefill ? [[
+        'id' => $prefill->id,
+        'label' => $prefill->name,
+        'picture_url' => $prefill->pictureUrl(),
+        'initials' => $prefill->initials(),
+      ]] : [],
+      'courses' => $prefillCourse ? [[
+        'id' => $prefillCourse->id,
+        'label' => $prefillCourse->title,
+      ]] : [],
+    ];
   @endphp
 
   <div class="compose-card" id="composeCard" @if (!$hasPrefill) style="display:none;" @endif>
     <h2>Ny besked</h2>
     <form method="POST" action="{{ route('beskeder.store') }}" id="composeForm">
       @csrf
-      <input type="hidden" name="recipient_type" id="recipientType" value="{{ $prefillType }}">
-      <input type="hidden" name="recipient_id" id="recipientId" value="{{ $prefillId }}">
 
       <div class="compose-row">
-        <label for="recipientSearch">Til</label>
-        <div id="recipientChosen" @if (!$hasPrefill) style="display:none;" @endif>
-          @if ($prefillCourse)
-            <span class="pill course">
-              <i class="fa-solid fa-bullhorn" style="margin-right:2px;"></i>
-              <span>{{ $prefillCourse->title }}</span>
-              <button type="button" id="clearRecipient" aria-label="Fjern">×</button>
-            </span>
-          @endif
-        </div>
-        <input type="text" id="recipientSearch" placeholder="Søg efter person@if ($canBroadcast) eller hold@endif…" autocomplete="off" @if ($hasPrefill) style="display:none;" @endif>
-        <div class="ac-results" id="acResults"></div>
+        <label>Til</label>
+        <button type="button" class="find-link" id="openPicker"><i class="fa-solid fa-magnifying-glass"></i> Find modtagere</button>
+        <div class="chips-area" id="chips"></div>
       </div>
 
       <div class="form-row">
@@ -104,10 +126,36 @@
       <div class="compose-actions">
         <button type="submit" class="btn btn-primary" id="composeSend"><i class="fa-solid fa-paper-plane"></i> Send</button>
         <button type="button" class="btn btn-ghost btn-sm" id="composeCancel">Annullér</button>
-        <span class="hint" id="composeHint">@if ($prefillCourse)Sendes som privat besked til hver enkelt på holdet.@endif</span>
+        <span class="hint" id="composeHint"></span>
       </div>
     </form>
   </div>
+
+  @auth
+  <div class="pick-backdrop" id="pickBackdrop" role="dialog" aria-modal="true">
+    <div class="pick-modal">
+      <div class="pick-head">
+        <div class="title">Vælg modtagere</div>
+        <button type="button" class="pick-close" id="pickClose" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="pick-tabs">
+        <button type="button" class="pick-tab active" data-tab="user">Medlemmer</button>
+        @if ($canBroadcast)
+          <button type="button" class="pick-tab" data-tab="course">Hold</button>
+        @endif
+      </div>
+      <div class="pick-search">
+        <input type="text" id="pickSearch" placeholder="Søg…" autocomplete="off">
+      </div>
+      <div class="pick-body" id="pickBody"><div class="pick-loading">Indlæser…</div></div>
+      <div class="pick-foot">
+        <span class="count" id="pickCount">0 valgt</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="pickCancel">Annullér</button>
+        <button type="button" class="btn btn-primary btn-sm" id="pickAdd">Tilføj</button>
+      </div>
+    </div>
+  </div>
+  @endauth
 
   @if (empty($threads))
     <div class="besk-empty">
@@ -146,104 +194,203 @@
 @push('scripts')
 <script>
 (function () {
+  var RECIPIENTS_URL = '{{ route('beskeder.recipients') }}';
   var openBtn = document.getElementById('composeOpen');
   var cancelBtn = document.getElementById('composeCancel');
   var card = document.getElementById('composeCard');
-  var search = document.getElementById('recipientSearch');
-  var chosen = document.getElementById('recipientChosen');
-  var ac = document.getElementById('acResults');
-  var typeF = document.getElementById('recipientType');
-  var idF = document.getElementById('recipientId');
   var form = document.getElementById('composeForm');
   var hint = document.getElementById('composeHint');
   var body = document.getElementById('composeBody');
+  var chips = document.getElementById('chips');
+  var openPicker = document.getElementById('openPicker');
+
+  // selected[type][id] = {label, picture_url, initials}
+  var selected = { user: {}, course: {} };
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-  function setRecipient(item) {
-    typeF.value = item.type;
-    idF.value = item.id;
-    var av = item.picture_url
-      ? '<img src="' + escapeHtml(item.picture_url) + '" style="width:22px;height:22px;border-radius:50%;object-fit:cover;">'
-      : '<div class="av sm" style="width:22px;height:22px;font-size:10px;">' + escapeHtml(item.initials || '?') + '</div>';
-    var cls = item.type === 'course' ? 'pill course' : 'pill';
-    var icon = item.type === 'course'
-      ? '<i class="fa-solid fa-bullhorn" style="margin-right:2px;"></i>'
-      : av;
-    chosen.innerHTML = '<span class="' + cls + '">' + icon + '<span>' + escapeHtml(item.label) + '</span><button type="button" id="clearRecipient" aria-label="Fjern">×</button></span>';
-    if (item.type === 'course') hint.textContent = 'Sendes som privat besked til hver enkelt på holdet.';
-    else hint.textContent = '';
-    chosen.style.display = '';
-    search.style.display = 'none';
-    ac.classList.remove('open');
-    document.getElementById('clearRecipient').addEventListener('click', clearRecipient);
-    body.focus();
-  }
-  function clearRecipient() {
-    typeF.value = ''; idF.value = '';
-    chosen.innerHTML = ''; chosen.style.display = 'none';
-    hint.textContent = '';
-    search.style.display = ''; search.value = '';
-    search.focus();
+  function avatarHtml(item) {
+    if (item.picture_url) {
+      return '<img src="' + escapeHtml(item.picture_url) + '" style="width:22px;height:22px;border-radius:50%;object-fit:cover;">';
+    }
+    return '<div class="av sm" style="width:22px;height:22px;font-size:10px;">' + escapeHtml(item.initials || '?') + '</div>';
   }
 
-  function openCompose() { card.style.display = ''; search.focus(); }
-  function closeCompose() { card.style.display = 'none'; clearRecipient(); body.value = ''; }
-  openBtn.addEventListener('click', openCompose);
-  cancelBtn.addEventListener('click', closeCompose);
+  function renderChips() {
+    var html = '';
+    Object.keys(selected.course).forEach(function (id) {
+      var c = selected.course[id];
+      html += '<span class="pill course"><i class="fa-solid fa-bullhorn"></i> <span>' + escapeHtml(c.label) +
+        '</span><button type="button" data-remove="course" data-id="' + id + '" aria-label="Fjern">×</button>' +
+        '<input type="hidden" name="recipient_courses[]" value="' + id + '"></span>';
+    });
+    Object.keys(selected.user).forEach(function (id) {
+      var u = selected.user[id];
+      html += '<span class="pill">' + avatarHtml(u) + '<span>' + escapeHtml(u.label) +
+        '</span><button type="button" data-remove="user" data-id="' + id + '" aria-label="Fjern">×</button>' +
+        '<input type="hidden" name="recipient_users[]" value="' + id + '"></span>';
+    });
+    chips.innerHTML = html;
+    chips.querySelectorAll('button[data-remove]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        delete selected[b.dataset.remove][b.dataset.id];
+        renderChips();
+        updateHint();
+      });
+    });
+  }
 
-  /* When the form was prefilled server-side (e.g. ?hold=ID), the pill is
-     already in the DOM — wire its clear button to clearRecipient. */
-  var initClear = document.getElementById('clearRecipient');
-  if (initClear) initClear.addEventListener('click', clearRecipient);
+  function updateHint() {
+    hint.textContent = Object.keys(selected.course).length
+      ? 'Hold-modtagere får beskeden som en privat besked til hver enkelt.'
+      : '';
+  }
 
-  var t = null;
-  search.addEventListener('input', function () {
-    clearTimeout(t);
-    var q = search.value.trim();
-    t = setTimeout(async function () {
-      try {
-        var res = await fetch('{{ route('beskeder.recipients') }}?q=' + encodeURIComponent(q));
-        var data = await res.json();
-        if (!data.results.length) {
-          ac.innerHTML = '<div class="ac-empty">Ingen match.</div>';
-        } else {
-          ac.innerHTML = data.results.map(function (r, i) {
-            var left;
-            if (r.type === 'course') {
-              left = '<div class="course-icon"><i class="fa-solid fa-bullhorn"></i></div>';
-            } else {
-              left = r.picture_url
-                ? '<div class="av sm"><img src="' + escapeHtml(r.picture_url) + '"></div>'
-                : '<div class="av sm">' + escapeHtml(r.initials) + '</div>';
-            }
-            return '<div class="ac-item" data-i="' + i + '">' + left +
-              '<div><div>' + escapeHtml(r.label) + '</div><div class="sub">' + escapeHtml(r.sub) + '</div></div></div>';
-          }).join('');
-          ac.querySelectorAll('.ac-item').forEach(function (el) {
-            el.addEventListener('click', function () { setRecipient(data.results[parseInt(el.dataset.i, 10)]); });
-          });
-        }
-        ac.classList.add('open');
-      } catch (e) {
-        ac.innerHTML = '<div class="ac-empty">Kunne ikke søge.</div>';
-        ac.classList.add('open');
-      }
-    }, 160);
-  });
+  function openCompose() { card.style.display = ''; body.focus(); }
+  function closeCompose() {
+    card.style.display = 'none';
+    selected = { user: {}, course: {} };
+    renderChips();
+    updateHint();
+    body.value = '';
+  }
+  if (openBtn) openBtn.addEventListener('click', openCompose);
+  if (cancelBtn) cancelBtn.addEventListener('click', closeCompose);
 
-  document.addEventListener('click', function (e) {
-    if (!ac.classList.contains('open')) return;
-    if (ac.contains(e.target) || search.contains(e.target)) return;
-    ac.classList.remove('open');
-  });
+  // Hydrate prefill (e.g. ?til=X / ?hold=Y from server).
+  (function () {
+    var pre = @json($prefillData);
+    (pre.users || []).forEach(function (u) { selected.user[u.id] = u; });
+    (pre.courses || []).forEach(function (c) { selected.course[c.id] = c; });
+    renderChips();
+    updateHint();
+  })();
 
   form.addEventListener('submit', function (e) {
-    if (!typeF.value || !idF.value) {
+    if (!Object.keys(selected.user).length && !Object.keys(selected.course).length) {
       e.preventDefault();
-      hint.textContent = 'Vælg en modtager.';
-      search.focus();
+      hint.textContent = 'Vælg mindst én modtager.';
+      if (openPicker) openPicker.focus();
     }
+  });
+
+  // ---------- Picker modal ----------
+  var backdrop = document.getElementById('pickBackdrop');
+  if (!backdrop) return; // not auth'd, nothing to wire
+
+  var pickClose = document.getElementById('pickClose');
+  var pickCancel = document.getElementById('pickCancel');
+  var pickAdd = document.getElementById('pickAdd');
+  var pickBody = document.getElementById('pickBody');
+  var pickSearch = document.getElementById('pickSearch');
+  var pickCount = document.getElementById('pickCount');
+  var tabs = backdrop.querySelectorAll('.pick-tab');
+
+  var currentTab = 'user';
+  var lastResults = []; // for current tab + query
+  var pending = { user: {}, course: {} };
+
+  function openPickerModal() {
+    pending = {
+      user: Object.assign({}, selected.user),
+      course: Object.assign({}, selected.course),
+    };
+    backdrop.classList.add('open');
+    pickSearch.value = '';
+    updatePickCount();
+    loadList();
+    setTimeout(function () { pickSearch.focus(); }, 50);
+  }
+  function closePickerModal() { backdrop.classList.remove('open'); }
+
+  if (openPicker) openPicker.addEventListener('click', openPickerModal);
+  pickClose.addEventListener('click', closePickerModal);
+  pickCancel.addEventListener('click', closePickerModal);
+  backdrop.addEventListener('click', function (e) { if (e.target === backdrop) closePickerModal(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && backdrop.classList.contains('open')) closePickerModal();
+  });
+
+  tabs.forEach(function (t) {
+    t.addEventListener('click', function () {
+      tabs.forEach(function (x) { x.classList.remove('active'); });
+      t.classList.add('active');
+      currentTab = t.dataset.tab;
+      pickSearch.value = '';
+      loadList();
+    });
+  });
+
+  var searchTimer = null;
+  pickSearch.addEventListener('input', function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(loadList, 160);
+  });
+
+  async function loadList() {
+    pickBody.innerHTML = '<div class="pick-loading">Indlæser…</div>';
+    try {
+      var url = RECIPIENTS_URL + '?type=' + currentTab + '&q=' + encodeURIComponent(pickSearch.value.trim());
+      var res = await fetch(url);
+      var data = await res.json();
+      lastResults = data.results || [];
+      renderList();
+    } catch (e) {
+      pickBody.innerHTML = '<div class="pick-empty">Kunne ikke indlæse.</div>';
+    }
+  }
+
+  function renderList() {
+    if (!lastResults.length) {
+      pickBody.innerHTML = '<div class="pick-empty">Ingen ' + (currentTab === 'course' ? 'hold' : 'medlemmer') + '.</div>';
+      return;
+    }
+    pickBody.innerHTML = lastResults.map(function (r, i) {
+      var isSel = !!pending[r.type][r.id];
+      var left;
+      if (r.type === 'course') {
+        left = '<div class="course-icon"><i class="fa-solid fa-bullhorn"></i></div>';
+      } else if (r.picture_url) {
+        left = '<div class="av sm"><img src="' + escapeHtml(r.picture_url) + '"></div>';
+      } else {
+        left = '<div class="av sm">' + escapeHtml(r.initials || '?') + '</div>';
+      }
+      return '<label class="pick-row ' + (isSel ? 'selected' : '') + '" data-i="' + i + '">' +
+        '<input type="checkbox" ' + (isSel ? 'checked' : '') + '>' +
+        left +
+        '<div class="meta"><div class="nm">' + escapeHtml(r.label) + '</div><div class="sub">' + escapeHtml(r.sub || '') + '</div></div>' +
+        '</label>';
+    }).join('');
+    pickBody.querySelectorAll('.pick-row').forEach(function (row) {
+      var cb = row.querySelector('input[type=checkbox]');
+      var item = lastResults[parseInt(row.dataset.i, 10)];
+      cb.addEventListener('change', function () {
+        if (cb.checked) {
+          pending[item.type][item.id] = item;
+          row.classList.add('selected');
+        } else {
+          delete pending[item.type][item.id];
+          row.classList.remove('selected');
+        }
+        updatePickCount();
+      });
+    });
+  }
+
+  function updatePickCount() {
+    var n = Object.keys(pending.user).length + Object.keys(pending.course).length;
+    pickCount.textContent = n + ' valgt';
+  }
+
+  pickAdd.addEventListener('click', function () {
+    selected = {
+      user: Object.assign({}, pending.user),
+      course: Object.assign({}, pending.course),
+    };
+    renderChips();
+    updateHint();
+    closePickerModal();
+    body.focus();
   });
 })();
 </script>

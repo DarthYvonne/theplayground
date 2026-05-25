@@ -91,8 +91,7 @@
 
   <form method="POST" action="{{ route('beskeder.store') }}" class="thread-reply" id="replyForm">
     @csrf
-    <input type="hidden" name="recipient_type" value="user">
-    <input type="hidden" name="recipient_id" value="{{ $other->id }}">
+    <input type="hidden" name="recipient_users[]" value="{{ $other->id }}">
     <textarea name="body" id="replyBody" placeholder="Skriv et svar…" maxlength="8000" required autofocus></textarea>
     <button type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
   </form>
