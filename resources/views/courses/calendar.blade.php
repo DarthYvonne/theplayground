@@ -50,9 +50,8 @@
   .cal-event .tm { color: var(--muted); font-size: 10px; line-height: 1.1; }
   .cal-event .aflyst-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #c0392b; background: rgba(192,57,43,0.1); border-radius: 3px; padding: 1px 5px; display: inline-block; width: fit-content; }
 
-  /* "Tilmeldt" pill, matching the hold cards. */
-  .cal-enrolled-badge { display: inline-flex; align-items: center; gap: 4px; background: #16a34a; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); width: fit-content; line-height: 1.3; }
-  .cal-enrolled-badge i { font-size: 9px; }
+  /* "Tilmeldt" indicator — inline green text, no pill. */
+  .cal-enrolled-text { color: #16a34a; font-weight: 700; }
 
   .cal-event.notime { position: static; left: auto; right: auto; padding: 4px 8px; }
   .cal-event.notime .t { -webkit-line-clamp: 1; }
@@ -167,8 +166,7 @@
         @foreach ($untimed[$key] as $ev)
           @php $c = $ev['course']; @endphp
           <a href="{{ route('courses.show', $c) }}" class="cal-event notime {{ $ev['cancelled'] ? 'cancelled' : '' }}">
-            <div class="t">{{ $c->title }}</div>
-            @if (isset($enrolledSet[$c->id]))<span class="cal-enrolled-badge"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>@endif
+            <div class="t">{{ $c->title }}@if (isset($enrolledSet[$c->id])) <span class="cal-enrolled-text">Tilmeldt</span>@endif</div>
             @if ($ev['cancelled'])<div class="aflyst-badge">Aflyst</div>@endif
           </a>
         @endforeach
@@ -191,8 +189,9 @@
              class="cal-event {{ $ev['cancelled'] ? 'cancelled' : '' }}"
              style="top: {{ $ev['top'] }}px; height: {{ $ev['height'] }}px;">
             <div class="t">{{ $c->title }}</div>
-            @if ($c->timeRange())<div class="tm">{{ $c->timeRange() }}</div>@endif
-            @if (isset($enrolledSet[$c->id]))<span class="cal-enrolled-badge"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>@endif
+            @if ($c->timeRange() || isset($enrolledSet[$c->id]))
+              <div class="tm">{{ $c->timeRange() }}@if (isset($enrolledSet[$c->id])) <span class="cal-enrolled-text">Tilmeldt</span>@endif</div>
+            @endif
             @if ($ev['cancelled'])<div class="aflyst-badge">Aflyst</div>@endif
           </a>
         @endforeach
@@ -213,10 +212,9 @@
       @forelse ($dayEvents as $ev)
         @php $c = $ev['course']; @endphp
         <a href="{{ route('courses.show', $c) }}" class="row {{ $ev['cancelled'] ? 'cancelled' : '' }}" style="color:inherit;">
-          <div class="tm">{{ $c->timeRange() ?? '—' }}</div>
+          <div class="tm">{{ $c->timeRange() ?? '—' }}@if (isset($enrolledSet[$c->id])) <span class="cal-enrolled-text">Tilmeldt</span>@endif</div>
           <div class="ti">{{ $c->title }}</div>
           @if ($ev['cancelled'])<span class="aflyst-tag">Aflyst</span>@endif
-          @if (isset($enrolledSet[$c->id]))<span class="cal-enrolled-badge"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>@endif
         </a>
       @empty
         <div class="empty">Ingen hold</div>
