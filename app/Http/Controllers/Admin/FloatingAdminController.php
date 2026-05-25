@@ -51,10 +51,12 @@ class FloatingAdminController extends Controller
     {
         $data = $request->validate([
             'name' => ['required','string','max:80'],
+            'type' => ['required', 'in:' . implode(',', FloatingDevice::TYPES)],
         ]);
         $max = (int) FloatingDevice::max('sort_order');
         FloatingDevice::create([
             'name' => $data['name'],
+            'type' => $data['type'],
             'sort_order' => $max + 1,
             'is_active' => true,
         ]);
@@ -65,10 +67,12 @@ class FloatingAdminController extends Controller
     {
         $data = $request->validate([
             'name' => ['required','string','max:80'],
+            'type' => ['required', 'in:' . implode(',', FloatingDevice::TYPES)],
             'is_active' => ['nullable','boolean'],
         ]);
         $device->update([
             'name' => $data['name'],
+            'type' => $data['type'],
             'is_active' => $request->boolean('is_active'),
         ]);
         return back()->with('status', 'Tank opdateret.');
