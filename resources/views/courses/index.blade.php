@@ -63,8 +63,8 @@
 
 @guest
 <div class="hero">
-  <h2>Find dit næste hold</h2>
-  <p>Se hvilke hold der kører på The Playground. Opret en konto for at tilmelde dig og chatte med trænere og andre medlemmer.</p>
+  <h2>Velkommen til The Playground</h2>
+  <p>Opret en konto for at tilmelde dig og chatte med trænere og andre medlemmer.</p>
   <a href="{{ route('register') }}" class="btn">Kom i gang</a>
   <a href="{{ route('login') }}" class="btn ghost">Log ind</a>
 </div>
