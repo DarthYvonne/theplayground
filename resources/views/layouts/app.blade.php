@@ -184,8 +184,7 @@
     .topbar-actions .btn { padding: 7px 12px; font-size: 13px; }
     .main { padding: 70px 14px 24px; }
     .app.guest .main { padding: 16px 14px 24px; }
-    .guest-header { padding: 12px 14px; }
-    .guest-header img { height: 30px; }
+    .guest-header { padding: 16px 14px; }
     .view-header { padding-left: 2px; }
     .view-header h1 { font-size: 18px; }
     .notif-dropdown { position: fixed; top: 60px; right: 8px; left: 8px; width: auto; max-width: none; }
