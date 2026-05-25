@@ -162,10 +162,10 @@ class BeskederController extends Controller
             return back()->withErrors(['recipients' => 'Ingen gyldige modtagere.'])->withInput();
         }
 
-        // Single direct-user pick → drop straight into the thread.
+        // Single direct-user pick → drop straight into the thread (no flash; the message itself is visible).
         if ($sent === 1 && $courseIds->isEmpty() && $userIds->count() === 1) {
             $only = User::find($userIds->first());
-            return redirect()->route('beskeder.show', $only)->with('status', 'Besked sendt.');
+            return redirect()->route('beskeder.show', $only);
         }
 
         $word = $sent === 1 ? 'modtager' : 'modtagere';
