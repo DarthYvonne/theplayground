@@ -41,9 +41,9 @@
   .main > * { width: 100%; max-width: 720px; margin-left: 0; margin-right: auto; }
 
   /* Guest header (logged-out top bar with logo only) */
-  .guest-header { background: #fff; border-bottom: 1px solid var(--border); padding: 8px 26px; display: flex; justify-content: center; align-items: center; line-height: 0; }
-  .guest-header .logo-link { display: inline-flex; line-height: 0; }
-  .guest-header img { height: 40px; width: auto; display: block; }
+  .guest-header { background: #fff; border-bottom: 1px solid var(--border); padding: 8px 26px; line-height: 0; }
+  .guest-header .logo-link { display: block; width: 100%; max-width: 720px; margin: 0 auto; line-height: 0; }
+  .guest-header img { width: 100%; height: auto; display: block; }
   .app.guest .main { padding: 24px 26px 40px; }
   .app.guest .main > * { margin-left: auto; margin-right: auto; }
 
