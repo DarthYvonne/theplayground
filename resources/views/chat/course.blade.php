@@ -83,7 +83,6 @@
 
   var bar = document.querySelector('.course-tabs');
   var vv = window.visualViewport;
-  var input = document.querySelector('.chat-composer textarea');
 
   function syncBar() {
     if (bar && getComputedStyle(bar).position === 'fixed') {
@@ -97,16 +96,13 @@
     var kb = 0;
     if (vv) {
       /* Visual-viewport diff catches iOS Safari and any browser in
-         "resizes-visual" mode. On "resizes-content" the diff is 0 — fine,
-         dvh has already shrunk so we just need to drop the tab bar. */
+         "resizes-visual" mode. On "resizes-content" the diff is 0 — that's
+         fine because the layout viewport already shrank, so dvh and any
+         fixed-bottom elements sit above the keyboard on their own. */
       kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
     }
     document.documentElement.style.setProperty('--kb-h', kb + 'px');
-    /* Treat the keyboard as open if either the visual diff is significant
-       or the chat input is focused (covers resizes-content where the diff
-       stays 0 but the keyboard is up). */
-    var focused = input && document.activeElement === input;
-    document.body.classList.toggle('kb-open', kb > 80 || focused);
+    document.body.classList.toggle('kb-open', kb > 80);
   }
 
   syncBar();
@@ -116,10 +112,6 @@
   if (vv) {
     vv.addEventListener('resize', syncKb);
     vv.addEventListener('scroll', syncKb);
-  }
-  if (input) {
-    input.addEventListener('focus', syncKb);
-    input.addEventListener('blur', syncKb);
   }
 })();
 </script>
