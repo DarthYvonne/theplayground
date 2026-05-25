@@ -231,17 +231,35 @@ class FloatingController extends Controller
         abort_unless($isOwner || $booking->user_id === $user->id, 403);
 
         if ($booking->isCancelled()) return back();
-        if (!$isOwner && !$booking->isCancellable($settings->cancel_cutoff_hours)) {
-            return back()->withErrors(['cancel' => 'Afbestillingsfristen er passeret. Kontakt os hvis du har brug for hjælp.']);
-        }
+
+        // Refund policy: full refund if cancelled before the cutoff window (i.e. while
+        // still within `cancel_cutoff_hours` of breathing room before the slot starts),
+        // or whenever an owner cancels. After the cutoff a user can still cancel but
+        // doesn't get their money back.
+        $eligibleForRefund = $isOwner || $booking->isCancellable($settings->cancel_cutoff_hours);
+        $refunded = false;
 
         $booking->update([
             'status' => 'cancelled',
             'cancelled_at' => now(),
             'cancelled_by' => $user->id,
         ]);
-        // TODO: trigger Stripe refund here once we wire payments.
-        return back()->with('status', 'Booking aflyst.');
+
+        if ($eligibleForRefund && $booking->paid_at && $booking->stripe_payment_intent_id && StripeConfig::isConfigured()) {
+            try {
+                StripeService::refundPaymentIntent($booking->stripe_payment_intent_id);
+                $refunded = true;
+            } catch (\Throwable $e) {
+                return back()->with('status', 'Booking aflyst, men refundering mislykkedes: ' . $e->getMessage());
+            }
+        }
+
+        $msg = match (true) {
+            $refunded => 'Booking aflyst og betaling refunderet.',
+            $eligibleForRefund => 'Booking aflyst.',
+            default => 'Booking aflyst. Da afbestillingsfristen var passeret, refunderes betalingen ikke.',
+        };
+        return back()->with('status', $msg);
     }
 
     /** @return array<string> HH:MM strings */

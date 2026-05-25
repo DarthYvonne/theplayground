@@ -6,6 +6,7 @@ use App\Mail\PaymentFailedMail;
 use App\Models\AppNotification;
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\FloatingBooking;
 use App\Models\User;
 use App\Support\StripeConfig;
 use Illuminate\Database\QueryException;
@@ -87,9 +88,17 @@ class StripeWebhookController extends Controller
     {
         $userId = (int) ($session['metadata']['user_id'] ?? 0);
         $courseId = (int) ($session['metadata']['course_id'] ?? 0);
+        $bookingId = (int) ($session['metadata']['booking_id'] ?? 0);
         $customerId = $session['customer'] ?? null;
         $mode = $session['mode'] ?? '';
         $metaPaymentMethod = $session['metadata']['payment_method'] ?? null;
+
+        // Floating booking checkout — confirm even if the user never made it back to the return URL.
+        if ($bookingId && !$courseId) {
+            $this->confirmFloatingBooking($bookingId, $session);
+            return;
+        }
+
         if (!$userId || !$courseId) return;
 
         if ($customerId && ($user = User::find($userId)) && !$user->stripe_id) {
@@ -118,6 +127,19 @@ class StripeWebhookController extends Controller
             $enrollment->current_period_end = now()->addMonth();
         }
         $enrollment->save();
+    }
+
+    private function confirmFloatingBooking(int $bookingId, array $session): void
+    {
+        $booking = FloatingBooking::find($bookingId);
+        if (!$booking) return;
+        if ($booking->status === 'cancelled') return; // honor any cancel that landed first
+        if ($booking->status === 'active' && $booking->paid_at) return; // already confirmed
+
+        $booking->status = 'active';
+        $booking->paid_at = $booking->paid_at ?: now();
+        $booking->stripe_payment_intent_id = $session['payment_intent'] ?? $booking->stripe_payment_intent_id;
+        $booking->save();
     }
 
     private function syncSubscription(array $sub): void

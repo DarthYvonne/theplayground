@@ -127,14 +127,20 @@
               <div class="sub">{{ $b->device->name ?? 'Tank' }}</div>
             </div>
             <div class="actions">
-              @if ($isOwner || $b->isCancellable($settings->cancel_cutoff_hours))
-                <form method="POST" action="{{ route('floating.cancel', $b) }}" onsubmit="return confirm('Aflys denne booking?');">
-                  @csrf
-                  <button class="btn btn-ghost btn-sm" type="submit"><i class="fa-solid fa-xmark"></i> Aflys</button>
-                </form>
-              @else
-                <span style="color:var(--muted);font-size:12px;">Inden for afbestillingsfrist</span>
-              @endif
+              @php
+                $refundable = $isOwner || $b->isCancellable($settings->cancel_cutoff_hours);
+                $wasPaid = $b->paid_at && $b->stripe_payment_intent_id;
+                $confirmMsg = $refundable
+                  ? ($wasPaid ? 'Aflys denne booking? Betalingen refunderes fuldt.' : 'Aflys denne booking?')
+                  : 'Afbestillingsfristen er passeret. Du kan aflyse, men betalingen refunderes ikke. Fortsæt?';
+              @endphp
+              <form method="POST" action="{{ route('floating.cancel', $b) }}" onsubmit="return confirm(@json($confirmMsg));">
+                @csrf
+                <button class="btn btn-ghost btn-sm" type="submit">
+                  <i class="fa-solid fa-xmark"></i>
+                  Aflys@if (!$refundable) <span style="color:var(--muted);font-weight:400;">(ingen refundering)</span>@endif
+                </button>
+              </form>
             </div>
           </div>
         @endforeach

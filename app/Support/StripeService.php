@@ -186,6 +186,19 @@ class StripeService
         ]));
     }
 
+    /**
+     * Refund a one-time charge by payment_intent id. Returns the refund payload,
+     * or throws RuntimeException on Stripe error. No-ops (returns null) if the
+     * payment_intent id is empty.
+     */
+    public static function refundPaymentIntent(string $paymentIntentId, ?int $amountCents = null): ?array
+    {
+        if ($paymentIntentId === '') return null;
+        $payload = ['payment_intent' => $paymentIntentId];
+        if ($amountCents !== null) $payload['amount'] = $amountCents;
+        return self::ok(self::request('POST', 'refunds', $payload));
+    }
+
     public static function customerPortalUrl(User $user, string $returnUrl): ?string
     {
         if (!$user->stripe_id) return null;
