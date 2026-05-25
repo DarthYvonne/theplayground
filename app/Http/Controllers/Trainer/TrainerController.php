@@ -4,6 +4,10 @@ namespace App\Http\Controllers\Trainer;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\CourseCancellation;
+use App\Support\CalendarWeek;
+use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class TrainerController extends Controller
@@ -20,6 +24,8 @@ class TrainerController extends Controller
 
     public function calendar(Request $request) {
         $user = $request->user();
+        $ctx = CalendarWeek::resolveContext($request);
+
         $courses = Course::with('trainer')
             ->where('trainer_id', $user->id)
             ->where('is_active', true)
@@ -35,8 +41,46 @@ class TrainerController extends Controller
             }
         }
         $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
+        $weekendCourses = collect($byDay['sat'] ?? [])->concat($byDay['sun'] ?? [])->unique('id')->values();
 
-        return view('trainer.calendar', compact('byDay', 'unscheduled'));
+        $cancelledMap = CourseCancellation::mapForRange($courses->pluck('id')->all(), $ctx['rangeStart'], $ctx['rangeEnd']);
+        $monday = $ctx['monday'];
+        $monthAnchor = $ctx['monthAnchor'];
+        $view = $ctx['view'];
+
+        return view('trainer.calendar', compact(
+            'byDay', 'unscheduled', 'weekendCourses', 'monday', 'monthAnchor',
+            'view', 'cancelledMap'
+        ));
+    }
+
+    public function storeCancellation(Request $request, Course $course): RedirectResponse {
+        $this->authorize($request, $course);
+        $data = $request->validate([
+            'occurrence_date' => ['required', 'date_format:Y-m-d'],
+            'reason' => ['nullable', 'string', 'max:200'],
+        ]);
+        $date = Carbon::parse($data['occurrence_date'])->startOfDay();
+        $key = CalendarWeek::dateKey($date);
+        if (!in_array($key, $course->weekdaysList(), true)) {
+            return back()->withErrors(['occurrence_date' => 'Holdet er ikke planlagt på den dag.']);
+        }
+        CourseCancellation::updateOrCreate(
+            ['course_id' => $course->id, 'occurrence_date' => $date->toDateString()],
+            ['reason' => $data['reason'] ?? null, 'cancelled_by' => $request->user()->id],
+        );
+        return back()->with('status', 'Aflyst: ' . $course->title . ' (' . $date->format('d/m/Y') . ').');
+    }
+
+    public function destroyCancellation(Request $request, Course $course): RedirectResponse {
+        $this->authorize($request, $course);
+        $data = $request->validate([
+            'occurrence_date' => ['required', 'date_format:Y-m-d'],
+        ]);
+        CourseCancellation::where('course_id', $course->id)
+            ->whereDate('occurrence_date', $data['occurrence_date'])
+            ->delete();
+        return back()->with('status', 'Genåbnet: ' . $course->title . ' (' . Carbon::parse($data['occurrence_date'])->format('d/m/Y') . ').');
     }
 
     public function participants(Request $request, Course $course) {

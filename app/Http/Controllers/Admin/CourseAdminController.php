@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\CourseCancellation;
 use App\Models\User;
+use App\Support\CalendarWeek;
 use App\Support\StripeConfig;
 use App\Support\StripeService;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +20,8 @@ class CourseAdminController extends Controller
         return view('admin.courses.index', compact('courses'));
     }
 
-    public function calendar() {
+    public function calendar(Request $request) {
+        $ctx = CalendarWeek::resolveContext($request);
         $courses = Course::with('trainer')->where('is_active', true)->orderBy('start_time')->orderBy('title')->get();
 
         $byDay = [];
@@ -29,8 +32,17 @@ class CourseAdminController extends Controller
             }
         }
         $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
+        $weekendCourses = collect($byDay['sat'] ?? [])->concat($byDay['sun'] ?? [])->unique('id')->values();
 
-        return view('admin.courses.calendar', compact('byDay', 'unscheduled'));
+        $cancelledMap = CourseCancellation::mapForRange($courses->pluck('id')->all(), $ctx['rangeStart'], $ctx['rangeEnd']);
+        $monday = $ctx['monday'];
+        $monthAnchor = $ctx['monthAnchor'];
+        $view = $ctx['view'];
+
+        return view('admin.courses.calendar', compact(
+            'byDay', 'unscheduled', 'weekendCourses',
+            'monday', 'monthAnchor', 'view', 'cancelledMap'
+        ));
     }
 
     public function create() {

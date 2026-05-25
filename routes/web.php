@@ -93,6 +93,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/', [TrainerController::class, 'index'])->name('index');
         Route::get('/calendar', [TrainerController::class, 'calendar'])->name('calendar');
         Route::get('/courses/{course}/participants', [TrainerController::class, 'participants'])->name('participants');
+        Route::post('/courses/{course}/cancellations', [TrainerController::class, 'storeCancellation'])->name('cancellations.store');
+        Route::delete('/courses/{course}/cancellations', [TrainerController::class, 'destroyCancellation'])->name('cancellations.destroy');
     });
 
     // Owner admin

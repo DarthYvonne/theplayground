@@ -17,9 +17,11 @@
 
   .cal-head { display: grid; grid-template-columns: var(--cal-gutter) repeat(5, minmax(0, 1fr)); border-bottom: 1px solid #f0f2f5; background: #fafbfc; }
   .cal-head .gutter { border-right: 1px solid #f0f2f5; }
-  .cal-head .day-label { padding: 10px 12px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); text-align: center; border-right: 1px solid #f0f2f5; }
+  .cal-head .day-label { padding: 10px 8px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); text-align: center; border-right: 1px solid #f0f2f5; display: flex; flex-direction: column; gap: 2px; }
   .cal-head .day-label:last-child { border-right: none; }
   .cal-head .day-label.today { background: var(--accent-soft); color: var(--accent); }
+  .cal-head .day-label .dnum { font-size: 16px; font-weight: 700; letter-spacing: 0; text-transform: none; color: var(--text); }
+  .cal-head .day-label.today .dnum { color: var(--accent); }
 
   .cal-notime { display: grid; grid-template-columns: var(--cal-gutter) repeat(5, minmax(0, 1fr)); border-bottom: 1px solid #f0f2f5; background: #fafbfc; min-height: 0; }
   .cal-notime .gutter { border-right: 1px solid #f0f2f5; font-size: 10px; color: var(--muted); padding: 6px 4px; text-align: right; }
@@ -39,13 +41,26 @@
   .cal-col:last-child { border-right: none; }
   .cal-col.today { background-color: rgba(24,119,242,0.03); }
 
-  .cal-event { position: absolute; left: 4px; right: 4px; background: var(--accent-soft); color: var(--text); border-radius: 8px; padding: 6px 8px; border-left: 3px solid var(--accent); overflow: hidden; transition: background 0.1s; display: flex; flex-direction: column; gap: 2px; }
-  .cal-event:hover { background: #dbe6fb; z-index: 5; }
+  /* For the trainer calendar we wrap each event in a position:absolute container
+     so the action button (a sibling <form>) can sit on top of the link. */
+  .cal-event-wrap { position: absolute; left: 4px; right: 4px; }
+  .cal-event { display: flex; flex-direction: column; gap: 2px; background: var(--accent-soft); color: var(--text); border-radius: 8px; padding: 6px 8px; padding-right: 26px; border-left: 3px solid var(--accent); overflow: hidden; transition: background 0.1s; height: 100%; }
+  .cal-event:hover { background: #dbe6fb; }
+  .cal-event-wrap:hover { z-index: 5; }
+  .cal-event.cancelled { background: #f5f7fa; border-left-color: #cbd0d6; }
+  .cal-event.cancelled .t { text-decoration: line-through; color: var(--muted); }
   .cal-event .t { font-weight: 700; font-size: 12px; line-height: 1.2; word-break: break-word; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .cal-event .tm { color: var(--muted); font-size: 10px; line-height: 1.1; }
+  .cal-event .aflyst-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #c0392b; background: rgba(192,57,43,0.1); border-radius: 3px; padding: 1px 5px; display: inline-block; width: fit-content; }
 
-  .cal-event.notime { position: static; left: auto; right: auto; padding: 4px 8px; }
+  .cal-event.notime { padding: 4px 26px 4px 8px; }
   .cal-event.notime .t { -webkit-line-clamp: 1; }
+
+  .cal-event-action { position: absolute; top: 4px; right: 4px; margin: 0; }
+  .cal-event-action button { padding: 2px 6px; font-size: 10px; line-height: 1; background: rgba(255,255,255,0.7); border: 1px solid transparent; border-radius: 4px; cursor: pointer; color: var(--muted); }
+  .cal-event-action button:hover { background: #fff; color: var(--accent); }
+  .cal-event.cancelled + .cal-event-action button:hover,
+  .cal-event-action.restore button:hover { color: #16a34a; }
 
   .cal-unscheduled { margin-top: 18px; background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 14px 16px; }
   .cal-unscheduled h3 { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 8px; }
@@ -64,9 +79,13 @@
   .cal-mobile-day h3.today { color: var(--accent); }
   .cal-mobile-day .row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #f0f2f5; }
   .cal-mobile-day .row:first-of-type { border-top: none; }
+  .cal-mobile-day .row.cancelled .ti { text-decoration: line-through; color: var(--muted); }
   .cal-mobile-day .tm { color: var(--muted); font-size: 12px; min-width: 60px; }
   .cal-mobile-day .ti { font-weight: 600; flex: 1; }
+  .cal-mobile-day .aflyst-tag { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #c0392b; background: rgba(192,57,43,0.1); border-radius: 3px; padding: 1px 5px; }
   .cal-mobile-day .empty { color: var(--muted); font-size: 12px; font-style: italic; }
+  .cal-mobile-day .mobile-action { background: transparent; border: none; cursor: pointer; color: var(--muted); padding: 4px 8px; font-size: 12px; }
+  .cal-mobile-day .mobile-action:hover { color: var(--accent); }
 </style>
 @endpush
 
@@ -77,53 +96,76 @@
 
 @include('trainer._subnav')
 
+@include('partials.calendar-header', ['view' => $view, 'monday' => $monday, 'monthAnchor' => $monthAnchor, 'routeName' => 'trainer.calendar'])
+
 @php
-  $today = strtolower(now()->locale('en')->format('D'));
+  use App\Support\CalendarWeek;
+
   $weekdayLabels = ['mon' => 'Mandag', 'tue' => 'Tirsdag', 'wed' => 'Onsdag', 'thu' => 'Torsdag', 'fri' => 'Fredag'];
+  $weekdayDates = $view === 'week' ? CalendarWeek::weekdayDates($monday) : [];
 
-  $startHour = 8;
-  $endHour = 22;
-  $hourPx = 56;
-
-  $parseTime = function ($t) {
-      if (!$t) return null;
-      $parts = explode(':', (string) $t);
-      $h = (int) ($parts[0] ?? 0);
-      $m = (int) ($parts[1] ?? 0);
-      return $h * 60 + $m;
+  $canCancelFor = function ($course) {
+      $u = auth()->user();
+      return $u && ($u->isOwner() || $course->trainer_id === $u->id);
   };
-
-  $timed = [];
-  $untimed = [];
-  foreach ($weekdayLabels as $key => $_) {
-      $timed[$key] = [];
-      $untimed[$key] = [];
-      foreach ($byDay[$key] ?? [] as $c) {
-          $startMin = $parseTime($c->start_time);
-          if ($startMin === null) {
-              $untimed[$key][] = $c;
-              continue;
-          }
-          $endMin = $parseTime($c->end_time) ?? ($startMin + 60);
-          if ($endMin <= $startMin) $endMin = $startMin + 60;
-          $visibleStart = max($startMin, $startHour * 60);
-          $visibleEnd = min($endMin, $endHour * 60);
-          if ($visibleEnd <= $visibleStart) continue;
-          $top = ($visibleStart - $startHour * 60) / 60 * $hourPx;
-          $height = max(($visibleEnd - $visibleStart) / 60 * $hourPx, 28);
-          $timed[$key][] = ['course' => $c, 'top' => $top, 'height' => $height];
-      }
-  }
-  $hasUntimed = collect($untimed)->flatten()->isNotEmpty();
-
-  $weekendCourses = collect($byDay['sat'] ?? [])->concat($byDay['sun'] ?? [])->unique('id')->values();
 @endphp
+
+@if ($view === 'month')
+  @include('partials.calendar-month', [
+    'monthAnchor' => $monthAnchor,
+    'byDay' => $byDay,
+    'cancelledMap' => $cancelledMap,
+    'routeName' => 'trainer.calendar',
+  ])
+@else
+  @php
+    $startHour = 8;
+    $endHour = 22;
+    $hourPx = 56;
+
+    $parseTime = function ($t) {
+        if (!$t) return null;
+        $parts = explode(':', (string) $t);
+        $h = (int) ($parts[0] ?? 0);
+        $m = (int) ($parts[1] ?? 0);
+        return $h * 60 + $m;
+    };
+
+    $timed = [];
+    $untimed = [];
+    foreach ($weekdayLabels as $key => $_) {
+        $timed[$key] = [];
+        $untimed[$key] = [];
+        $dateStr = $weekdayDates[$key]->toDateString();
+        foreach ($byDay[$key] ?? [] as $c) {
+            $cancelled = isset($cancelledMap[$c->id . ':' . $dateStr]);
+            $startMin = $parseTime($c->start_time);
+            if ($startMin === null) {
+                $untimed[$key][] = ['course' => $c, 'cancelled' => $cancelled, 'date' => $dateStr];
+                continue;
+            }
+            $endMin = $parseTime($c->end_time) ?? ($startMin + 60);
+            if ($endMin <= $startMin) $endMin = $startMin + 60;
+            $visibleStart = max($startMin, $startHour * 60);
+            $visibleEnd = min($endMin, $endHour * 60);
+            if ($visibleEnd <= $visibleStart) continue;
+            $top = ($visibleStart - $startHour * 60) / 60 * $hourPx;
+            $height = max(($visibleEnd - $visibleStart) / 60 * $hourPx, 28);
+            $timed[$key][] = ['course' => $c, 'top' => $top, 'height' => $height, 'cancelled' => $cancelled, 'date' => $dateStr];
+        }
+    }
+    $hasUntimed = collect($untimed)->flatten(1)->isNotEmpty();
+  @endphp
 
 <div class="cal-wrap">
   <div class="cal-head">
     <div class="gutter"></div>
     @foreach ($weekdayLabels as $key => $label)
-      <div class="day-label {{ $key === $today ? 'today' : '' }}">{{ $label }}</div>
+      @php $d = $weekdayDates[$key]; @endphp
+      <div class="day-label {{ $d->isToday() ? 'today' : '' }}">
+        <div>{{ $label }}</div>
+        <div class="dnum">{{ $d->day }}/{{ $d->month }}</div>
+      </div>
     @endforeach
   </div>
 
@@ -131,10 +173,17 @@
     <div class="gutter">Uden tid</div>
     @foreach ($weekdayLabels as $key => $_)
       <div class="cell">
-        @foreach ($untimed[$key] as $c)
-          <a href="{{ route('courses.show', $c) }}" class="cal-event notime">
-            <div class="t">{{ $c->title }}</div>
-          </a>
+        @foreach ($untimed[$key] as $ev)
+          @php $c = $ev['course']; @endphp
+          <div class="cal-event-wrap" style="position:relative;">
+            <a href="{{ route('courses.show', $c) }}" class="cal-event notime {{ $ev['cancelled'] ? 'cancelled' : '' }}">
+              <div class="t">{{ $c->title }}</div>
+              @if ($ev['cancelled'])<div class="aflyst-badge">Aflyst</div>@endif
+            </a>
+            @if ($canCancelFor($c))
+              @include('partials.cancel-event-action', ['course' => $c, 'date' => $ev['date'], 'cancelled' => $ev['cancelled']])
+            @endif
+          </div>
         @endforeach
       </div>
     @endforeach
@@ -147,15 +196,20 @@
       @endfor
     </div>
     @foreach ($weekdayLabels as $key => $_)
-      <div class="cal-col {{ $key === $today ? 'today' : '' }}" style="height: {{ ($endHour - $startHour) * $hourPx }}px;">
+      @php $d = $weekdayDates[$key]; @endphp
+      <div class="cal-col {{ $d->isToday() ? 'today' : '' }}" style="height: {{ ($endHour - $startHour) * $hourPx }}px;">
         @foreach ($timed[$key] as $ev)
           @php $c = $ev['course']; @endphp
-          <a href="{{ route('courses.show', $c) }}"
-             class="cal-event"
-             style="top: {{ $ev['top'] }}px; height: {{ $ev['height'] }}px;">
-            <div class="t">{{ $c->title }}</div>
-            @if ($c->timeRange())<div class="tm">{{ $c->timeRange() }}</div>@endif
-          </a>
+          <div class="cal-event-wrap" style="top: {{ $ev['top'] }}px; height: {{ $ev['height'] }}px;">
+            <a href="{{ route('courses.show', $c) }}" class="cal-event {{ $ev['cancelled'] ? 'cancelled' : '' }}">
+              <div class="t">{{ $c->title }}</div>
+              @if ($c->timeRange())<div class="tm">{{ $c->timeRange() }}</div>@endif
+              @if ($ev['cancelled'])<div class="aflyst-badge">Aflyst</div>@endif
+            </a>
+            @if ($canCancelFor($c))
+              @include('partials.cancel-event-action', ['course' => $c, 'date' => $ev['date'], 'cancelled' => $ev['cancelled']])
+            @endif
+          </div>
         @endforeach
       </div>
     @endforeach
@@ -165,22 +219,41 @@
 {{-- Mobile fallback: per-day stacked list. --}}
 <div class="cal-mobile">
   @foreach ($weekdayLabels as $key => $label)
+    @php $d = $weekdayDates[$key]; @endphp
     <div class="cal-mobile-day">
-      <h3 class="{{ $key === $today ? 'today' : '' }}">{{ $label }}</h3>
-      @php
-        $dayCourses = collect($timed[$key])->map(fn ($e) => $e['course'])->concat($untimed[$key]);
-      @endphp
-      @forelse ($dayCourses as $c)
-        <a href="{{ route('courses.show', $c) }}" class="row" style="color:inherit;">
-          <div class="tm">{{ $c->timeRange() ?? '—' }}</div>
-          <div class="ti">{{ $c->title }}</div>
-        </a>
+      <h3 class="{{ $d->isToday() ? 'today' : '' }}">{{ $label }} {{ $d->day }}/{{ $d->month }}</h3>
+      @php $dayEvents = collect($timed[$key])->concat($untimed[$key]); @endphp
+      @forelse ($dayEvents as $ev)
+        @php $c = $ev['course']; @endphp
+        <div class="row {{ $ev['cancelled'] ? 'cancelled' : '' }}">
+          <a href="{{ route('courses.show', $c) }}" style="color:inherit;display:flex;gap:10px;align-items:center;flex:1;">
+            <div class="tm">{{ $c->timeRange() ?? '—' }}</div>
+            <div class="ti">{{ $c->title }}</div>
+            @if ($ev['cancelled'])<span class="aflyst-tag">Aflyst</span>@endif
+          </a>
+          @if ($canCancelFor($c))
+            @if ($ev['cancelled'])
+              <form method="POST" action="{{ route('trainer.cancellations.destroy', $c) }}" style="margin:0;">
+                @csrf @method('DELETE')
+                <input type="hidden" name="occurrence_date" value="{{ $ev['date'] }}">
+                <button type="submit" class="mobile-action" onclick="return confirm('Genåbn {{ $c->title }} den {{ \Carbon\Carbon::parse($ev['date'])->format('d/m/Y') }}?');" title="Genåbn"><i class="fa-solid fa-rotate-left"></i></button>
+              </form>
+            @else
+              <form method="POST" action="{{ route('trainer.cancellations.store', $c) }}" style="margin:0;">
+                @csrf
+                <input type="hidden" name="occurrence_date" value="{{ $ev['date'] }}">
+                <button type="submit" class="mobile-action" onclick="return confirm('Aflys {{ $c->title }} den {{ \Carbon\Carbon::parse($ev['date'])->format('d/m/Y') }}?');" title="Aflys"><i class="fa-solid fa-ban"></i></button>
+              </form>
+            @endif
+          @endif
+        </div>
       @empty
         <div class="empty">Ingen hold</div>
       @endforelse
     </div>
   @endforeach
 </div>
+@endif
 
 @if ($weekendCourses->isNotEmpty())
   <div class="cal-unscheduled">

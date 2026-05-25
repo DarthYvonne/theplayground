@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\CourseCancellation;
 use App\Models\Enrollment;
 use App\Models\User;
+use App\Support\CalendarWeek;
 use Illuminate\Http\Request;
 
 class CourseController extends Controller
@@ -21,6 +23,8 @@ class CourseController extends Controller
 
     public function calendar(Request $request)
     {
+        $ctx = CalendarWeek::resolveContext($request);
+
         $courses = Course::with('trainer')
             ->where('is_active', true)
             ->orderBy('start_time')
@@ -42,8 +46,16 @@ class CourseController extends Controller
         $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
 
         $enrolledIds = $request->user()?->activeEnrollments()->pluck('course_id')->all() ?? [];
+        $cancelledMap = CourseCancellation::mapForRange($courses->pluck('id')->all(), $ctx['rangeStart'], $ctx['rangeEnd']);
 
-        return view('courses.calendar', compact('byDay', 'unscheduled', 'weekendCourses', 'enrolledIds'));
+        $monday = $ctx['monday'];
+        $monthAnchor = $ctx['monthAnchor'];
+        $view = $ctx['view'];
+
+        return view('courses.calendar', compact(
+            'byDay', 'unscheduled', 'weekendCourses', 'enrolledIds',
+            'monday', 'monthAnchor', 'view', 'cancelledMap'
+        ));
     }
 
     public function mine(Request $request)

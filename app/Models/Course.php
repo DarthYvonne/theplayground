@@ -77,6 +77,7 @@ class Course extends Model
     public function enrollments(): HasMany { return $this->hasMany(Enrollment::class); }
     public function activeEnrollments(): HasMany { return $this->enrollments()->where('status','active'); }
     public function messages(): HasMany { return $this->hasMany(Message::class)->where('channel_type','course'); }
+    public function cancellations(): HasMany { return $this->hasMany(CourseCancellation::class); }
 
     public function imageUrl(): ?string
     {
