@@ -218,6 +218,7 @@
       @php $beskederUnread = auth()->user()->unreadDirectMessageCount(); @endphp
       <a href="{{ route('beskeder.index') }}" class="{{ request()->is('beskeder*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Beskeder @if ($beskederUnread > 0)<span class="badge-pill">{{ $beskederUnread > 99 ? '99+' : $beskederUnread }}</span>@endif</a>
       <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-circle-user"></i></span> Find medlem</a>
+      <a href="{{ route('floating.index') }}" class="{{ request()->is('floating*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-water"></i></span> Floating</a>
 
       @if (auth()->user()->isTrainer() || auth()->user()->isOwner())
         <div class="nav-divider"></div>

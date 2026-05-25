@@ -66,6 +66,33 @@ class StripeService
         ]));
     }
 
+    public static function createOneTimePrice(string $productId, int $cents, ?string $currency = null): array
+    {
+        return self::ok(self::request('POST', 'prices', [
+            'product' => $productId,
+            'currency' => $currency ?: StripeConfig::currency(),
+            'unit_amount' => $cents,
+        ]));
+    }
+
+    public static function createOneTimeCheckoutSession(User $user, string $priceId, string $successUrl, string $cancelUrl, array $metadata = []): array
+    {
+        $customerId = self::ensureCustomer($user);
+        $payload = [
+            'mode' => 'payment',
+            'customer' => $customerId,
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
+            'line_items[0][price]' => $priceId,
+            'line_items[0][quantity]' => 1,
+        ];
+        foreach ($metadata as $k => $v) {
+            $payload['metadata[' . $k . ']'] = (string) $v;
+            $payload['payment_intent_data[metadata][' . $k . ']'] = (string) $v;
+        }
+        return self::ok(self::request('POST', 'checkout/sessions', $payload));
+    }
+
     public static function archivePrice(string $priceId): void
     {
         try { self::ok(self::request('POST', 'prices/' . $priceId, ['active' => 'false'])); }
@@ -104,6 +131,29 @@ class StripeService
             'metadata[course_id]' => (string) $course->id,
             'subscription_data[metadata][user_id]' => (string) $user->id,
             'subscription_data[metadata][course_id]' => (string) $course->id,
+        ]));
+    }
+
+    /** Fetch a Checkout Session by id — used to reconcile enrollment immediately on return. */
+    public static function retrieveCheckoutSession(string $sessionId): array
+    {
+        return self::ok(self::request('GET', 'checkout/sessions/' . $sessionId));
+    }
+
+    /** Fetch a Subscription — used after checkout to read current_period_end. */
+    public static function retrieveSubscription(string $subscriptionId): array
+    {
+        return self::ok(self::request('GET', 'subscriptions/' . $subscriptionId));
+    }
+
+    /**
+     * Cancel a subscription at the end of its current billing period. The user keeps
+     * access until that date and is not charged again. Pass $cancel=false to undo.
+     */
+    public static function cancelSubscriptionAtPeriodEnd(string $subscriptionId, bool $cancel = true): array
+    {
+        return self::ok(self::request('POST', 'subscriptions/' . $subscriptionId, [
+            'cancel_at_period_end' => $cancel ? 'true' : 'false',
         ]));
     }
 

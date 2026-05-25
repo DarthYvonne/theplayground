@@ -10,6 +10,8 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\FeedController;
+use App\Http\Controllers\FloatingController;
+use App\Http\Controllers\Admin\FloatingAdminController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PreviewRoleController;
@@ -84,6 +86,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/messages/{message}', [ChatController::class, 'updateMessage']);
     Route::post('/api/messages/{message}/delete', [ChatController::class, 'destroyMessage']);
 
+    // Floating
+    Route::get('/floating', [FloatingController::class, 'index'])->name('floating.index');
+    Route::post('/floating/book', [FloatingController::class, 'book'])->name('floating.book');
+    Route::get('/floating/return', [FloatingController::class, 'returnFromCheckout'])->name('floating.return');
+    Route::post('/floating/{booking}/cancel', [FloatingController::class, 'cancel'])->name('floating.cancel');
+
     // Notifications
     Route::get('/api/notifications/counts', [NotificationController::class, 'unreadCount']);
     Route::get('/api/notifications', [NotificationController::class, 'list']);
@@ -112,5 +120,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/users/{user}/delete', [UserAdminController::class, 'destroy'])->name('users.destroy');
         Route::get('/settings', [SettingsController::class, 'revenue'])->name('settings.revenue');
         Route::get('/settings/andet', [SettingsController::class, 'other'])->name('settings.other');
+
+        // Floating admin
+        Route::get('/settings/floating', [FloatingAdminController::class, 'index'])->name('settings.floating');
+        Route::post('/settings/floating', [FloatingAdminController::class, 'updateSettings'])->name('settings.floating.update');
+        Route::post('/settings/floating/devices', [FloatingAdminController::class, 'storeDevice'])->name('settings.floating.devices.store');
+        Route::post('/settings/floating/devices/{device}', [FloatingAdminController::class, 'updateDevice'])->name('settings.floating.devices.update');
+        Route::post('/settings/floating/devices/{device}/delete', [FloatingAdminController::class, 'destroyDevice'])->name('settings.floating.devices.destroy');
     });
 });

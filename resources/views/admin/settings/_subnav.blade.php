@@ -16,6 +16,9 @@
   <a href="{{ route('admin.users.index') }}" class="{{ request()->routeIs('admin.users.index') ? 'active' : '' }}">
     <i class="fa-solid fa-users"></i> Brugere
   </a>
+  <a href="{{ route('admin.settings.floating') }}" class="{{ request()->routeIs('admin.settings.floating*') ? 'active' : '' }}">
+    <i class="fa-solid fa-water"></i> Floating
+  </a>
   <a href="{{ route('admin.settings.other') }}" class="{{ request()->routeIs('admin.settings.other') ? 'active' : '' }}">
     <i class="fa-solid fa-ellipsis"></i> Andet
   </a>
