@@ -21,16 +21,10 @@
 ])
 
 {{-- This @push must come AFTER the @include above so its rules win
-     over _room.blade.php's pushed styles. Instead of subtracting magic
-     numbers, we make .main a flex-column so the chat-card grows to
-     fill whatever vertical space is left. --}}
+     over _room.blade.php's pushed styles. --}}
 @push('styles')
 <style>
-  /* Viewport-locked chat layout (desktop & mobile):
-       top    — view-header (pinned)
-       middle — chat-stream (flex-grow, scrollable)
-       above bottom — chat-composer (pinned)
-       bottom — course-tabs (pinned) */
+  /* Desktop: chat-card grows to fill remaining vertical space inside .main. */
   .main {
     display: flex; flex-direction: column;
     height: 100vh; height: 100dvh;
@@ -38,32 +32,39 @@
     overflow: hidden;
   }
   .main > * { flex-shrink: 0; }
-  /* Desktop: view-header → course-tabs → chat-shell (DOM order).
-     Mobile: course-tabs is position:fixed at bottom, so order doesn't apply. */
-  .view-header { order: 0; }
-  .course-tabs { order: 0; }
-  .chat-shell { order: 1; flex: 1; min-height: 0; display: flex; flex-direction: column; }
-
+  .chat-shell { flex: 1; min-height: 0; display: flex; flex-direction: column; }
   .chat-card { flex: 1; height: auto; min-height: 0; }
 
   @media (max-width: 767px) {
-    /* Hard-lock the page so the keyboard can't scroll the body underneath.
-       Without this the browser scrolls the focused input into view by
-       scrolling the body, leaving a gap above the fixed bottom tab bar. */
+    /* Hard-lock the page so the keyboard can't scroll the body underneath. */
     html, body { height: 100%; height: 100dvh; overflow: hidden; overscroll-behavior: none; }
     .app { min-height: 0; height: 100%; }
 
-    /* Default: reserve the actual rendered tab-bar height (set by JS). */
-    .main { padding-bottom: var(--tabbar-h, 52px); }
-    .chat-composer { padding-bottom: 8px; }
+    /* Drop the desktop flex-column trick on mobile — we pin chat-shell
+       to the viewport directly, so .main doesn't need to participate. */
+    .main { display: block; height: auto; overflow: visible; padding: 0; }
 
-    /* Keyboard open: drop the tab bar entirely (it'd be behind the keyboard
-       or floating above it) and bottom-pad by the keyboard height. On
-       Chromes where the layout viewport shrinks ("resizes-content" mode)
-       --kb-h stays 0 because dvh already shrank — padding-bottom: 0 is then
-       correct, and the composer ends right at the keyboard top. */
+    /* Pin the chat to the visible area between the mobile-topbar (56px)
+       and the bottom course-tabs. Override .main > * { max-width: 720px;
+       margin-right: auto; } so it actually spans edge-to-edge instead of
+       being squeezed into the left-aligned 720px content column. */
+    .chat-shell {
+      position: fixed;
+      top: 56px; left: 0; right: 0;
+      bottom: var(--tabbar-h, 52px);
+      max-width: none; margin: 0;
+      display: flex; flex-direction: column;
+    }
+    /* Keyboard open: tab bar would be behind the keyboard — hide it and
+       let the chat fill down to the keyboard top. */
     body.kb-open .course-tabs { display: none; }
-    body.kb-open .main { padding-bottom: var(--kb-h, 0px); }
+    body.kb-open .chat-shell { bottom: var(--kb-h, 0px); }
+
+    .chat-card { flex: 1; height: auto; min-height: 0; margin: 0; border-radius: 0; box-shadow: none; }
+    .chat-composer { padding-bottom: max(8px, env(safe-area-inset-bottom)); }
+    /* iOS zooms inputs with font-size < 16px on focus — that's what
+       causes the page to "jump around" when you tap the input. */
+    .chat-composer input { font-size: 16px; }
   }
 </style>
 @endpush
