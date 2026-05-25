@@ -57,7 +57,7 @@
           @endif
           <div class="card-pad">
             <div class="course-tile-title">{{ $c->title }}</div>
-            <div class="course-tile-meta">Træner {{ $c->trainer->name }} · {{ $c->price() }}</div>
+            <div class="course-tile-meta">{{ count($c->trainers) === 1 ? 'Træner' : 'Trænere' }} {{ $c->trainerNames() }} · {{ $c->price() }}</div>
             @if ($c->scheduleLabel())
               <div class="course-tile-meta" style="margin-top:4px;"><i class="fa-regular fa-clock" style="margin-right:4px;"></i>{{ $c->scheduleLabel() }}</div>
             @endif

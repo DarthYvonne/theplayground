@@ -185,7 +185,7 @@ class ChatController extends Controller
         $recipientIds = Enrollment::where('course_id', $course->id)
             ->where('status', 'active')
             ->pluck('user_id')
-            ->push($course->trainer_id)
+            ->merge($course->trainers()->pluck('users.id'))
             ->unique()
             ->reject(fn ($id) => $id === $sender->id)
             ->values();
@@ -215,7 +215,7 @@ class ChatController extends Controller
     private function authorizeCourse(Request $request, Course $course): void
     {
         $u = $request->user();
-        $ok = $u->isOwner() || $course->trainer_id === $u->id || $u->enrolledIn($course);
+        $ok = $u->isOwner() || $course->hasTrainer($u) || $u->enrolledIn($course);
         abort_unless($ok, 403);
     }
 

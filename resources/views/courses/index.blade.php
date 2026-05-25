@@ -82,7 +82,7 @@
         $full = $course->active_enrollments_count >= $course->max_participants;
         $enrolled = auth()->check() && auth()->user()->enrolledIn($course);
       @endphp
-      <a href="{{ route('courses.show', $course) }}" class="card course-tile" data-search="{{ strtolower($course->title . ' ' . $course->trainer->name . ' ' . ($course->scheduleLabel() ?? '')) }}" aria-label="{{ $course->title }}">
+      <a href="{{ route('courses.show', $course) }}" class="card course-tile" data-search="{{ strtolower($course->title . ' ' . $course->trainerNames() . ' ' . ($course->scheduleLabel() ?? '')) }}" aria-label="{{ $course->title }}">
         <div class="img-wrap">
           @if ($course->image_path)
             <img src="{{ $course->imageUrl() }}" alt="" class="course-tile-img">

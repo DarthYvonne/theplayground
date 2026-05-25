@@ -125,8 +125,10 @@ class BeskederController extends Controller
             $course = Course::find($cid);
             if (!$course || !$this->canBroadcastTo($me, $course)) continue;
             $members = $course->activeEnrollments()->with('user')->get()->pluck('user')->filter();
-            if ($course->trainer_id && $course->trainer_id !== $me->id) {
-                $members->push($course->trainer);
+            foreach ($course->trainers as $trainer) {
+                if ($trainer->id !== $me->id) {
+                    $members->push($trainer);
+                }
             }
             foreach ($members as $u) {
                 if ($u->id === $me->id) continue;
@@ -262,7 +264,7 @@ class BeskederController extends Controller
     private function canBroadcastTo(User $u, Course $course): bool
     {
         if ($u->isOwner()) return true;
-        if ($u->isTrainer() && $course->trainer_id === $u->id) return true;
+        if ($u->isTrainer() && $course->hasTrainer($u)) return true;
         if (($u->isTrainer() || $u->isAssistant()) && $u->enrolledIn($course)) return true;
         return false;
     }

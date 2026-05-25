@@ -14,8 +14,8 @@ class TrainerController extends Controller
 {
     public function index(Request $request) {
         $user = $request->user();
-        $courses = Course::with('trainer')
-            ->where('trainer_id', $user->id)
+        $courses = $user->trainerCourses()
+            ->with('trainers')
             ->orderByDesc('is_active')
             ->orderBy('title')
             ->get();
@@ -26,8 +26,8 @@ class TrainerController extends Controller
         $user = $request->user();
         $ctx = CalendarWeek::resolveContext($request);
 
-        $courses = Course::with('trainer')
-            ->where('trainer_id', $user->id)
+        $courses = $user->trainerCourses()
+            ->with('trainers')
             ->where('is_active', true)
             ->orderBy('start_time')
             ->orderBy('title')
@@ -91,6 +91,6 @@ class TrainerController extends Controller
 
     private function authorize(Request $request, Course $course): void {
         $u = $request->user();
-        abort_unless($u->isOwner() || $course->trainer_id === $u->id, 403);
+        abort_unless($u->isOwner() || $course->hasTrainer($u), 403);
     }
 }

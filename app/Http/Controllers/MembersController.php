@@ -15,7 +15,7 @@ class MembersController extends Controller
             ->withCount('trainerCourses')
             ->with([
                 'activeEnrollments:id,user_id,course_id',
-                'trainerCourses:id,trainer_id',
+                'trainerCourses:id',
             ])
             ->get();
 
@@ -26,13 +26,13 @@ class MembersController extends Controller
 
     public function show(Request $request, User $user)
     {
-        $enrolledCourses = Course::with('trainer')
+        $enrolledCourses = Course::with('trainers')
             ->whereIn('id', $user->activeEnrollments()->pluck('course_id'))
             ->orderBy('title')
             ->get();
 
         $trainerCourses = $user->trainerCourses()
-            ->with('trainer')
+            ->with('trainers')
             ->where('is_active', true)
             ->orderBy('title')
             ->get();

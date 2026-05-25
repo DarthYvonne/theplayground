@@ -18,12 +18,12 @@ class ProfileController extends Controller
 
     public function courses(Request $request) {
         $user = $request->user();
-        $enrolledCourses = \App\Models\Course::with('trainer')
+        $enrolledCourses = \App\Models\Course::with('trainers')
             ->whereIn('id', $user->activeEnrollments()->pluck('course_id'))
             ->orderBy('title')
             ->get();
         $trainerCourses = $user->isTrainer()
-            ? $user->trainerCourses()->with('trainer')->orderByDesc('is_active')->orderBy('title')->get()
+            ? $user->trainerCourses()->with('trainers')->orderByDesc('is_active')->orderBy('title')->get()
             : collect();
         return view('profile.courses', [
             'user' => $user,

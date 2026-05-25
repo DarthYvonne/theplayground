@@ -106,7 +106,7 @@
 
   $canCancelFor = function ($course) {
       $u = auth()->user();
-      return $u && ($u->isOwner() || $course->trainer_id === $u->id);
+      return $u && ($u->isOwner() || $course->hasTrainer($u));
   };
 @endphp
 

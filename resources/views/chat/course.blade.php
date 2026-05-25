@@ -13,7 +13,7 @@
 
 @include('chat._room', [
   'title' => $course->title,
-  'sub' => 'Hold-chat · ' . $course->activeCount() . ' deltagere · træner ' . $course->trainer->name,
+  'sub' => 'Hold-chat · ' . $course->activeCount() . ' deltagere · ' . (count($course->trainers) === 1 ? 'træner' : 'trænere') . ' ' . $course->trainerNames(),
   'icon' => 'fa-regular fa-comments',
   'listUrl' => url('/api/chat/courses/' . $course->id),
   'sendUrl' => url('/api/chat/courses/' . $course->id),

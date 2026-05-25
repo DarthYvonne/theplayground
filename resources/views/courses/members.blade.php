@@ -45,27 +45,29 @@
   <div class="card">
     @php
       $u = auth()->user();
-      $canBroadcastHere = $u && ($u->id === $course->trainer_id || $u->isOwner());
+      $canBroadcastHere = $u && ($course->hasTrainer($u) || $u->isOwner());
     @endphp
     <div class="members-sec {{ $canBroadcastHere ? 'has-action' : '' }}">
-      <span>Træner</span>
+      <span>{{ count($course->trainers) === 1 ? 'Træner' : 'Trænere' }}</span>
       @if ($canBroadcastHere)
         <a href="{{ route('beskeder.index', ['hold' => $course->id]) }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-envelope"></i> Send besked til alle</a>
       @endif
     </div>
-    <a href="{{ route('members.show', $course->trainer) }}" class="member-row">
-      @include('partials.avatar', ['u' => $course->trainer])
-      <div class="meta">
-        <div class="name">
-          {{ $course->trainer->name }}
-          <span class="role-pill">Træner</span>
+    @foreach ($course->trainers as $trainer)
+      <a href="{{ route('members.show', $trainer) }}" class="member-row">
+        @include('partials.avatar', ['u' => $trainer])
+        <div class="meta">
+          <div class="name">
+            {{ $trainer->name }}
+            <span class="role-pill">Træner</span>
+          </div>
+          @if ($trainer->about)
+            <div class="sub">{{ \Illuminate\Support\Str::limit($trainer->about, 80) }}</div>
+          @endif
         </div>
-        @if ($course->trainer->about)
-          <div class="sub">{{ \Illuminate\Support\Str::limit($course->trainer->about, 80) }}</div>
-        @endif
-      </div>
-      <i class="fa-solid fa-chevron-right chev"></i>
-    </a>
+        <i class="fa-solid fa-chevron-right chev"></i>
+      </a>
+    @endforeach
 
     <div class="members-sec">Deltagere ({{ $members->count() }})</div>
     @if ($members->isEmpty())

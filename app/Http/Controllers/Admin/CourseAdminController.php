@@ -16,13 +16,13 @@ use Illuminate\Support\Facades\Storage;
 class CourseAdminController extends Controller
 {
     public function index() {
-        $courses = Course::with('trainer')->withCount(['enrollments as active_enrollments_count' => fn ($q) => $q->where('status','active')])->orderByDesc('created_at')->get();
+        $courses = Course::with('trainers')->withCount(['enrollments as active_enrollments_count' => fn ($q) => $q->where('status','active')])->orderByDesc('created_at')->get();
         return view('admin.courses.index', compact('courses'));
     }
 
     public function calendar(Request $request) {
         $ctx = CalendarWeek::resolveContext($request);
-        $courses = Course::with('trainer')->where('is_active', true)->orderBy('start_time')->orderBy('title')->get();
+        $courses = Course::with('trainers')->where('is_active', true)->orderBy('start_time')->orderBy('title')->get();
 
         $byDay = [];
         foreach (array_keys(Course::WEEKDAYS) as $day) $byDay[$day] = [];
@@ -50,9 +50,10 @@ class CourseAdminController extends Controller
     }
 
     public function store(Request $request): RedirectResponse {
-        $data = $this->validateData($request);
+        [$data, $trainerIds] = $this->validateData($request);
         if ($request->hasFile('image')) $data['image_path'] = $request->file('image')->store('courses', 'public');
         $course = Course::create($data);
+        $course->trainers()->sync($trainerIds);
         $this->syncStripe($course);
         return redirect()->route('admin.courses.edit', $course)->with('status', $this->saveMessage($course, 'oprettet'));
     }
@@ -62,13 +63,14 @@ class CourseAdminController extends Controller
     }
 
     public function update(Request $request, Course $course): RedirectResponse {
-        $data = $this->validateData($request);
+        [$data, $trainerIds] = $this->validateData($request);
         if ($request->hasFile('image')) {
             if ($course->image_path) Storage::disk('public')->delete($course->image_path);
             $data['image_path'] = $request->file('image')->store('courses', 'public');
         }
         $priceChanged = (int) $data['price_cents'] !== (int) $course->price_cents;
         $course->update($data);
+        $course->trainers()->sync($trainerIds);
         $this->syncStripe($course, $priceChanged);
         return back()->with('status', $this->saveMessage($course, 'opdateret'));
     }
@@ -121,7 +123,8 @@ class CourseAdminController extends Controller
         $data = $request->validate([
             'title' => ['required','string','max:160'],
             'description' => ['required','string','max:4000'],
-            'trainer_id' => ['required','exists:users,id'],
+            'trainer_ids' => ['required','array','min:1'],
+            'trainer_ids.*' => ['integer','exists:users,id'],
             'image' => ['nullable','image','max:16384'],
             'price_kr' => ['required','numeric','min:0','max:100000'],
             'max_participants' => ['required','integer','min:1','max:1000'],
@@ -132,12 +135,14 @@ class CourseAdminController extends Controller
             'weekdays' => ['nullable','array'],
             'weekdays.*' => ['in:mon,tue,wed,thu,fri,sat,sun'],
         ]);
+        $trainerIds = array_values(array_unique(array_map('intval', $data['trainer_ids'])));
+        unset($data['trainer_ids']);
         $data['price_cents'] = (int) round(((float) $data['price_kr']) * 100);
         unset($data['price_kr']);
         $data['is_active'] = $request->boolean('is_active');
         $data['free_enrollment'] = $request->boolean('free_enrollment');
         $data['weekdays'] = !empty($data['weekdays']) ? implode(',', $data['weekdays']) : null;
-        return $data;
+        return [$data, $trainerIds];
     }
 
     private function trainers() {

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -34,7 +35,10 @@ class User extends Authenticatable
 
     public function enrollments(): HasMany { return $this->hasMany(Enrollment::class); }
     public function activeEnrollments(): HasMany { return $this->enrollments()->where('status', 'active'); }
-    public function trainerCourses(): HasMany { return $this->hasMany(Course::class, 'trainer_id'); }
+    public function trainerCourses(): BelongsToMany
+    {
+        return $this->belongsToMany(Course::class, 'course_trainer')->withTimestamps();
+    }
     public function messages(): HasMany { return $this->hasMany(Message::class); }
     public function notifications(): HasMany { return $this->hasMany(AppNotification::class)->latest(); }
 

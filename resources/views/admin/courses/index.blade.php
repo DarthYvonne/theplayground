@@ -36,7 +36,7 @@
             {{ $c->price() }} ·
             @if ($c->is_active)<span style="color:#166534;font-weight:600;">Aktiv</span>@else<span>Kladde</span>@endif
           </div>
-          <div class="course-tile-meta" style="margin-top:4px;"><i class="fa-regular fa-user" style="margin-right:4px;"></i>{{ $c->trainer->name }}</div>
+          <div class="course-tile-meta" style="margin-top:4px;"><i class="fa-regular fa-user" style="margin-right:4px;"></i>{{ $c->trainerNames() ?: '—' }}</div>
         </div>
       </a>
     @endforeach

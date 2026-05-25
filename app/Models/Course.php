@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\Storage;
 
@@ -13,7 +13,7 @@ class Course extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title','description','trainer_id','image_path','price_cents',
+        'title','description','image_path','price_cents',
         'max_participants','is_active','free_enrollment','stripe_product_id','stripe_price_id',
         'start_time','end_time','weekdays',
     ];
@@ -73,7 +73,31 @@ class Course extends Model
         return implode(', ', $names) . ' og ' . $last;
     }
 
-    public function trainer(): BelongsTo { return $this->belongsTo(User::class, 'trainer_id'); }
+    public function trainers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'course_trainer')->withTimestamps()->orderBy('users.name');
+    }
+
+    public function hasTrainer(?User $user): bool
+    {
+        if (!$user) return false;
+        return $this->trainers()->whereKey($user->id)->exists();
+    }
+
+    public function primaryTrainer(): ?User
+    {
+        return $this->trainers->first();
+    }
+
+    public function trainerNames(): string
+    {
+        $names = $this->trainers->pluck('name')->all();
+        if (!$names) return '';
+        if (count($names) === 1) return $names[0];
+        $last = array_pop($names);
+        return implode(', ', $names) . ' og ' . $last;
+    }
+
     public function enrollments(): HasMany { return $this->hasMany(Enrollment::class); }
     public function activeEnrollments(): HasMany { return $this->enrollments()->where('status','active'); }
     public function messages(): HasMany { return $this->hasMany(Message::class)->where('channel_type','course'); }

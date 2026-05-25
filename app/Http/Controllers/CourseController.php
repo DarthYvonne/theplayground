@@ -13,7 +13,7 @@ class CourseController extends Controller
 {
     public function index(Request $request)
     {
-        $courses = Course::with('trainer')
+        $courses = Course::with('trainers')
             ->where('is_active', true)
             ->withCount(['enrollments as active_enrollments_count' => fn ($q) => $q->where('status','active')])
             ->orderByDesc('created_at')
@@ -25,7 +25,7 @@ class CourseController extends Controller
     {
         $ctx = CalendarWeek::resolveContext($request);
 
-        $courses = Course::with('trainer')
+        $courses = Course::with('trainers')
             ->where('is_active', true)
             ->orderBy('start_time')
             ->orderBy('title')
@@ -61,7 +61,7 @@ class CourseController extends Controller
     public function mine(Request $request)
     {
         $user = $request->user();
-        $enrolledCourses = Course::with('trainer')
+        $enrolledCourses = Course::with('trainers')
             ->whereIn('id', $user->activeEnrollments()->pluck('course_id'))
             ->get();
         return view('courses.mine', compact('enrolledCourses'));
@@ -71,10 +71,15 @@ class CourseController extends Controller
     {
         if (!$course->is_active && !($request->user()?->isOwner())) abort(404);
         $course->load('trainer');
-        $isEnrolled = $request->user()?->enrolledIn($course) ?? false;
+        $user = $request->user();
+        $isEnrolled = $user?->enrolledIn($course) ?? false;
+        $enrollment = $user
+            ? Enrollment::where('user_id', $user->id)->where('course_id', $course->id)->whereIn('status', ['active','past_due','pending'])->first()
+            : null;
         return view('courses.show', [
             'course' => $course,
             'isEnrolled' => $isEnrolled,
+            'enrollment' => $enrollment,
             'title' => $course->title,
         ]);
     }
@@ -82,9 +87,9 @@ class CourseController extends Controller
     public function members(Course $course, Request $request)
     {
         $u = $request->user();
-        abort_unless($u->isOwner() || $course->trainer_id === $u->id || $u->enrolledIn($course), 403);
+        abort_unless($u->isOwner() || $course->hasTrainer($u) || $u->enrolledIn($course), 403);
 
-        $course->load('trainer');
+        $course->load('trainers');
         $memberIds = Enrollment::where('course_id', $course->id)
             ->where('status', 'active')
             ->pluck('user_id');

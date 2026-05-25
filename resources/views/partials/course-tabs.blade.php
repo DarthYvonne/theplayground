@@ -1,7 +1,7 @@
 @php
   /** @var \App\Models\Course $course */
   $u = auth()->user();
-  $hasAccess = $u && ($u->isOwner() || $course->trainer_id === $u->id || $u->enrolledIn($course));
+  $hasAccess = $u && ($u->isOwner() || $course->hasTrainer($u) || $u->enrolledIn($course));
   $unreadCount = 0;
   if ($hasAccess) {
     $lastRead = \App\Models\MessageRead::where('user_id', $u->id)->where('course_id', $course->id)->value('last_read_at');

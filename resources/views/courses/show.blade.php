@@ -83,10 +83,12 @@
         @endif
       </div>
 
-      <div class="trainer-line">
-        @include('partials.avatar', ['u' => $course->trainer, 'size' => 'sm'])
-        <span>Med <span class="name">{{ $course->trainer->name }}</span></span>
-      </div>
+      @if ($course->trainers->isNotEmpty())
+        <div class="trainer-line">
+          @include('partials.avatar', ['u' => $course->primaryTrainer(), 'size' => 'sm'])
+          <span>Med <span class="name">{{ $course->trainerNames() }}</span></span>
+        </div>
+      @endif
 
       @if (trim((string) $course->description) !== '')
         <div class="desc">{{ $course->description }}</div>
@@ -97,11 +99,15 @@
       <div class="footer-left">
         @auth
           @if ($isEnrolled)
-            <form method="POST" action="{{ route('enroll.cancel', $course) }}" onsubmit="return confirm('Afmeld dig dette hold?');">
-              @csrf
-              <button class="afmeld" type="submit">Afmeld</button>
-            </form>
-            <span class="enrolled-note"><i class="fa-solid fa-circle-check"></i> Du er tilmeldt</span>
+            @if ($enrollment && $enrollment->cancel_at_period_end)
+              <span class="enrolled-note" style="color:#92400e;">
+                <i class="fa-solid fa-clock"></i>
+                Afmeldt — adgang frem til {{ optional($enrollment->current_period_end)->format('d.m.Y') ?? '–' }}
+              </span>
+            @else
+              <button class="afmeld" type="button" onclick="document.getElementById('afmeldModal').classList.add('open')">Afmeld</button>
+              <span class="enrolled-note"><i class="fa-solid fa-circle-check"></i> Du er tilmeldt</span>
+            @endif
           @elseif ($course->isFull())
             <button class="btn btn-secondary" disabled>Holdet er fuldt</button>
           @else
@@ -129,5 +135,63 @@
     </div>
   </div>
 </div>
+
+@auth
+  @if ($isEnrolled && $enrollment && !$enrollment->cancel_at_period_end)
+    <div class="afmeld-modal" id="afmeldModal" role="dialog" aria-modal="true" aria-labelledby="afmeldModalTitle">
+      <div class="afmeld-modal-backdrop" onclick="document.getElementById('afmeldModal').classList.remove('open')"></div>
+      <div class="afmeld-modal-card">
+        <h2 id="afmeldModalTitle">Afmeld {{ $course->title }}?</h2>
+        <p>
+          @if ($enrollment->current_period_end)
+            Du beholder din adgang frem til <strong>{{ $enrollment->current_period_end->format('d.m.Y') }}</strong>. Vi opkræver ikke flere betalinger.
+          @elseif ($enrollment->stripe_subscription_id)
+            Du beholder adgang resten af din nuværende betalingsperiode, og vi opkræver dig ikke igen.
+          @else
+            Din tilmelding bliver annulleret med det samme.
+          @endif
+        </p>
+        <form method="POST" action="{{ route('enroll.cancel', $course) }}">
+          @csrf
+          <label for="afmeldConfirm">Skriv <strong>Afmeld</strong> for at bekræfte</label>
+          <input id="afmeldConfirm" name="confirm" type="text" autocomplete="off" autocapitalize="words" required>
+          <div class="afmeld-modal-actions">
+            <button type="button" class="btn btn-ghost" onclick="document.getElementById('afmeldModal').classList.remove('open')">Annuller</button>
+            <button type="submit" class="btn btn-danger" id="afmeldConfirmBtn" disabled>Afmeld endeligt</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    @push('styles')
+    <style>
+      .afmeld-modal { display: none; position: fixed; inset: 0; z-index: 1050; align-items: center; justify-content: center; padding: 16px; }
+      .afmeld-modal.open { display: flex; }
+      .afmeld-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); }
+      .afmeld-modal-card { position: relative; background: #fff; border-radius: 12px; padding: 22px 24px; max-width: 460px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+      .afmeld-modal-card h2 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+      .afmeld-modal-card p { color: var(--muted); line-height: 1.5; margin-bottom: 16px; }
+      .afmeld-modal-card label { font-size: 13px; font-weight: 600; margin-bottom: 6px; display: block; }
+      .afmeld-modal-card input { width: 100%; }
+      .afmeld-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+    </style>
+    @endpush
+    @push('scripts')
+    <script>
+      (function () {
+        var input = document.getElementById('afmeldConfirm');
+        var btn = document.getElementById('afmeldConfirmBtn');
+        if (!input || !btn) return;
+        input.addEventListener('input', function () {
+          btn.disabled = input.value.trim().toLowerCase() !== 'afmeld';
+        });
+        var modal = document.getElementById('afmeldModal');
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && modal.classList.contains('open')) modal.classList.remove('open');
+        });
+      })();
+    </script>
+    @endpush
+  @endif
+@endauth
 
 @endsection
