@@ -24,7 +24,7 @@ class AuthController extends Controller
             return back()->withErrors(['email' => 'E-mail eller adgangskode passer ikke.'])->onlyInput('email');
         }
         $request->session()->regenerate();
-        return redirect('/dashboard');
+        return redirect()->intended('/dashboard');
     }
 
     public function showRegister() { return view('auth.register'); }
@@ -46,7 +46,7 @@ class AuthController extends Controller
         ]);
         Auth::login($user);
         $request->session()->regenerate();
-        return redirect('/dashboard');
+        return redirect()->intended('/dashboard');
     }
 
     public function logout(Request $request): RedirectResponse
