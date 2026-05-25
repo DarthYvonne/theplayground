@@ -54,7 +54,9 @@
     </div>
     <form class="chat-composer" id="chatComposer" autocomplete="off">
       @csrf
-      <input type="text" name="body" placeholder="Skriv en besked…" maxlength="2000" required autofocus>
+      <input type="text" name="body" placeholder="Skriv en besked…" maxlength="2000" required autofocus
+             autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true"
+             data-1p-ignore data-lpignore="true" data-form-type="other">
       <button type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
     </form>
   </div>

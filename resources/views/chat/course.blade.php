@@ -47,12 +47,34 @@
   .chat-card { flex: 1; height: auto; min-height: 0; }
 
   @media (max-width: 767px) {
-    /* course-tabs is position:fixed on mobile — reserve just its actual
-       height in main's bottom padding so the composer ends right above it. */
-    .main { padding-bottom: calc(52px + env(safe-area-inset-bottom)); }
+    /* course-tabs is position:fixed on mobile — reserve its actual rendered
+       height (set by JS below) so the composer ends right at the tab bar.
+       The fallback 52px is just a sensible default before the script runs. */
+    .main { padding-bottom: var(--tabbar-h, 52px); }
     .chat-composer { padding-bottom: 8px; }
   }
 </style>
+@endpush
+
+@push('scripts')
+<script>
+(function () {
+  var bar = document.querySelector('.course-tabs');
+  if (!bar) return;
+  function sync() {
+    /* Only set the var when the bar is actually rendered as the fixed bottom
+       bar (mobile breakpoint). On desktop the tabs are inline, so leave it.  */
+    if (getComputedStyle(bar).position === 'fixed') {
+      document.documentElement.style.setProperty('--tabbar-h', bar.offsetHeight + 'px');
+    } else {
+      document.documentElement.style.removeProperty('--tabbar-h');
+    }
+  }
+  sync();
+  window.addEventListener('resize', sync);
+  window.addEventListener('orientationchange', sync);
+})();
+</script>
 @endpush
 
 @endsection
