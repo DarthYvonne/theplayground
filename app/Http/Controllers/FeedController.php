@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Course;
 use App\Models\Enrollment;
+use App\Models\FeedComment;
 use App\Models\Message;
 use App\Models\Respekt;
 use Illuminate\Http\JsonResponse;
@@ -94,6 +95,7 @@ class FeedController extends Controller
             ->values();
 
         $merged = $this->attachRespekt($merged, $user->id);
+        $merged = $this->attachCommentCounts($merged);
 
         $payload = $merged->map(fn ($i) => collect($i)->except('sort_key')->all())->values();
 
@@ -143,6 +145,36 @@ class FeedController extends Controller
             $it['you_respekted'] = isset($mine[$type][$rawId]);
             $it['target_type'] = $type;
             $it['target_id'] = $rawId;
+            return $it;
+        });
+    }
+
+    private function attachCommentCounts(\Illuminate\Support\Collection $items): \Illuminate\Support\Collection
+    {
+        $messageIds = $items
+            ->filter(fn ($it) => in_array($it['type'], ['platform_message', 'course_message'], true))
+            ->map(fn ($it) => (int) $it['target_id'])
+            ->unique()
+            ->values()
+            ->all();
+
+        $counts = [];
+        if (!empty($messageIds)) {
+            foreach (
+                FeedComment::selectRaw('message_id, COUNT(*) as c')
+                    ->whereIn('message_id', $messageIds)
+                    ->groupBy('message_id')
+                    ->get()
+                as $row
+            ) {
+                $counts[(int) $row->message_id] = (int) $row->c;
+            }
+        }
+
+        return $items->map(function ($it) use ($counts) {
+            $isMsg = in_array($it['type'], ['platform_message', 'course_message'], true);
+            $it['can_comment'] = $isMsg;
+            $it['comments_count'] = $isMsg ? ($counts[(int) $it['target_id']] ?? 0) : 0;
             return $it;
         });
     }

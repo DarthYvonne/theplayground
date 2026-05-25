@@ -88,6 +88,47 @@
 
   .feed-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); }
   .feed-loading { color: var(--muted); text-align: center; padding: 20px; font-size: 13px; }
+
+  /* Comments */
+  .comments-toggle { background: none; border: none; padding: 0; font: inherit; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+  .comments-toggle:hover { color: var(--accent); }
+  .comments-toggle i { font-size: 13px; }
+  .comments-wrap { margin: 10px -16px 0; border-top: 1px solid #f0f2f5; padding: 10px 16px 0; display: none; }
+  .comments-wrap.open { display: block; }
+  .comments-list { display: flex; flex-direction: column; gap: 6px; }
+  .pc-comment { display: flex; gap: 10px; padding: 4px 0; }
+  .pc-comment .av { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; background: #e4e6eb; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #65676b; overflow: hidden; }
+  .pc-comment .av img { width: 100%; height: 100%; object-fit: cover; }
+  .pc-comment .col { min-width: 0; flex: 1; }
+  .pc-comment .bubble { background: #f0f2f5; padding: 8px 12px; border-radius: 14px; font-size: 13px; line-height: 1.4; display: inline-block; max-width: 100%; word-break: break-word; }
+  .pc-comment .bubble .nm { font-weight: 600; display: block; font-size: 12px; }
+  .pc-comment .bubble .nm a { color: var(--text); text-decoration: none; }
+  .pc-comment .bubble .nm a:hover { text-decoration: underline; }
+  .pc-comment .bubble .body { white-space: pre-wrap; }
+  .pc-comment .cm-meta { font-size: 11px; color: var(--muted); padding: 2px 12px; display: flex; gap: 12px; align-items: center; }
+  .pc-comment .cm-meta button { background: none; border: none; padding: 0; font: inherit; color: var(--muted); cursor: pointer; }
+  .pc-comment .cm-meta button:hover { color: var(--text); text-decoration: underline; }
+  .pc-comment .cm-meta .cm-respekt.active { color: var(--accent); font-weight: 700; }
+  .pc-comment .cm-meta .cm-respekt-count { display: inline-flex; align-items: center; gap: 4px; color: var(--accent); font-weight: 700; }
+  .pc-comment .cm-meta .cm-respekt-count i { font-size: 11px; }
+  .pc-comment .cm-meta .cm-respekt-count:not(.visible) { display: none; }
+  .pc-comment.thread { margin-left: 36px; }
+  .pc-comment.thread .av { width: 28px; height: 28px; font-size: 11px; }
+  .pc-comment .cm-edit { margin-top: 6px; }
+  .pc-comment .cm-edit textarea { width: 100%; resize: vertical; border: 1px solid var(--border); border-radius: 12px; padding: 8px 12px; font-family: inherit; font-size: 13px; min-height: 50px; }
+  .pc-comment .cm-edit textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
+  .pc-comment .cm-edit-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 6px; }
+  .comments-empty { color: var(--muted); font-size: 13px; padding: 6px 0 10px; text-align: center; }
+  .comment-input { display: flex; gap: 8px; padding: 8px 0 10px; align-items: flex-end; }
+  .comment-input .av { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; background: #e4e6eb; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #65676b; overflow: hidden; }
+  .comment-input .av img { width: 100%; height: 100%; object-fit: cover; }
+  .comment-input form { flex: 1; display: flex; gap: 8px; align-items: flex-end; }
+  .comment-input textarea { flex: 1; padding: 8px 14px; border: 1px solid var(--border); border-radius: 18px; font-size: 13px; font-family: inherit; resize: none; min-height: 36px; max-height: 140px; line-height: 1.4; background: #f0f2f5; }
+  .comment-input textarea:focus { outline: none; background: #fff; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
+  .comment-input button { padding: 7px 14px; border: none; background: var(--accent); color: #fff; border-radius: 18px; cursor: pointer; font-size: 13px; font-weight: 600; }
+  .comment-input button:disabled { opacity: 0.5; cursor: default; }
+  .comment-input .reply-target { font-size: 11px; color: var(--muted); padding: 0 0 4px 42px; display: flex; gap: 8px; align-items: center; }
+  .comment-input .reply-target button { background: none; border: none; color: var(--muted); cursor: pointer; padding: 0; font: inherit; text-decoration: underline; }
 </style>
 @endpush
 
@@ -141,6 +182,12 @@
 <script>
 (function () {
   var CSRF = document.querySelector('meta[name=csrf-token]').content;
+  var VIEWER = @json([
+    'name' => $user->name,
+    'initials' => $user->initials(),
+    'picture_url' => $user->pictureUrl(),
+    'profile_url' => route('members.show', $user),
+  ]);
   var composer = document.getElementById('feedComposer');
   var input = document.getElementById('feedComposerInput');
   var submit = document.getElementById('feedComposerSubmit');
@@ -223,13 +270,25 @@
         '</div>' +
       '</div>';
 
+    var canComment = !!it.can_comment;
+    var commentsCount = Number(it.comments_count || 0);
+    var commentsToggle = canComment
+      ? '<button type="button" class="comments-toggle" data-message-id="' + escapeHtml(String(it.target_id)) + '">' +
+          '<i class="fa-regular fa-comment"></i>' +
+          '<span class="comments-count-num">' + commentsCount + '</span> kommentarer' +
+        '</button>'
+      : '';
+
     var footer =
       '<div class="feed-footer">' +
-        '<button type="button" class="respekt-count"' +
-          ' data-target-type="' + escapeHtml(it.target_type) + '"' +
-          ' data-target-id="' + escapeHtml(String(it.target_id)) + '">' +
-          (it.respekt_count > 0 ? '<i class="fa-solid fa-hand-fist"></i>' + it.respekt_count : '') +
-        '</button>' +
+        '<div style="display:flex;align-items:center;gap:14px;">' +
+          '<button type="button" class="respekt-count"' +
+            ' data-target-type="' + escapeHtml(it.target_type) + '"' +
+            ' data-target-id="' + escapeHtml(String(it.target_id)) + '">' +
+            (it.respekt_count > 0 ? '<i class="fa-solid fa-hand-fist"></i>' + it.respekt_count : '') +
+          '</button>' +
+          commentsToggle +
+        '</div>' +
         '<button type="button" class="respekt-btn ' + (it.you_respekted ? 'active' : '') + '"' +
           ' data-target-type="' + escapeHtml(it.target_type) + '"' +
           ' data-target-id="' + escapeHtml(String(it.target_id)) + '">' +
@@ -237,7 +296,23 @@
         '</button>' +
       '</div>';
 
-    el.innerHTML = menu + head + body + footer;
+    var commentsWrap = canComment
+      ? '<div class="comments-wrap" data-message-id="' + escapeHtml(String(it.target_id)) + '" data-loaded="0">' +
+          '<div class="comments-list"></div>' +
+          '<div class="comment-input">' +
+            avatar(VIEWER) +
+            '<div style="flex:1;display:flex;flex-direction:column;">' +
+              '<div class="reply-target" style="display:none;"></div>' +
+              '<form class="comment-form">' +
+                '<textarea name="body" rows="1" placeholder="Skriv en kommentar..." maxlength="2000"></textarea>' +
+                '<button type="submit" disabled>Send</button>' +
+              '</form>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      : '';
+
+    el.innerHTML = menu + head + body + footer + commentsWrap;
     return el;
   }
 
@@ -561,7 +636,313 @@
     }
   });
 
-  load(true);
+  // ---------- Comments ----------
+  var COMMENTS_INDEX_URL = function (id) { return '{{ url('/api/messages') }}/' + encodeURIComponent(id) + '/comments'; };
+  var COMMENT_UPDATE_URL = function (id) { return '{{ url('/api/comments') }}/' + encodeURIComponent(id); };
+  var COMMENT_DELETE_URL = function (id) { return '{{ url('/api/comments') }}/' + encodeURIComponent(id) + '/delete'; };
+
+  var OPEN_KEY = 'tp:openComments';
+  var openComments = new Set((function () {
+    try { return JSON.parse(localStorage.getItem(OPEN_KEY) || '[]'); } catch (_) { return []; }
+  })());
+  function persistOpen() {
+    try { localStorage.setItem(OPEN_KEY, JSON.stringify([].slice.call(openComments))); } catch (_) {}
+  }
+
+  function renderCommentRow(c, isReply) {
+    var classes = 'pc-comment' + (isReply ? ' thread' : '');
+    var av = c.user.picture_url
+      ? '<div class="av"><img src="' + escapeHtml(c.user.picture_url) + '" alt=""></div>'
+      : '<div class="av">' + escapeHtml(c.user.initials) + '</div>';
+    var nameLink = '<a href="' + escapeHtml(c.user.profile_url) + '">' + escapeHtml(c.user.name) + '</a>';
+    var bubble =
+      '<div class="bubble">' +
+        '<span class="nm">' + nameLink + '</span>' +
+        '<div class="body">' + escapeHtml(c.body) + '</div>' +
+      '</div>';
+    var respektActive = c.you_respekted ? ' active' : '';
+    var respektCountHtml =
+      '<span class="cm-respekt-count' + (c.respekt_count > 0 ? ' visible' : '') + '"' +
+        ' data-target-type="comment" data-target-id="' + c.id + '">' +
+        '<i class="fa-solid fa-hand-fist"></i><span class="num">' + (c.respekt_count > 0 ? c.respekt_count : '') + '</span>' +
+      '</span>';
+    var mineActions = c.mine ? '<button type="button" class="cm-edit-btn">Rediger</button><button type="button" class="cm-delete-btn">Slet</button>' : '';
+    var replyBtn = !isReply ? '<button type="button" class="cm-reply-btn">Svar</button>' : '';
+    var meta =
+      '<div class="cm-meta">' +
+        '<button type="button" class="cm-respekt' + respektActive + '" data-target-type="comment" data-target-id="' + c.id + '">Respekt</button>' +
+        replyBtn +
+        mineActions +
+        '<span style="flex:1;"></span>' +
+        respektCountHtml +
+        '<span>' + escapeHtml(c.time_human) + '</span>' +
+      '</div>';
+
+    return '<div class="' + classes + '" data-comment-id="' + c.id + '" data-parent-id="' + (c.parent_id || '') + '">' +
+      av +
+      '<div class="col"><div class="bubble-wrap">' + bubble + '</div>' + meta + '</div>' +
+    '</div>';
+  }
+
+  function renderCommentsInto(wrap, comments) {
+    var listEl = wrap.querySelector('.comments-list');
+    if (!comments || !comments.length) {
+      listEl.innerHTML = '<div class="comments-empty">Ingen kommentarer endnu.</div>';
+      return;
+    }
+    // Top-level first, replies grouped after each parent.
+    var byParent = {};
+    var topLevel = [];
+    comments.forEach(function (c) {
+      if (c.parent_id) {
+        (byParent[c.parent_id] = byParent[c.parent_id] || []).push(c);
+      } else {
+        topLevel.push(c);
+      }
+    });
+    var html = '';
+    topLevel.forEach(function (c) {
+      html += renderCommentRow(c, false);
+      (byParent[c.id] || []).forEach(function (r) {
+        html += renderCommentRow(r, true);
+      });
+    });
+    listEl.innerHTML = html;
+  }
+
+  async function loadComments(wrap, force) {
+    if (!force && wrap.dataset.loaded === '1') return;
+    var id = wrap.dataset.messageId;
+    try {
+      var res = await fetch(COMMENTS_INDEX_URL(id), { headers: { Accept: 'application/json' }});
+      if (!res.ok) throw new Error('load failed');
+      var data = await res.json();
+      renderCommentsInto(wrap, data.comments);
+      wrap.dataset.loaded = '1';
+    } catch (err) {
+      wrap.querySelector('.comments-list').innerHTML = '<div class="comments-empty">Kunne ikke hente kommentarer.</div>';
+    }
+  }
+
+  function setCount(card, n) {
+    var t = card.querySelector('.comments-toggle .comments-count-num');
+    if (t) t.textContent = String(n);
+  }
+
+  function restoreOpenComments() {
+    openComments.forEach(function (id) {
+      var card = document.getElementById(id);
+      if (!card) return;
+      var wrap = card.querySelector('.comments-wrap');
+      if (!wrap) return;
+      wrap.classList.add('open');
+      loadComments(wrap, false);
+    });
+  }
+
+  list.addEventListener('click', async function (e) {
+    // Toggle
+    var toggle = e.target.closest('.comments-toggle');
+    if (toggle) {
+      e.preventDefault();
+      var card = toggle.closest('.feed-item');
+      var wrap = card.querySelector('.comments-wrap');
+      var isOpen = wrap.classList.toggle('open');
+      if (isOpen) {
+        openComments.add(card.id);
+        loadComments(wrap, false);
+      } else {
+        openComments.delete(card.id);
+      }
+      persistOpen();
+      return;
+    }
+
+    // Reply
+    var replyBtn = e.target.closest('.cm-reply-btn');
+    if (replyBtn) {
+      e.preventDefault();
+      var row = replyBtn.closest('.pc-comment');
+      var card = row.closest('.feed-item');
+      var wrap = card.querySelector('.comments-wrap');
+      var rt = wrap.querySelector('.reply-target');
+      var ta = wrap.querySelector('textarea');
+      var name = row.querySelector('.bubble .nm a').textContent;
+      rt.dataset.parentId = row.dataset.commentId;
+      rt.innerHTML = 'Svarer ' + escapeHtml(name) + ' · <button type="button" class="cancel-reply">annullér</button>';
+      rt.style.display = 'flex';
+      ta.focus();
+      return;
+    }
+    var cancelReply = e.target.closest('.cancel-reply');
+    if (cancelReply) {
+      e.preventDefault();
+      var card = cancelReply.closest('.feed-item');
+      var wrap = card.querySelector('.comments-wrap');
+      var rt = wrap.querySelector('.reply-target');
+      rt.dataset.parentId = '';
+      rt.style.display = 'none';
+      rt.innerHTML = '';
+      return;
+    }
+
+    // Edit
+    var editBtn = e.target.closest('.cm-edit-btn');
+    if (editBtn) {
+      e.preventDefault();
+      var row = editBtn.closest('.pc-comment');
+      if (row.querySelector('.cm-edit')) return;
+      var bodyEl = row.querySelector('.bubble .body');
+      var original = bodyEl ? bodyEl.textContent : '';
+      var edit = document.createElement('div');
+      edit.className = 'cm-edit';
+      edit.innerHTML =
+        '<textarea maxlength="2000"></textarea>' +
+        '<div class="cm-edit-actions">' +
+          '<button type="button" class="btn btn-secondary btn-sm cm-edit-cancel">Annullér</button>' +
+          '<button type="button" class="btn btn-primary btn-sm cm-edit-save">Gem</button>' +
+        '</div>';
+      var ta = edit.querySelector('textarea');
+      ta.value = original;
+      if (bodyEl) bodyEl.closest('.bubble-wrap').appendChild(edit);
+      ta.focus();
+      ta.setSelectionRange(ta.value.length, ta.value.length);
+      edit.querySelector('.cm-edit-cancel').addEventListener('click', function () { edit.remove(); });
+      edit.querySelector('.cm-edit-save').addEventListener('click', async function () {
+        var newBody = ta.value.trim();
+        if (!newBody) return;
+        var saveBtn = edit.querySelector('.cm-edit-save');
+        saveBtn.disabled = true;
+        try {
+          var res = await fetch(COMMENT_UPDATE_URL(row.dataset.commentId), {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json', 'Content-Type': 'application/json' },
+            body: JSON.stringify({ body: newBody }),
+          });
+          if (!res.ok) throw new Error('save failed');
+          var data = await res.json();
+          if (bodyEl) bodyEl.textContent = data.body;
+          edit.remove();
+        } catch (err) {
+          saveBtn.disabled = false;
+        }
+      });
+      return;
+    }
+
+    // Delete
+    var delBtn = e.target.closest('.cm-delete-btn');
+    if (delBtn) {
+      e.preventDefault();
+      if (!confirm('Slet denne kommentar?')) return;
+      var row = delBtn.closest('.pc-comment');
+      var card = row.closest('.feed-item');
+      try {
+        var res = await fetch(COMMENT_DELETE_URL(row.dataset.commentId), {
+          method: 'POST',
+          headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json' },
+        });
+        if (!res.ok) throw new Error('delete failed');
+        var data = await res.json();
+        // Remove the row + any replies whose parent_id matches
+        var parentId = row.dataset.commentId;
+        Array.prototype.slice.call(card.querySelectorAll('.pc-comment')).forEach(function (r) {
+          if (r === row || r.dataset.parentId === parentId) r.remove();
+        });
+        setCount(card, data.comments_count);
+        var listEl = card.querySelector('.comments-list');
+        if (listEl && !listEl.querySelector('.pc-comment')) {
+          listEl.innerHTML = '<div class="comments-empty">Ingen kommentarer endnu.</div>';
+        }
+      } catch (err) { /* silent */ }
+      return;
+    }
+
+    // Respekt on comment
+    var cmRespekt = e.target.closest('.cm-respekt');
+    if (cmRespekt) {
+      e.preventDefault();
+      var id = cmRespekt.dataset.targetId;
+      cmRespekt.disabled = true;
+      try {
+        var res = await fetch('{{ url('/api/respekt') }}', {
+          method: 'POST',
+          headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ target_type: 'comment', target_id: id }),
+        });
+        if (!res.ok) throw new Error('respekt failed');
+        var data = await res.json();
+        cmRespekt.classList.toggle('active', !!data.respekted);
+        var row = cmRespekt.closest('.pc-comment');
+        var counter = row.querySelector('.cm-respekt-count');
+        if (counter) {
+          var numEl = counter.querySelector('.num');
+          if (numEl) numEl.textContent = data.count > 0 ? data.count : '';
+          counter.classList.toggle('visible', data.count > 0);
+        }
+      } catch (err) { /* silent */ }
+      finally { cmRespekt.disabled = false; }
+      return;
+    }
+
+    // Open list of who-respekted on comment
+    var cmRespCount = e.target.closest('.cm-respekt-count');
+    if (cmRespCount && cmRespCount.classList.contains('visible')) {
+      e.preventDefault();
+      openRespModal('comment', cmRespCount.dataset.targetId);
+      return;
+    }
+  });
+
+  // Comment form input
+  list.addEventListener('input', function (e) {
+    var ta = e.target.closest('.comment-input textarea');
+    if (!ta) return;
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 140) + 'px';
+    var btn = ta.form.querySelector('button[type=submit]');
+    if (btn) btn.disabled = !ta.value.trim();
+  });
+  list.addEventListener('keydown', function (e) {
+    var ta = e.target.closest('.comment-input textarea');
+    if (!ta) return;
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (ta.value.trim()) ta.form.requestSubmit();
+    }
+  });
+  list.addEventListener('submit', async function (e) {
+    var form = e.target.closest('.comment-form');
+    if (!form) return;
+    e.preventDefault();
+    var card = form.closest('.feed-item');
+    var wrap = form.closest('.comments-wrap');
+    var ta = form.querySelector('textarea');
+    var btn = form.querySelector('button[type=submit]');
+    var body = ta.value.trim();
+    if (!body) return;
+    var rt = wrap.querySelector('.reply-target');
+    var parentId = rt && rt.dataset.parentId ? rt.dataset.parentId : null;
+    btn.disabled = true;
+    try {
+      var res = await fetch(COMMENTS_INDEX_URL(wrap.dataset.messageId), {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ body: body, parent_id: parentId }),
+      });
+      if (!res.ok) throw new Error('send failed');
+      var data = await res.json();
+      ta.value = '';
+      ta.style.height = 'auto';
+      if (rt) { rt.dataset.parentId = ''; rt.style.display = 'none'; rt.innerHTML = ''; }
+      setCount(card, data.comments_count);
+      await loadComments(wrap, true);
+    } catch (err) {
+      btn.disabled = false;
+    }
+  });
+
+  load(true).then(restoreOpenComments);
   setInterval(function () { load(false); }, 8000);
 })();
 </script>

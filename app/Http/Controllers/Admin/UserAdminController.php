@@ -6,12 +6,44 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class UserAdminController extends Controller
 {
     public function index() {
         $users = User::orderBy('role')->orderBy('name')->get();
         return view('admin.users.index', compact('users'));
+    }
+
+    public function edit(User $user) {
+        return view('admin.users.edit', compact('user'));
+    }
+
+    public function update(Request $request, User $user): RedirectResponse {
+        $data = $request->validate([
+            'name' => ['required','string','max:120'],
+            'email' => ['required','email','unique:users,email,' . $user->id],
+            'phone' => ['nullable','string','max:40'],
+            'about' => ['nullable','string','max:2000'],
+            'picture' => ['nullable','image','max:16384'],
+            'password' => ['nullable','confirmed','min:8'],
+        ]);
+
+        $user->name = $data['name'];
+        $user->email = $data['email'];
+        $user->phone = $data['phone'] ?? null;
+        $user->about = $data['about'] ?? null;
+        if ($request->hasFile('picture')) {
+            if ($user->picture_path) Storage::disk('public')->delete($user->picture_path);
+            $user->picture_path = $request->file('picture')->store('avatars', 'public');
+        }
+        if (!empty($data['password'])) {
+            $user->password = Hash::make($data['password']);
+        }
+        $user->save();
+
+        return redirect()->route('admin.users.edit', $user)->with('status', $user->name . ' er opdateret.');
     }
 
     public function updateRole(Request $request, User $user): RedirectResponse {
@@ -37,6 +69,6 @@ class UserAdminController extends Controller
         }
         $name = $user->name;
         $user->delete();
-        return back()->with('status', $name . ' er slettet.');
+        return redirect()->route('admin.users.index')->with('status', $name . ' er slettet.');
     }
 }

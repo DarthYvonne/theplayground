@@ -15,7 +15,7 @@ class RespektController extends Controller
     public function toggle(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'target_type' => ['required', 'in:platform_message,course_message,enrollment'],
+            'target_type' => ['required', 'in:platform_message,course_message,enrollment,comment'],
             'target_id' => ['required', 'integer'],
         ]);
 
@@ -55,6 +55,15 @@ class RespektController extends Controller
             $authorId = $enrollment->user_id;
             $link = $enrollment->course ? route('courses.show', $enrollment->course) : route('dashboard');
             $courseId = $enrollment->course_id;
+        } elseif ($type === 'comment') {
+            $comment = \App\Models\FeedComment::with('message')->find($targetId);
+            if (!$comment) return;
+            $authorId = $comment->user_id;
+            $message = $comment->message;
+            $courseId = $message?->course_id;
+            $link = $message && $message->channel_type === 'course' && $courseId
+                ? route('chat.course', $courseId)
+                : route('dashboard') . ($message ? ('#pm-' . $message->id) : '');
         } else {
             $message = Message::find($targetId);
             if (!$message) return;
@@ -80,7 +89,7 @@ class RespektController extends Controller
     public function list(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'target_type' => ['required', 'in:platform_message,course_message,enrollment'],
+            'target_type' => ['required', 'in:platform_message,course_message,enrollment,comment'],
             'target_id' => ['required', 'integer'],
         ]);
 

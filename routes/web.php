@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\BeskederController;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
@@ -87,6 +88,12 @@ Route::middleware('auth')->group(function () {
     Route::post('/api/messages/{message}', [ChatController::class, 'updateMessage']);
     Route::post('/api/messages/{message}/delete', [ChatController::class, 'destroyMessage']);
 
+    // Feed comments
+    Route::get('/api/messages/{message}/comments', [CommentController::class, 'index']);
+    Route::post('/api/messages/{message}/comments', [CommentController::class, 'store']);
+    Route::post('/api/comments/{comment}', [CommentController::class, 'update']);
+    Route::post('/api/comments/{comment}/delete', [CommentController::class, 'destroy']);
+
     // Floating
     Route::get('/floating', [FloatingController::class, 'index'])->name('floating.index');
     Route::post('/floating/book', [FloatingController::class, 'book'])->name('floating.book');
@@ -117,6 +124,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/courses/{course}', [CourseAdminController::class, 'update'])->name('courses.update');
         Route::post('/courses/{course}/delete', [CourseAdminController::class, 'destroy'])->name('courses.destroy');
         Route::get('/users', [UserAdminController::class, 'index'])->name('users.index');
+        Route::get('/users/{user}/edit', [UserAdminController::class, 'edit'])->name('users.edit');
+        Route::post('/users/{user}', [UserAdminController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/role', [UserAdminController::class, 'updateRole'])->name('users.role');
         Route::post('/users/{user}/delete', [UserAdminController::class, 'destroy'])->name('users.destroy');
         Route::get('/settings', [SettingsController::class, 'revenue'])->name('settings.revenue');
