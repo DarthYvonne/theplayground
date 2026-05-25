@@ -211,7 +211,15 @@
 (function () {
   var CSRF = document.querySelector('meta[name=csrf-token]').content;
   var BOOK_URL = '{{ route('floating.book') }}';
-  var DEVICES = @json($devices->map(fn ($d) => ['id' => $d->id, 'name' => $d->name, 'type_label' => $d->typeLabel(), 'price_label' => $settings->priceLabelFor($d->type)])->values());
+  @php
+    $deviceJson = $devices->map(fn ($d) => [
+        'id' => $d->id,
+        'name' => $d->name,
+        'type_label' => $d->typeLabel(),
+        'price_label' => $settings->priceLabelFor($d->type),
+    ])->values();
+  @endphp
+  var DEVICES = @json($deviceJson);
   var backdrop = document.getElementById('bookBackdrop');
   var whenEl = document.getElementById('bookWhen');
   var listEl = document.getElementById('bookDevices');
