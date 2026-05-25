@@ -22,17 +22,16 @@
   .float-grid thead th.closed { color: var(--muted); }
   .float-grid tbody th { padding: 8px 10px; color: var(--muted); font-weight: 600; white-space: nowrap; background: #fafbfc; min-width: 64px; }
   .float-grid td.cell { padding: 6px; }
-  .float-grid .slot { display: block; border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 8px 10px; cursor: pointer; transition: background 0.1s, border-color 0.1s; font: inherit; width: 100%; text-align: left; color: inherit; }
+  .float-grid .slot { display: flex; gap: 6px; align-items: center; border: 1px solid var(--border); background: #fff; border-radius: 8px; padding: 8px 10px; cursor: pointer; transition: background 0.1s, border-color 0.1s; font: inherit; width: 100%; text-align: left; color: var(--muted); min-height: 36px; }
   .float-grid .slot:hover { background: var(--accent-soft); border-color: var(--accent); }
-  .float-grid .slot.free .count { color: #166534; font-weight: 700; }
-  .float-grid .slot.tight .count { color: #b45309; font-weight: 700; }
-  .float-grid .slot.full { background: #f5f6f8; border-color: #e7eaee; color: var(--muted); cursor: not-allowed; }
+  .float-grid .slot.full { background: #f5f6f8; border-color: #e7eaee; color: var(--muted); cursor: not-allowed; justify-content: center; font-size: 11px; }
   .float-grid .slot.full:hover { background: #f5f6f8; border-color: #e7eaee; }
-  .float-grid .slot.mine { background: #ecfdf5; border-color: #34d399; }
-  .float-grid .slot.mine .count { color: #065f46; font-weight: 700; }
+  .float-grid .slot.mine { background: #ecfdf5; border-color: #34d399; color: #065f46; flex-direction: column; align-items: flex-start; gap: 0; }
+  .float-grid .slot.mine .lbl { font-weight: 700; font-size: 12px; }
+  .float-grid .slot.mine .sub { font-size: 11px; }
   .float-grid .slot.past { opacity: 0.45; cursor: not-allowed; }
-  .float-grid .slot .count { font-size: 12px; }
-  .float-grid .slot .lbl { display: block; font-weight: 600; }
+  .float-grid .slot .avail-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: #166534; font-weight: 600; }
+  .float-grid .slot .avail-chip i { font-size: 10px; opacity: 0.75; }
   .float-grid td.closed { background: #fafbfc; color: var(--muted); text-align: center; padding: 18px 8px; font-size: 12px; }
 
   /* Booking modal */
@@ -118,8 +117,11 @@
         </thead>
         <tbody>
           @foreach ($slots as $hhmm)
+            @php
+              $slotEnd = \Carbon\Carbon::createFromFormat('H:i', $hhmm)->addMinutes($settings->slot_duration_minutes)->format('H:i');
+            @endphp
             <tr>
-              <th>{{ $hhmm }}</th>
+              <th>{{ $hhmm }}–{{ $slotEnd }}</th>
               @foreach ($days as $day)
                 @php
                   $cell = $grid[$day['date']][$hhmm] ?? null;
@@ -132,26 +134,27 @@
                   <td class="cell">
                     <button type="button" class="slot mine" disabled>
                       <span class="lbl">Din booking</span>
-                      <span class="count">{{ $cell['mine']->device->name ?? 'Tank' }}</span>
+                      <span class="sub">{{ $cell['mine']->device->name ?? 'Tank' }}</span>
                     </button>
                   </td>
                 @elseif ($cell['free_count'] <= 0)
                   <td class="cell">
-                    <button type="button" class="slot full" disabled>
-                      <span class="lbl">Optaget</span>
-                      <span class="count">0 af {{ $devices->count() }}</span>
-                    </button>
+                    <button type="button" class="slot full" disabled>Fuldt booket</button>
                   </td>
                 @else
                   <td class="cell">
                     <button type="button"
-                      class="slot {{ $cell['free_count'] === $devices->count() ? 'free' : 'tight' }} {{ $isPast ? 'past' : '' }}"
+                      class="slot {{ $isPast ? 'past' : '' }}"
                       {{ $isPast ? 'disabled' : '' }}
                       data-slot="{{ $day['date'] }} {{ $hhmm }}"
                       data-taken="{{ implode(',', $cell['taken_device_ids']) }}"
                     >
-                      <span class="lbl">Book</span>
-                      <span class="count">{{ $cell['free_count'] }} af {{ $devices->count() }} ledige</span>
+                      @if (($cell['free_by_type']['single'] ?? 0) > 0)
+                        <span class="avail-chip" title="Enkelt-tanke ledige"><i class="fa-solid fa-user"></i>{{ $cell['free_by_type']['single'] }}</span>
+                      @endif
+                      @if (($cell['free_by_type']['double'] ?? 0) > 0)
+                        <span class="avail-chip" title="Dobbelt-tanke ledige"><i class="fa-solid fa-user-group"></i>{{ $cell['free_by_type']['double'] }}</span>
+                      @endif
                     </button>
                   </td>
                 @endif

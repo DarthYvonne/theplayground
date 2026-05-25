@@ -49,6 +49,13 @@ class FloatingController extends Controller
                 return $b->slot_start->toDateString() . ' ' . $b->slot_start->format('H:i');
             });
 
+        $devicesByType = $devices->groupBy('type');
+        $totalByType = [
+            'single' => $devicesByType->get('single', collect())->count(),
+            'double' => $devicesByType->get('double', collect())->count(),
+        ];
+        $deviceTypeById = $devices->pluck('type', 'id')->all();
+
         // For each (day, slot) compute: device statuses + my booking (if any).
         $grid = [];
         foreach ($days as $day) {
@@ -58,9 +65,21 @@ class FloatingController extends Controller
                 $taken = $bookings->get($key, collect());
                 $takenDeviceIds = $taken->pluck('device_id')->all();
                 $myBooking = $taken->firstWhere('user_id', $user?->id);
+
+                $takenByType = ['single' => 0, 'double' => 0];
+                foreach ($takenDeviceIds as $id) {
+                    $t = $deviceTypeById[$id] ?? null;
+                    if (isset($takenByType[$t])) $takenByType[$t]++;
+                }
+                $freeByType = [
+                    'single' => max(0, $totalByType['single'] - $takenByType['single']),
+                    'double' => max(0, $totalByType['double'] - $takenByType['double']),
+                ];
+
                 $row[$hhmm] = [
                     'taken_device_ids' => $takenDeviceIds,
                     'free_count' => max(0, $devices->count() - count($takenDeviceIds)),
+                    'free_by_type' => $freeByType,
                     'mine' => $myBooking,
                 ];
             }
