@@ -182,12 +182,15 @@
 <script>
 (function () {
   var CSRF = document.querySelector('meta[name=csrf-token]').content;
-  var VIEWER = @json([
-    'name' => $user->name,
-    'initials' => $user->initials(),
-    'picture_url' => $user->pictureUrl(),
-    'profile_url' => route('members.show', $user),
-  ]);
+  @php
+    $viewerPayload = [
+      'name' => $user->name,
+      'initials' => $user->initials(),
+      'picture_url' => $user->pictureUrl(),
+      'profile_url' => route('members.show', $user),
+    ];
+  @endphp
+  var VIEWER = @json($viewerPayload);
   var composer = document.getElementById('feedComposer');
   var input = document.getElementById('feedComposerInput');
   var submit = document.getElementById('feedComposerSubmit');
