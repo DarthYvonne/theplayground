@@ -8,7 +8,9 @@ class FloatingSetting extends Model
 {
     protected $fillable = [
         'slot_duration_minutes','open_from','open_to','days_open',
-        'price_cents','cancel_cutoff_hours','stripe_product_id','stripe_price_id',
+        'price_cents','price_cents_single','price_cents_double',
+        'cancel_cutoff_hours',
+        'stripe_product_id','stripe_price_id','stripe_price_id_single','stripe_price_id_double',
     ];
 
     protected function casts(): array
@@ -16,6 +18,8 @@ class FloatingSetting extends Model
         return [
             'slot_duration_minutes' => 'integer',
             'price_cents' => 'integer',
+            'price_cents_single' => 'integer',
+            'price_cents_double' => 'integer',
             'cancel_cutoff_hours' => 'integer',
         ];
     }
@@ -28,6 +32,8 @@ class FloatingSetting extends Model
             'open_to' => '22:00:00',
             'days_open' => 'mon,tue,wed,thu,fri,sat,sun',
             'price_cents' => 0,
+            'price_cents_single' => 0,
+            'price_cents_double' => 0,
             'cancel_cutoff_hours' => 24,
         ]);
     }
@@ -44,9 +50,30 @@ class FloatingSetting extends Model
         return in_array($code, $this->daysList(), true);
     }
 
+    public function priceCentsFor(string $type): int
+    {
+        return $type === 'double' ? (int) $this->price_cents_double : (int) $this->price_cents_single;
+    }
+
+    public function stripePriceIdFor(string $type): ?string
+    {
+        return $type === 'double' ? $this->stripe_price_id_double : $this->stripe_price_id_single;
+    }
+
+    public function priceLabelFor(string $type): string
+    {
+        return self::formatKr($this->priceCentsFor($type));
+    }
+
     public function priceLabel(): string
     {
-        $amt = number_format($this->price_cents / 100, $this->price_cents % 100 === 0 ? 0 : 2, ',', '.');
+        return self::formatKr((int) $this->price_cents_single);
+    }
+
+    private static function formatKr(int $cents): string
+    {
+        $kr = $cents / 100;
+        $amt = number_format($kr, $cents % 100 === 0 ? 0 : 2, ',', '.');
         return $amt . ' kr';
     }
 }

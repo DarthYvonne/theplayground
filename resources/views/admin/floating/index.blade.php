@@ -47,19 +47,29 @@
     <h2>Floating</h2>
     <div class="hint">Indstil hvor længe et slot varer, åbningstider, pris og afbestillingsfrist. Stripe-priser opdateres automatisk når feltet er konfigureret.</div>
 
+    <div class="form-row">
+      <label for="slot_duration_minutes">Slot-længde (minutter)</label>
+      <select id="slot_duration_minutes" name="slot_duration_minutes">
+        @foreach ([15,30,45,60,75,90,120] as $m)
+          <option value="{{ $m }}" {{ (int) old('slot_duration_minutes', $settings->slot_duration_minutes) === $m ? 'selected' : '' }}>{{ $m }} min</option>
+        @endforeach
+      </select>
+    </div>
+
+    @php
+      $fmtKr = function ($cents) {
+        $kr = $cents / 100;
+        return $kr == (int) $kr ? (string) (int) $kr : rtrim(rtrim(number_format($kr, 2, '.', ''), '0'), '.');
+      };
+    @endphp
     <div class="grid-2">
       <div class="form-row">
-        <label for="slot_duration_minutes">Slot-længde (minutter)</label>
-        <select id="slot_duration_minutes" name="slot_duration_minutes">
-          @foreach ([15,30,45,60,75,90,120] as $m)
-            <option value="{{ $m }}" {{ (int) old('slot_duration_minutes', $settings->slot_duration_minutes) === $m ? 'selected' : '' }}>{{ $m }} min</option>
-          @endforeach
-        </select>
+        <label for="price_kr_single">Pris pr. slot — Enkelt (kr)</label>
+        <input id="price_kr_single" type="number" name="price_kr_single" min="0" step="0.01" value="{{ old('price_kr_single', $fmtKr($settings->price_cents_single)) }}">
       </div>
       <div class="form-row">
-        <label for="price_kr">Pris pr. slot (kr)</label>
-        @php $priceKr = $settings->price_cents / 100; $priceKrDisplay = $priceKr == (int) $priceKr ? (string) (int) $priceKr : rtrim(rtrim(number_format($priceKr, 2, '.', ''), '0'), '.'); @endphp
-        <input id="price_kr" type="number" name="price_kr" min="0" step="0.01" value="{{ old('price_kr', $priceKrDisplay) }}">
+        <label for="price_kr_double">Pris pr. slot — Dobbelt (kr)</label>
+        <input id="price_kr_double" type="number" name="price_kr_double" min="0" step="0.01" value="{{ old('price_kr_double', $fmtKr($settings->price_cents_double)) }}">
       </div>
     </div>
 

@@ -126,11 +126,13 @@ class FloatingController extends Controller
             return redirect()->route('floating.index')->with('status', 'Du er allerede booket.');
         }
 
-        $paidFlow = StripeConfig::isConfigured() && (int) $settings->price_cents > 0;
+        $priceCents = $settings->priceCentsFor($device->type);
+        $stripePriceId = $settings->stripePriceIdFor($device->type);
+        $paidFlow = StripeConfig::isConfigured() && $priceCents > 0;
 
         if ($paidFlow) {
-            if (!$settings->stripe_price_id) {
-                return back()->withErrors(['slot' => 'Stripe-pris mangler. Bed admin om at gemme Floating-indstillinger igen.']);
+            if (!$stripePriceId) {
+                return back()->withErrors(['slot' => 'Stripe-pris mangler for denne tank-type. Bed admin om at gemme Floating-indstillinger igen.']);
             }
             $booking = $existing ?? new FloatingBooking();
             $booking->fill([
@@ -139,13 +141,13 @@ class FloatingController extends Controller
                 'slot_start' => $start,
                 'slot_end' => $end,
                 'status' => 'pending',
-                'amount_cents' => (int) $settings->price_cents,
+                'amount_cents' => $priceCents,
             ])->save();
 
             try {
                 $session = StripeService::createOneTimeCheckoutSession(
                     $user,
-                    $settings->stripe_price_id,
+                    $stripePriceId,
                     route('floating.return') . '?session_id={CHECKOUT_SESSION_ID}',
                     route('floating.index'),
                     ['booking_id' => $booking->id, 'user_id' => $user->id],
@@ -159,7 +161,7 @@ class FloatingController extends Controller
         }
 
         // Free / no-Stripe flow: create active booking directly.
-        DB::transaction(function () use ($user, $device, $start, $end, $settings, $existing) {
+        DB::transaction(function () use ($user, $device, $start, $end, $priceCents, $existing) {
             $b = $existing ?? new FloatingBooking();
             $b->fill([
                 'user_id' => $user->id,
@@ -167,7 +169,7 @@ class FloatingController extends Controller
                 'slot_start' => $start,
                 'slot_end' => $end,
                 'status' => 'active',
-                'amount_cents' => (int) $settings->price_cents,
+                'amount_cents' => $priceCents,
                 'paid_at' => null,
             ])->save();
         });

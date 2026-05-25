@@ -27,22 +27,33 @@ class FloatingAdminController extends Controller
             'open_to' => ['required','date_format:H:i','after:open_from'],
             'days_open' => ['required','array','min:1'],
             'days_open.*' => ['in:mon,tue,wed,thu,fri,sat,sun'],
-            'price_kr' => ['required','numeric','min:0','max:100000'],
+            'price_kr_single' => ['required','numeric','min:0','max:100000'],
+            'price_kr_double' => ['required','numeric','min:0','max:100000'],
             'cancel_cutoff_hours' => ['required','integer','min:0','max:168'],
         ]);
 
         $settings = FloatingSetting::current();
-        $oldCents = (int) $settings->price_cents;
+        $oldSingle = (int) $settings->price_cents_single;
+        $oldDouble = (int) $settings->price_cents_double;
+
+        $newSingle = (int) round(((float) $data['price_kr_single']) * 100);
+        $newDouble = (int) round(((float) $data['price_kr_double']) * 100);
+
         $settings->fill([
             'slot_duration_minutes' => $data['slot_duration_minutes'],
             'open_from' => $data['open_from'] . ':00',
             'open_to' => $data['open_to'] . ':00',
             'days_open' => implode(',', $data['days_open']),
-            'price_cents' => (int) round(((float) $data['price_kr']) * 100),
+            'price_cents' => $newSingle, // keep legacy column in sync with single
+            'price_cents_single' => $newSingle,
+            'price_cents_double' => $newDouble,
             'cancel_cutoff_hours' => $data['cancel_cutoff_hours'],
         ])->save();
 
-        $this->syncStripe($settings, $oldCents !== (int) $settings->price_cents);
+        $this->syncStripe($settings, [
+            'single' => $oldSingle !== $newSingle,
+            'double' => $oldDouble !== $newDouble,
+        ]);
 
         return back()->with('status', 'Indstillinger gemt.');
     }
@@ -84,20 +95,42 @@ class FloatingAdminController extends Controller
         return back()->with('status', 'Tank slettet.');
     }
 
-    private function syncStripe(FloatingSetting $settings, bool $priceChanged): void
+    /**
+     * @param array{single: bool, double: bool} $priceChanged
+     */
+    private function syncStripe(FloatingSetting $settings, array $priceChanged): void
     {
         if (!StripeConfig::isConfigured()) return;
-        if ((int) $settings->price_cents <= 0) return;
+
         try {
             if (!$settings->stripe_product_id) {
                 $product = StripeService::createProduct('Floating session', 'Booking af en floating-session på The Playground.');
                 $settings->stripe_product_id = $product['id'];
             }
-            if (!$settings->stripe_price_id || $priceChanged) {
-                if ($settings->stripe_price_id) StripeService::archivePrice($settings->stripe_price_id);
-                $price = StripeService::createOneTimePrice($settings->stripe_product_id, (int) $settings->price_cents);
-                $settings->stripe_price_id = $price['id'];
+
+            foreach (['single', 'double'] as $type) {
+                $cents = $settings->priceCentsFor($type);
+                $col = 'stripe_price_id_' . $type;
+                $currentId = $settings->{$col};
+
+                if ($cents <= 0) {
+                    // No price configured — make sure no stale price id sticks around.
+                    if ($currentId) {
+                        StripeService::archivePrice($currentId);
+                        $settings->{$col} = null;
+                    }
+                    continue;
+                }
+
+                if (!$currentId || $priceChanged[$type]) {
+                    if ($currentId) StripeService::archivePrice($currentId);
+                    $price = StripeService::createOneTimePrice($settings->stripe_product_id, $cents);
+                    $settings->{$col} = $price['id'];
+                }
             }
+
+            // Keep legacy stripe_price_id pointed at the single-tank price for back-compat.
+            $settings->stripe_price_id = $settings->stripe_price_id_single;
             $settings->save();
         } catch (\Throwable $e) {
             session()->flash('status', 'Gemt lokalt, men Stripe-synkronisering fejlede: ' . $e->getMessage());

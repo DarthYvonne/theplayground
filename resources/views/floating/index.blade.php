@@ -82,7 +82,7 @@
 
 <div class="float-shell">
   <div class="float-head">
-    <span class="price">{{ $settings->priceLabel() }} · {{ $settings->slot_duration_minutes }} min</span>
+    <span class="price">Enkelt {{ $settings->priceLabelFor('single') }} · Dobbelt {{ $settings->priceLabelFor('double') }} · {{ $settings->slot_duration_minutes }} min</span>
     @if ($devices->isEmpty())
       <span style="color:var(--muted);font-size:13px;">Ingen tanke endnu @if ($isOwner) — <a href="{{ route('admin.settings.floating') }}">tilføj i Indstillinger</a>@endif.</span>
     @endif
@@ -201,7 +201,7 @@
       <div class="device-list" id="bookDevices"></div>
     </div>
     <div class="book-foot">
-      <span class="hint">{{ $settings->priceLabel() }} pr. session · {{ $settings->slot_duration_minutes }} min</span>
+      <span class="hint">{{ $settings->slot_duration_minutes }} min · pris vises pr. tank</span>
     </div>
   </div>
 </div>
@@ -211,7 +211,7 @@
 (function () {
   var CSRF = document.querySelector('meta[name=csrf-token]').content;
   var BOOK_URL = '{{ route('floating.book') }}';
-  var DEVICES = @json($devices->map(fn ($d) => ['id' => $d->id, 'name' => $d->name, 'type_label' => $d->typeLabel()])->values());
+  var DEVICES = @json($devices->map(fn ($d) => ['id' => $d->id, 'name' => $d->name, 'type_label' => $d->typeLabel(), 'price_label' => $settings->priceLabelFor($d->type)])->values());
   var backdrop = document.getElementById('bookBackdrop');
   var whenEl = document.getElementById('bookWhen');
   var listEl = document.getElementById('bookDevices');
@@ -230,7 +230,7 @@
         '<input type="hidden" name="device_id" value="' + d.id + '">' +
         '<input type="hidden" name="slot_start" value="' + escapeHtml(slot) + '">' +
         '<span class="nm">' + escapeHtml(d.name) + '</span>' +
-        '<span class="meta">' + escapeHtml(d.type_label) + '</span>' +
+        '<span class="meta">' + escapeHtml(d.type_label) + ' · ' + escapeHtml(d.price_label) + '</span>' +
         (isTaken ? '<span class="meta">Optaget</span>' : '<button class="btn btn-primary btn-sm" type="submit">Book</button>') +
         '</form>';
     }).join('');
