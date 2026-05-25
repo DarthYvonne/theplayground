@@ -10,12 +10,15 @@
   .period-bar select { border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; font-size: 14px; background: #fff; }
   .period-bar .nudge { margin-left: auto; color: var(--muted); font-size: 13px; }
 
-  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
-  .stat { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 16px 18px; }
-  .stat .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
-  .stat .value { font-size: 24px; font-weight: 700; margin-top: 6px; }
-  .stat .value small { font-size: 13px; color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .stat { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 12px 10px; text-align: center; min-width: 0; }
+  .stat .label { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 700; }
+  .stat .value { font-size: 20px; font-weight: 700; margin-top: 4px; line-height: 1.2; word-break: break-word; }
+  .stat .sub { font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 2px; }
   .stat.total .value { color: var(--accent); }
+  @media (max-width: 767px) {
+    .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
 
   .rev-section-title { font-size: 13px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); font-weight: 700; margin: 22px 4px 8px; }
 
@@ -71,30 +74,26 @@
 
 <div class="stat-grid">
   <div class="stat">
-    <div class="label">Hold ({{ $period === 'year' ? 'året' : 'måneden' }})</div>
-    <div class="value">
-      {{ $fmtKr($holdCentsInPeriod) }}
-    </div>
+    <div class="label">Hold</div>
+    <div class="value">{{ $fmtKr($holdCentsInPeriod) }}</div>
   </div>
   <div class="stat">
-    <div class="label">Floating ({{ $period === 'year' ? 'året' : 'måneden' }})</div>
-    <div class="value">
-      {{ $fmtKr($floatingCentsInPeriod) }}
-      <small>{{ $floatingBookingsCount }} bookinger</small>
-    </div>
+    <div class="label">Floating</div>
+    <div class="value">{{ $fmtKr($floatingCentsInPeriod) }}</div>
+    <div class="sub">{{ $floatingBookingsCount }} bookinger</div>
   </div>
   <div class="stat total">
-    <div class="label">Total ({{ $period === 'year' ? 'året' : 'måneden' }})</div>
-    <div class="value">
-      {{ $fmtKr($totalCentsInPeriod) }}
-    </div>
+    <div class="label">Total</div>
+    <div class="value">{{ $fmtKr($totalCentsInPeriod) }}</div>
   </div>
   <div class="stat">
-    <div class="label">Aktive tilmeldinger nu</div>
-    <div class="value">
-      {{ $activeEnrollmentsNow }}
-      <small>{{ $fmtKr($monthlyCentsNow) }}/md</small>
-    </div>
+    <div class="label">Tilmeldinger</div>
+    <div class="value">{{ $activeEnrollmentsNow }}</div>
+    <div class="sub">{{ $fmtKr($monthlyCentsNow) }}/md</div>
+  </div>
+  <div class="stat">
+    <div class="label">Medlemmer</div>
+    <div class="value">{{ $membersCount }}</div>
   </div>
 </div>
 

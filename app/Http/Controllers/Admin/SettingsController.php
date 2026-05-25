@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\FloatingBooking;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -58,6 +59,9 @@ class SettingsController extends Controller
             ->where('enrollments.status', 'active')
             ->sum('courses.price_cents');
 
+        // Members only (excluding owner/trainer/assistant).
+        $membersCount = User::where('role', 'user')->count();
+
         // Floating revenue: sum amount_cents for bookings paid within the period.
         $floatingCentsInPeriod = (int) FloatingBooking::query()
             ->whereNotNull('paid_at')
@@ -99,6 +103,7 @@ class SettingsController extends Controller
             'monthsInPeriod' => $monthsInPeriod,
             'activeEnrollmentsNow' => $activeEnrollmentsNow,
             'monthlyCentsNow' => $monthlyCentsNow,
+            'membersCount' => $membersCount,
             'perCourse' => $perCourse,
         ]);
     }
