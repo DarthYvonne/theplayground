@@ -116,6 +116,35 @@ class StripeService
         return $data['id'];
     }
 
+    /**
+     * One-time MobilePay payment for one month of access to a course. MobilePay
+     * is not supported in Stripe subscription mode, so each renewal is a new
+     * Checkout Session. The webhook activates the enrollment for one month;
+     * the user must re-pay to continue beyond that.
+     */
+    public static function createMobilePayCheckoutSession(User $user, Course $course, string $successUrl, string $cancelUrl): array
+    {
+        if ($course->price_cents <= 0) throw new RuntimeException('Course has no price.');
+        $customerId = self::ensureCustomer($user);
+        return self::ok(self::request('POST', 'checkout/sessions', [
+            'mode' => 'payment',
+            'customer' => $customerId,
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
+            'payment_method_types[0]' => 'mobilepay',
+            'line_items[0][price_data][currency]' => StripeConfig::currency(),
+            'line_items[0][price_data][unit_amount]' => $course->price_cents,
+            'line_items[0][price_data][product_data][name]' => $course->title . ' — 1 måned',
+            'line_items[0][quantity]' => 1,
+            'metadata[user_id]' => (string) $user->id,
+            'metadata[course_id]' => (string) $course->id,
+            'metadata[payment_method]' => 'mobilepay',
+            'payment_intent_data[metadata][user_id]' => (string) $user->id,
+            'payment_intent_data[metadata][course_id]' => (string) $course->id,
+            'payment_intent_data[metadata][payment_method]' => 'mobilepay',
+        ]));
+    }
+
     public static function createCheckoutSession(User $user, Course $course, string $successUrl, string $cancelUrl): array
     {
         if (!$course->stripe_price_id) throw new RuntimeException('Course has no Stripe price. Re-save the course to provision it.');

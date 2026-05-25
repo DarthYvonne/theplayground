@@ -87,8 +87,9 @@ class StripeWebhookController extends Controller
     {
         $userId = (int) ($session['metadata']['user_id'] ?? 0);
         $courseId = (int) ($session['metadata']['course_id'] ?? 0);
-        $subId = $session['subscription'] ?? null;
         $customerId = $session['customer'] ?? null;
+        $mode = $session['mode'] ?? '';
+        $metaPaymentMethod = $session['metadata']['payment_method'] ?? null;
         if (!$userId || !$courseId) return;
 
         if ($customerId && ($user = User::find($userId)) && !$user->stripe_id) {
@@ -100,9 +101,22 @@ class StripeWebhookController extends Controller
 
         $enrollment = Enrollment::firstOrNew(['user_id' => $userId, 'course_id' => $courseId]);
         $enrollment->status = 'active';
-        $enrollment->stripe_subscription_id = $subId;
         $enrollment->enrolled_at = $enrollment->enrolled_at ?: now();
         $enrollment->canceled_at = null;
+        $enrollment->cancel_at_period_end = false;
+
+        if ($mode === 'subscription') {
+            // Recurring card subscription — current_period_end gets filled in by
+            // customer.subscription.updated. Card is the default unless otherwise tagged.
+            $enrollment->stripe_subscription_id = $session['subscription'] ?? null;
+            $enrollment->payment_method = $metaPaymentMethod ?: 'card';
+        } elseif ($mode === 'payment') {
+            // One-time payment (MobilePay et al). No subscription — we grant one
+            // month of access from now; further months require a new Checkout.
+            $enrollment->stripe_subscription_id = null;
+            $enrollment->payment_method = $metaPaymentMethod ?: 'one_time';
+            $enrollment->current_period_end = now()->addMonth();
+        }
         $enrollment->save();
     }
 
