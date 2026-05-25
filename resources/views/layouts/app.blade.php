@@ -31,7 +31,7 @@
 
   /* App shell */
   .app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
-  .app.guest { grid-template-columns: 1fr; }
+  .app.guest { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .sidebar { background: #fff; border-right: 1px solid var(--border); padding: 16px 12px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
   .mobile-topbar { display: none; }
   .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1001; }
@@ -41,9 +41,9 @@
   .main > * { width: 100%; max-width: 720px; margin-left: 0; margin-right: auto; }
 
   /* Guest header (logged-out top bar with logo only) */
-  .guest-header { background: #fff; border-bottom: 1px solid var(--border); padding: clamp(4px, 0.6vw, 12px) 26px; text-align: center; }
-  .guest-header .logo-link { display: inline-block; line-height: 0; }
-  .guest-header img { height: clamp(28px, 4vw, 56px); width: auto; display: block; margin: 0 auto; }
+  .guest-header { background: #fff; border-bottom: 1px solid var(--border); padding: 8px 26px; display: flex; justify-content: center; align-items: center; line-height: 0; }
+  .guest-header .logo-link { display: inline-flex; line-height: 0; }
+  .guest-header img { height: 40px; width: auto; display: block; }
   .app.guest .main { padding: 24px 26px 40px; }
   .app.guest .main > * { margin-left: auto; margin-right: auto; }
 
