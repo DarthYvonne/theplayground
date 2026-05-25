@@ -57,7 +57,7 @@
   .book-foot .hint { color: var(--muted); font-size: 12px; flex: 1; }
 
   /* My upcoming */
-  .my-up { margin-top: 18px; background: #fff; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+  .my-up { margin-bottom: 18px; background: #fff; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
   .my-up h2 { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
   .my-up .row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #f0f2f5; }
   .my-up .row:last-child { border-bottom: none; }
@@ -84,6 +84,32 @@
 @if ($errors->any())<div class="alert alert-error">{{ $errors->first() }}</div>@endif
 
 <div class="float-shell">
+  @auth
+    @if ($myUpcoming->isNotEmpty())
+      <div class="my-up">
+        <h2><i class="fa-regular fa-calendar-check" style="margin-right:6px;color:var(--accent);"></i>Mine kommende bookinger</h2>
+        @foreach ($myUpcoming as $b)
+          <div class="row">
+            <div class="meta">
+              <div class="when">{{ $b->slot_start->format('d.m.Y · H:i') }}–{{ $b->slot_end->format('H:i') }}</div>
+              <div class="sub">{{ $b->device->name ?? 'Tank' }}</div>
+            </div>
+            <div class="actions">
+              @if ($isOwner || $b->isCancellable($settings->cancel_cutoff_hours))
+                <form method="POST" action="{{ route('floating.cancel', $b) }}" onsubmit="return confirm('Aflys denne booking?');">
+                  @csrf
+                  <button class="btn btn-ghost btn-sm" type="submit"><i class="fa-solid fa-xmark"></i> Aflys</button>
+                </form>
+              @else
+                <span style="color:var(--muted);font-size:12px;">Inden for afbestillingsfrist</span>
+              @endif
+            </div>
+          </div>
+        @endforeach
+      </div>
+    @endif
+  @endauth
+
   <div class="float-head">
     <span class="price">Enkelt {{ $settings->priceLabelFor('single') }} · Dobbelt {{ $settings->priceLabelFor('double') }} · {{ $settings->slot_duration_minutes }} min</span>
     @if ($devices->isEmpty())
@@ -176,31 +202,6 @@
     </div>
   @endif
 
-  @auth
-    @if ($myUpcoming->isNotEmpty())
-      <div class="my-up">
-        <h2><i class="fa-regular fa-calendar-check" style="margin-right:6px;color:var(--accent);"></i>Mine kommende bookinger</h2>
-        @foreach ($myUpcoming as $b)
-          <div class="row">
-            <div class="meta">
-              <div class="when">{{ $b->slot_start->format('d.m.Y · H:i') }}–{{ $b->slot_end->format('H:i') }}</div>
-              <div class="sub">{{ $b->device->name ?? 'Tank' }}</div>
-            </div>
-            <div class="actions">
-              @if ($isOwner || $b->isCancellable($settings->cancel_cutoff_hours))
-                <form method="POST" action="{{ route('floating.cancel', $b) }}" onsubmit="return confirm('Aflys denne booking?');">
-                  @csrf
-                  <button class="btn btn-ghost btn-sm" type="submit"><i class="fa-solid fa-xmark"></i> Aflys</button>
-                </form>
-              @else
-                <span style="color:var(--muted);font-size:12px;">Inden for afbestillingsfrist</span>
-              @endif
-            </div>
-          </div>
-        @endforeach
-      </div>
-    @endif
-  @endauth
 </div>
 
 <div class="book-backdrop" id="bookBackdrop" role="dialog" aria-modal="true">
