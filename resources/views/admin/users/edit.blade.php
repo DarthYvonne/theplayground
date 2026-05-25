@@ -24,27 +24,27 @@
   </div>
 @endif
 
-<form method="POST" action="{{ route('admin.users.update', $user) }}" enctype="multipart/form-data" class="card card-pad">
-  @csrf
-  <div style="display:flex;gap:16px;align-items:center;margin-bottom:18px;">
+<div class="card card-pad" style="margin-bottom:14px;">
+  <div style="display:flex;gap:16px;align-items:center;">
     @include('partials.avatar', ['u' => $user, 'size' => 'xl'])
     <div style="flex:1;min-width:0;">
       <div style="font-weight:700;font-size:16px;">{{ $user->name }}</div>
       <div style="color:var(--muted);font-size:13px;">{{ $user->email }}</div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <form method="POST" action="{{ route('admin.users.role', $user) }}" style="display:flex;align-items:center;">
-        @csrf
-        <select name="role" onchange="this.form.submit()" style="width:auto;">
-          <option value="user" {{ $user->role === 'user' ? 'selected' : '' }}>Bruger</option>
-          <option value="assistant" {{ $user->role === 'assistant' ? 'selected' : '' }}>Assistent</option>
-          <option value="trainer" {{ $user->role === 'trainer' ? 'selected' : '' }}>Træner</option>
-          <option value="owner" {{ $user->role === 'owner' ? 'selected' : '' }}>Ejer</option>
-        </select>
-      </form>
-    </div>
+    <form method="POST" action="{{ route('admin.users.role', $user) }}" style="display:flex;align-items:center;">
+      @csrf
+      <select name="role" onchange="this.form.submit()" style="width:auto;">
+        <option value="user" {{ $user->role === 'user' ? 'selected' : '' }}>Bruger</option>
+        <option value="assistant" {{ $user->role === 'assistant' ? 'selected' : '' }}>Assistent</option>
+        <option value="trainer" {{ $user->role === 'trainer' ? 'selected' : '' }}>Træner</option>
+        <option value="owner" {{ $user->role === 'owner' ? 'selected' : '' }}>Ejer</option>
+      </select>
+    </form>
   </div>
+</div>
 
+<form method="POST" action="{{ route('admin.users.update', $user) }}" enctype="multipart/form-data" class="card card-pad">
+  @csrf
   <div class="form-row">
     <label for="picture">Profilbillede</label>
     <input id="picture" type="file" name="picture" accept="image/*">
