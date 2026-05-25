@@ -41,9 +41,9 @@
   .main > * { width: 100%; max-width: 720px; margin-left: 0; margin-right: auto; }
 
   /* Guest header (logged-out top bar with logo only) */
-  .guest-header { background: #fff; border-bottom: 1px solid var(--border); padding: 10px 26px; text-align: center; }
+  .guest-header { background: #fff; border-bottom: 1px solid var(--border); padding: 6px 26px; text-align: center; }
   .guest-header .logo-link { display: inline-block; }
-  .guest-header img { height: 72px; width: auto; display: block; margin: 0 auto; }
+  .guest-header img { height: 48px; width: auto; display: block; margin: 0 auto; }
   .app.guest .main { padding: 24px 26px 40px; }
   .app.guest .main > * { margin-left: auto; margin-right: auto; }
 
