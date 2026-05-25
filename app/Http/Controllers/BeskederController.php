@@ -201,7 +201,15 @@ class BeskederController extends Controller
             return;
         }
 
-        SendNewMessageMail::dispatch($msg)->delay(now()->addSeconds(30));
+        try {
+            SendNewMessageMail::dispatch($msg)->delay(now()->addSeconds(30));
+        } catch (\Throwable $e) {
+            logger()->error('SendNewMessageMail dispatch failed', [
+                'message_id' => $msg->id,
+                'to' => $recipient->id,
+                'err' => $e->getMessage(),
+            ]);
+        }
     }
 
     /** @return \Illuminate\Support\Collection<int, \App\Models\Course> */
