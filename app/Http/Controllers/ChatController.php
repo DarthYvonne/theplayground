@@ -10,7 +10,6 @@ use App\Models\MessageRead;
 use App\Models\Respekt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -67,19 +66,6 @@ class ChatController extends Controller
 
     public function uploadImage(Request $request): JsonResponse
     {
-        Log::info('feed.upload-image', [
-            'content_length' => $request->server('CONTENT_LENGTH'),
-            'content_type' => $request->server('CONTENT_TYPE'),
-            'has_file' => $request->hasFile('image'),
-            'files_keys' => array_keys($_FILES),
-            'files_image' => isset($_FILES['image']) ? array_diff_key($_FILES['image'], ['tmp_name' => '']) : null,
-            'post_keys' => array_keys($request->post()),
-            'php_upload_max' => ini_get('upload_max_filesize'),
-            'php_post_max' => ini_get('post_max_size'),
-            'php_file_uploads' => ini_get('file_uploads'),
-            'php_tmp_dir' => ini_get('upload_tmp_dir') ?: sys_get_temp_dir(),
-        ]);
-
         $file = $request->file('image');
 
         if ($file === null) {
