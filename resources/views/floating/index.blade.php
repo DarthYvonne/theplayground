@@ -127,7 +127,7 @@
                   $isPast = $slotStart->isPast();
                 @endphp
                 @if (!$day['is_open'])
-                  <td class="closed">@if ($loop->first && $hhmm === reset($slots))Lukket@endif</td>
+                  <td class="closed">@if ($loop->first && $hhmm === ($slots[0] ?? null))Lukket@endif</td>
                 @elseif ($cell['mine'] ?? false)
                   <td class="cell">
                     <button type="button" class="slot mine" disabled>
