@@ -211,7 +211,7 @@
 (function () {
   var CSRF = document.querySelector('meta[name=csrf-token]').content;
   var BOOK_URL = '{{ route('floating.book') }}';
-  var DEVICES = @json($devices->map(fn ($d) => ['id' => $d->id, 'name' => $d->name])->values());
+  var DEVICES = @json($devices->map(fn ($d) => ['id' => $d->id, 'name' => $d->name, 'type_label' => $d->typeLabel()])->values());
   var backdrop = document.getElementById('bookBackdrop');
   var whenEl = document.getElementById('bookWhen');
   var listEl = document.getElementById('bookDevices');
@@ -230,6 +230,7 @@
         '<input type="hidden" name="device_id" value="' + d.id + '">' +
         '<input type="hidden" name="slot_start" value="' + escapeHtml(slot) + '">' +
         '<span class="nm">' + escapeHtml(d.name) + '</span>' +
+        '<span class="meta">' + escapeHtml(d.type_label) + '</span>' +
         (isTaken ? '<span class="meta">Optaget</span>' : '<button class="btn btn-primary btn-sm" type="submit">Book</button>') +
         '</form>';
     }).join('');

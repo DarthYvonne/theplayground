@@ -19,12 +19,14 @@
   .weekday-chip:hover span { background: var(--hover); }
   .weekday-chip input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-  .device-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: #fff; }
-  .device-row input[type=text] { flex: 1; padding: 8px 10px; font-size: 14px; border: 1px solid var(--border); border-radius: 6px; }
+  .device-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; background: #fff; flex-wrap: wrap; }
+  .device-row input[type=text] { flex: 1; min-width: 140px; padding: 8px 10px; font-size: 14px; border: 1px solid var(--border); border-radius: 6px; }
+  .device-row select { padding: 8px 10px; font-size: 14px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
   .device-row .switch { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
   .device-row form { display: inline-flex; align-items: center; gap: 8px; margin: 0; }
-  .device-add { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
-  .device-add input { flex: 1; padding: 9px 12px; font-size: 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .device-add { display: flex; gap: 8px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  .device-add input { flex: 1; min-width: 140px; padding: 9px 12px; font-size: 14px; border: 1px solid var(--border); border-radius: 8px; }
+  .device-add select { padding: 9px 12px; font-size: 14px; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
 
   @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
 </style>
@@ -103,6 +105,10 @@
       <form method="POST" action="{{ route('admin.settings.floating.devices.update', $d) }}" class="device-row">
         @csrf
         <input type="text" name="name" value="{{ $d->name }}" required>
+        <select name="type" title="Type">
+          <option value="single" {{ $d->type === 'single' ? 'selected' : '' }}>Enkelt</option>
+          <option value="double" {{ $d->type === 'double' ? 'selected' : '' }}>Dobbelt</option>
+        </select>
         <label class="switch" title="Aktiv">
           <input type="checkbox" name="is_active" value="1" {{ $d->is_active ? 'checked' : '' }}>
           <span class="knob"></span>
@@ -117,6 +123,10 @@
     <form method="POST" action="{{ route('admin.settings.floating.devices.store') }}" class="device-add">
       @csrf
       <input type="text" name="name" placeholder="Fx Tank A" required>
+      <select name="type">
+        <option value="single">Enkelt</option>
+        <option value="double">Dobbelt</option>
+      </select>
       <button class="btn btn-primary btn-sm" type="submit"><i class="fa-solid fa-plus"></i> Tilføj</button>
     </form>
   </div>
