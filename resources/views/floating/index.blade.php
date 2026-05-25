@@ -66,11 +66,43 @@
   .my-up .row .sub { color: var(--muted); font-size: 12px; }
   .my-up .row .actions { display: inline-flex; gap: 6px; }
 
+  /* Mobile single-day view */
+  .float-mobile { display: none; }
+  .float-mobile .day-tabs { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 10px; margin-bottom: 6px; scrollbar-width: none; }
+  .float-mobile .day-tabs::-webkit-scrollbar { display: none; }
+  .float-mobile .day-tab { flex: 0 0 auto; display: inline-flex; flex-direction: column; align-items: center; gap: 1px; min-width: 52px; padding: 8px 6px; border: 1px solid var(--border); background: #fff; border-radius: 10px; cursor: pointer; font: inherit; color: inherit; line-height: 1.15; }
+  .float-mobile .day-tab .dl { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+  .float-mobile .day-tab .dn { font-size: 15px; font-weight: 700; }
+  .float-mobile .day-tab.closed .dl, .float-mobile .day-tab.closed .dn { color: var(--muted); }
+  .float-mobile .day-tab.today { color: var(--accent); border-color: var(--accent); }
+  .float-mobile .day-tab.today .dl { color: var(--accent); }
+  .float-mobile .day-tab.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .float-mobile .day-tab.active .dl, .float-mobile .day-tab.active .dn { color: #fff; }
+  .float-mobile .day-panel { display: none; background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); overflow: hidden; }
+  .float-mobile .day-panel.active { display: block; }
+  .float-mobile .day-panel .day-empty { padding: 30px 18px; text-align: center; color: var(--muted); font-size: 13px; }
+  .float-mobile .slot-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid #f0f2f5; cursor: pointer; background: #fff; }
+  .float-mobile .slot-row:last-child { border-bottom: none; }
+  .float-mobile .slot-row:hover { background: var(--accent-soft); }
+  .float-mobile .slot-row .time { font-weight: 700; font-size: 14px; min-width: 96px; color: var(--text); }
+  .float-mobile .slot-row .state { margin-left: auto; display: inline-flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .float-mobile .slot-row.full { background: #fafbfc; color: var(--muted); cursor: not-allowed; }
+  .float-mobile .slot-row.full:hover { background: #fafbfc; }
+  .float-mobile .slot-row.mine { background: #ecfdf5; cursor: not-allowed; }
+  .float-mobile .slot-row.mine:hover { background: #ecfdf5; }
+  .float-mobile .slot-row.mine .state { color: #065f46; font-weight: 700; font-size: 13px; }
+  .float-mobile .slot-row.has-mine .time::before { content: '\f058'; font-family: 'Font Awesome 6 Free'; font-weight: 900; color: #16a34a; margin-right: 6px; font-size: 12px; }
+  .float-mobile .slot-row.past { opacity: 0.5; cursor: not-allowed; }
+  .float-mobile .slot-row.past:hover { background: #fff; }
+  .float-mobile .slot-row .avail-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #166534; font-weight: 600; }
+  .float-mobile .slot-row .avail-chip i { font-size: 11px; opacity: 0.75; }
+  .float-mobile .slot-row .state .full-tag { font-size: 12px; color: var(--muted); }
+
   @media (max-width: 767px) {
-    .float-grid { font-size: 12px; }
-    .float-grid thead th { padding: 8px 4px; font-size: 11px; }
-    .float-grid tbody th { font-size: 11px; padding: 6px 6px; min-width: 50px; }
-    .float-grid .slot { padding: 6px 6px; font-size: 11px; }
+    .float-grid { display: none; }
+    .float-mobile { display: block; }
+    .float-head .price { font-size: 12px; padding: 5px 10px; }
+    .float-head .nav .label { padding: 0 4px; font-size: 12px; }
   }
 </style>
 @endpush
@@ -200,6 +232,70 @@
         </tbody>
       </table>
     </div>
+
+    @php
+      $todayStr = \Carbon\Carbon::today()->toDateString();
+      $todayKey = collect($days)->firstWhere('date', $todayStr)['date'] ?? null;
+      $defaultDayKey = $todayKey ?? ($days[0]['date'] ?? null);
+    @endphp
+    <div class="float-mobile">
+      <div class="day-tabs" role="tablist">
+        @foreach ($days as $day)
+          @php $isToday = $day['date'] === $todayStr; @endphp
+          <button type="button" class="day-tab {{ $isToday ? 'today' : '' }} {{ !$day['is_open'] ? 'closed' : '' }} {{ $day['date'] === $defaultDayKey ? 'active' : '' }}" data-day="{{ $day['date'] }}" role="tab">
+            <span class="dl">{{ $day['label'] }}</span>
+            <span class="dn">{{ $day['short'] }}</span>
+          </button>
+        @endforeach
+      </div>
+
+      @foreach ($days as $day)
+        <div class="day-panel {{ $day['date'] === $defaultDayKey ? 'active' : '' }}" data-day="{{ $day['date'] }}" role="tabpanel">
+          @if (!$day['is_open'])
+            <div class="day-empty">Lukket</div>
+          @else
+            @foreach ($slots as $hhmm)
+              @php
+                $slotEnd = \Carbon\Carbon::createFromFormat('H:i', $hhmm)->addMinutes($settings->slot_duration_minutes)->format('H:i');
+                $cell = $grid[$day['date']][$hhmm] ?? null;
+                $slotStart = \Carbon\Carbon::parse($day['date'] . ' ' . $hhmm);
+                $isPast = $slotStart->isPast();
+                $hasMine = (bool) ($cell['mine'] ?? false);
+              @endphp
+              @if ($hasMine && $cell['free_count'] <= 0)
+                <div class="slot-row mine">
+                  <div class="time">{{ $hhmm }}–{{ $slotEnd }}</div>
+                  <div class="state">Din booking · {{ $cell['mine']->device->name ?? 'Tank' }}</div>
+                </div>
+              @elseif ($cell['free_count'] <= 0)
+                <div class="slot-row full">
+                  <div class="time">{{ $hhmm }}–{{ $slotEnd }}</div>
+                  <div class="state"><span class="full-tag">Fuldt booket</span></div>
+                </div>
+              @else
+                <div class="slot-row {{ $hasMine ? 'has-mine' : '' }} {{ $isPast ? 'past' : '' }}"
+                  @if (!$isPast)
+                    data-slot="{{ $day['date'] }} {{ $hhmm }}"
+                    data-taken="{{ implode(',', $cell['taken_device_ids']) }}"
+                    data-mine="{{ implode(',', $cell['mine_device_ids'] ?? []) }}"
+                  @endif
+                  role="button" tabindex="0">
+                  <div class="time">{{ $hhmm }}–{{ $slotEnd }}</div>
+                  <div class="state">
+                    @if (($cell['free_by_type']['single'] ?? 0) > 0)
+                      <span class="avail-chip"><i class="fa-solid fa-user"></i>{{ $cell['free_by_type']['single'] }} enkelt</span>
+                    @endif
+                    @if (($cell['free_by_type']['double'] ?? 0) > 0)
+                      <span class="avail-chip"><i class="fa-solid fa-user-group"></i>{{ $cell['free_by_type']['double'] }} dobbelt</span>
+                    @endif
+                  </div>
+                </div>
+              @endif
+            @endforeach
+          @endif
+        </div>
+      @endforeach
+    </div>
   @endif
 
 </div>
@@ -270,10 +366,23 @@
   }
   function close() { backdrop.classList.remove('open'); }
 
-  document.querySelectorAll('.slot[data-slot]').forEach(function (btn) {
-    btn.addEventListener('click', function () {
+  document.querySelectorAll('.slot[data-slot], .slot-row[data-slot]').forEach(function (btn) {
+    var trigger = function () {
       if (btn.disabled) return;
       open(btn.dataset.slot, btn.dataset.taken, btn.dataset.mine);
+    };
+    btn.addEventListener('click', trigger);
+    btn.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); trigger(); }
+    });
+  });
+
+  // Mobile day tabs
+  document.querySelectorAll('.float-mobile .day-tab').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      var day = tab.dataset.day;
+      document.querySelectorAll('.float-mobile .day-tab').forEach(function (t) { t.classList.toggle('active', t === tab); });
+      document.querySelectorAll('.float-mobile .day-panel').forEach(function (p) { p.classList.toggle('active', p.dataset.day === day); });
     });
   });
   closeBtn.addEventListener('click', close);
