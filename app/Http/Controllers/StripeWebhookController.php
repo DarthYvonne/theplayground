@@ -2,15 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use App\Mail\PaymentFailedMail;
+use App\Models\AppNotification;
 use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\User;
 use App\Support\StripeConfig;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 
 class StripeWebhookController extends Controller
 {
+    /** Reject signatures whose timestamp is older/newer than this many seconds (replay protection). */
+    private const SIGNATURE_TOLERANCE = 300;
+
     public function __invoke(Request $request): JsonResponse
     {
         $payload = $request->getContent();
@@ -24,18 +32,38 @@ class StripeWebhookController extends Controller
         $event = json_decode($payload, true);
         if (!is_array($event)) return response()->json(['error' => 'bad payload'], 400);
 
+        // Dedupe: Stripe retries on non-2xx, and may also send the same event twice.
+        // We rely on a UNIQUE constraint on event_id; a duplicate insert means we
+        // already processed this event and can ack without doing anything.
+        $eventId = $event['id'] ?? null;
+        if ($eventId) {
+            try {
+                DB::table('stripe_events')->insert([
+                    'event_id' => $eventId,
+                    'type' => $event['type'] ?? '',
+                    'created_at' => now(),
+                ]);
+            } catch (QueryException) {
+                return response()->json(['ok' => true, 'duplicate' => true]);
+            }
+        }
+
         match ($event['type'] ?? '') {
             'checkout.session.completed'      => $this->handleCheckoutCompleted($event['data']['object'] ?? []),
             'customer.subscription.created',
             'customer.subscription.updated'   => $this->syncSubscription($event['data']['object'] ?? []),
             'customer.subscription.deleted'   => $this->cancelSubscription($event['data']['object'] ?? []),
+            'invoice.payment_failed'          => $this->handleInvoiceFailed($event['data']['object'] ?? []),
             default => null,
         };
 
         return response()->json(['ok' => true]);
     }
 
-    /** Verify a Stripe webhook signature header (t=…,v1=…). */
+    /**
+     * Verify a Stripe webhook signature header (t=…,v1=…). Also rejects signatures
+     * whose timestamp falls outside SIGNATURE_TOLERANCE to block replay attacks.
+     */
     private function verifySignature(string $payload, ?string $header, string $secret): bool
     {
         if (!$header) return false;
@@ -45,6 +73,8 @@ class StripeWebhookController extends Controller
             $parts[$k][] = $v;
         }
         if (empty($parts['t'][0]) || empty($parts['v1'])) return false;
+        $ts = (int) $parts['t'][0];
+        if ($ts <= 0 || abs(time() - $ts) > self::SIGNATURE_TOLERANCE) return false;
         $signed = $parts['t'][0] . '.' . $payload;
         $expected = hash_hmac('sha256', $signed, $secret);
         foreach ($parts['v1'] as $candidate) {
@@ -72,6 +102,7 @@ class StripeWebhookController extends Controller
         $enrollment->status = 'active';
         $enrollment->stripe_subscription_id = $subId;
         $enrollment->enrolled_at = $enrollment->enrolled_at ?: now();
+        $enrollment->canceled_at = null;
         $enrollment->save();
     }
 
@@ -89,8 +120,9 @@ class StripeWebhookController extends Controller
         }
         if (!$enrollment) return;
 
+        $oldStatus = $enrollment->status;
         $enrollment->status = match ($sub['status'] ?? '') {
-            'active', 'trialing'             => 'active',
+            'active', 'trialing'              => 'active',
             'past_due', 'unpaid', 'incomplete' => 'past_due',
             'canceled', 'incomplete_expired'  => 'canceled',
             default                           => $enrollment->status,
@@ -98,6 +130,10 @@ class StripeWebhookController extends Controller
         if ($enrollment->status === 'active' && !$enrollment->enrolled_at) $enrollment->enrolled_at = now();
         if ($enrollment->status === 'canceled' && !$enrollment->canceled_at) $enrollment->canceled_at = now();
         $enrollment->save();
+
+        if ($oldStatus !== 'past_due' && $enrollment->status === 'past_due') {
+            $this->notifyPastDue($enrollment);
+        }
     }
 
     private function cancelSubscription(array $sub): void
@@ -107,5 +143,57 @@ class StripeWebhookController extends Controller
         $e = Enrollment::where('stripe_subscription_id', $subId)->first();
         if (!$e) return;
         $e->update(['status' => 'canceled', 'canceled_at' => now()]);
+    }
+
+    /**
+     * Stripe fires this when a recurring charge fails. The subscription will
+     * also flip to past_due via customer.subscription.updated, but we react
+     * here too so the user is notified even if statuses arrive out of order.
+     */
+    private function handleInvoiceFailed(array $invoice): void
+    {
+        // Older API: invoice.subscription. Newer API (2024-09+): nested on parent.
+        $subId = $invoice['subscription']
+            ?? ($invoice['parent']['subscription_details']['subscription'] ?? null);
+        if (!$subId) return;
+
+        $enrollment = Enrollment::where('stripe_subscription_id', $subId)->first();
+        if (!$enrollment) return;
+
+        $oldStatus = $enrollment->status;
+        if ($oldStatus !== 'past_due') {
+            $enrollment->update(['status' => 'past_due']);
+            $this->notifyPastDue($enrollment);
+        }
+    }
+
+    /**
+     * Send a one-time in-app + email notification when an enrollment transitions
+     * to past_due. Guarded by the caller on (oldStatus !== 'past_due') so the
+     * same failure episode doesn't notify twice.
+     */
+    private function notifyPastDue(Enrollment $enrollment): void
+    {
+        $enrollment->loadMissing('user', 'course');
+        $user = $enrollment->user;
+        $course = $enrollment->course;
+        if (!$user || !$course) return;
+
+        AppNotification::create([
+            'user_id' => $user->id,
+            'type' => 'system',
+            'title' => 'Betaling fejlede',
+            'body' => 'Din betaling for "' . $course->title . '" gik ikke igennem. Opdater dit kort for at bevare adgangen.',
+            'link' => route('profile.billing'),
+            'course_id' => $course->id,
+        ]);
+
+        if ($user->email) {
+            try {
+                Mail::to($user->email)->queue(new PaymentFailedMail($user, $course));
+            } catch (\Throwable) {
+                // Don't fail the webhook on mail issues — the in-app + banner still surface it.
+            }
+        }
     }
 }

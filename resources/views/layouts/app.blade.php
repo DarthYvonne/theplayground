@@ -267,6 +267,22 @@
         </div>
       @endif
     @endauth
+    @auth
+      @php
+        $pastDueEnrollments = auth()->user()->enrollments()->with('course')->where('status', 'past_due')->get();
+      @endphp
+      @if ($pastDueEnrollments->isNotEmpty())
+        <div class="alert alert-error" style="align-items:flex-start;">
+          <i class="fa-solid fa-circle-exclamation" style="margin-top:2px;"></i>
+          <div>
+            <strong>Din betaling fejlede.</strong>
+            Vi kunne ikke trække beløbet for
+            @foreach ($pastDueEnrollments as $i => $e)<strong>{{ $e->course->title }}</strong>@if ($i < $pastDueEnrollments->count() - 2), @elseif ($i === $pastDueEnrollments->count() - 2) og @endif @endforeach.
+            <a href="{{ route('profile.billing') }}" style="color:inherit;text-decoration:underline;font-weight:600;">Opdater dit kort</a> for at undgå at miste adgangen.
+          </div>
+        </div>
+      @endif
+    @endauth
     @if (session('status'))
       <div class="alert alert-success"><i class="fa-solid fa-check-circle"></i> {{ session('status') }}</div>
     @endif

@@ -37,11 +37,15 @@ class EnrollmentController extends Controller
                     route('enroll.return', $course) . '?session_id={CHECKOUT_SESSION_ID}',
                     route('courses.show', $course),
                 );
-                // Pre-create a pending enrollment so we can reconcile if webhooks lag.
-                Enrollment::firstOrCreate(
-                    ['user_id' => $user->id, 'course_id' => $course->id],
-                    ['status' => 'pending', 'enrolled_at' => now()]
-                );
+                // Pre-create (or reset) a pending enrollment so we can reconcile if
+                // webhooks lag. If a stale row exists (canceled by the expiry sweep,
+                // or canceled previously), reset it so the user starts fresh.
+                $enrollment = Enrollment::firstOrNew(['user_id' => $user->id, 'course_id' => $course->id]);
+                $enrollment->status = 'pending';
+                $enrollment->stripe_subscription_id = null;
+                $enrollment->canceled_at = null;
+                $enrollment->enrolled_at = now();
+                $enrollment->save();
                 return redirect()->away($session['url']);
             } catch (\Throwable $e) {
                 return back()->withErrors(['enroll' => 'Stripe-fejl: ' . $e->getMessage()]);

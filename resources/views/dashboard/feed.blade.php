@@ -56,8 +56,8 @@
   .feed-head .action a { color: var(--accent); font-weight: 600; text-decoration: none; }
   .feed-head .action a:hover { text-decoration: underline; }
   .feed-head .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
-  .feed-body { margin-top: 10px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .feed-body-box { margin-top: 10px; padding: 10px 12px; background: #fafbfc; border-radius: 8px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .feed-body { margin-top: 10px; font-size: 16px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+  .feed-body-box { margin-top: 10px; padding: 10px 12px; background: #fafbfc; border-radius: 8px; font-size: 16px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
 
   .feed-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid #f0f2f5; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .respekt-count { color: var(--text); font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; min-height: 1em; background: none; border: none; padding: 0; font-family: inherit; cursor: default; }
