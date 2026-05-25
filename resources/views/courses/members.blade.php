@@ -50,7 +50,7 @@
     <div class="members-sec {{ $canBroadcastHere ? 'has-action' : '' }}">
       <span>Træner</span>
       @if ($canBroadcastHere)
-        <a href="{{ route('beskeder.index', ['hold' => $course->id]) }}" class="btn-broadcast"><i class="fa-solid fa-bullhorn"></i> Skriv til alle</a>
+        <a href="{{ route('beskeder.index', ['hold' => $course->id]) }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-envelope"></i> Send besked til alle</a>
       @endif
     </div>
     <a href="{{ route('members.show', $course->trainer) }}" class="member-row">
