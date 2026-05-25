@@ -44,14 +44,15 @@
 
   .cal-event { position: absolute; left: 4px; right: 4px; background: #f5f7fa; color: var(--text); border-radius: 8px; padding: 6px 8px; border: 2px solid transparent; overflow: hidden; transition: background 0.1s, border-color 0.1s; display: flex; flex-direction: column; gap: 2px; }
   .cal-event:hover { background: #eaeef3; z-index: 5; }
-  .cal-event.enrolled { background: var(--accent-soft); border-color: var(--accent); }
-  .cal-event.enrolled:hover { background: #dbe6fb; }
   .cal-event.cancelled { background: #f5f7fa; border-color: transparent; }
   .cal-event.cancelled .t { text-decoration: line-through; color: var(--muted); }
-  .cal-event.cancelled.enrolled { background: #f5f7fa; border-color: #d6dae0; }
   .cal-event .t { font-weight: 700; font-size: 12px; line-height: 1.2; word-break: break-word; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .cal-event .tm { color: var(--muted); font-size: 10px; line-height: 1.1; }
   .cal-event .aflyst-badge { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: #c0392b; background: rgba(192,57,43,0.1); border-radius: 3px; padding: 1px 5px; display: inline-block; width: fit-content; }
+
+  /* "Tilmeldt" pill, matching the hold cards. */
+  .cal-enrolled-badge { display: inline-flex; align-items: center; gap: 4px; background: #16a34a; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 999px; box-shadow: 0 1px 3px rgba(0,0,0,0.15); width: fit-content; line-height: 1.3; }
+  .cal-enrolled-badge i { font-size: 9px; }
 
   .cal-event.notime { position: static; left: auto; right: auto; padding: 4px 8px; }
   .cal-event.notime .t { -webkit-line-clamp: 1; }
@@ -77,7 +78,6 @@
   .cal-mobile-day .row.cancelled .ti { text-decoration: line-through; color: var(--muted); }
   .cal-mobile-day .tm { color: var(--muted); font-size: 12px; min-width: 60px; }
   .cal-mobile-day .ti { font-weight: 600; flex: 1; }
-  .cal-mobile-day .enrolled-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
   .cal-mobile-day .aflyst-tag { font-size: 9px; font-weight: 700; text-transform: uppercase; color: #c0392b; background: rgba(192,57,43,0.1); border-radius: 3px; padding: 1px 5px; }
   .cal-mobile-day .empty { color: var(--muted); font-size: 12px; font-style: italic; }
 </style>
@@ -166,8 +166,9 @@
       <div class="cell">
         @foreach ($untimed[$key] as $ev)
           @php $c = $ev['course']; @endphp
-          <a href="{{ route('courses.show', $c) }}" class="cal-event notime {{ isset($enrolledSet[$c->id]) ? 'enrolled' : '' }} {{ $ev['cancelled'] ? 'cancelled' : '' }}">
+          <a href="{{ route('courses.show', $c) }}" class="cal-event notime {{ $ev['cancelled'] ? 'cancelled' : '' }}">
             <div class="t">{{ $c->title }}</div>
+            @if (isset($enrolledSet[$c->id]))<span class="cal-enrolled-badge"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>@endif
             @if ($ev['cancelled'])<div class="aflyst-badge">Aflyst</div>@endif
           </a>
         @endforeach
@@ -187,10 +188,11 @@
         @foreach ($timed[$key] as $ev)
           @php $c = $ev['course']; @endphp
           <a href="{{ route('courses.show', $c) }}"
-             class="cal-event {{ isset($enrolledSet[$c->id]) ? 'enrolled' : '' }} {{ $ev['cancelled'] ? 'cancelled' : '' }}"
+             class="cal-event {{ $ev['cancelled'] ? 'cancelled' : '' }}"
              style="top: {{ $ev['top'] }}px; height: {{ $ev['height'] }}px;">
             <div class="t">{{ $c->title }}</div>
             @if ($c->timeRange())<div class="tm">{{ $c->timeRange() }}</div>@endif
+            @if (isset($enrolledSet[$c->id]))<span class="cal-enrolled-badge"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>@endif
             @if ($ev['cancelled'])<div class="aflyst-badge">Aflyst</div>@endif
           </a>
         @endforeach
@@ -214,7 +216,7 @@
           <div class="tm">{{ $c->timeRange() ?? '—' }}</div>
           <div class="ti">{{ $c->title }}</div>
           @if ($ev['cancelled'])<span class="aflyst-tag">Aflyst</span>@endif
-          @if (isset($enrolledSet[$c->id]))<span class="enrolled-dot" title="Du er tilmeldt"></span>@endif
+          @if (isset($enrolledSet[$c->id]))<span class="cal-enrolled-badge"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>@endif
         </a>
       @empty
         <div class="empty">Ingen hold</div>

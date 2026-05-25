@@ -25,6 +25,7 @@
   .cal-month-cell .chip { display: flex; gap: 6px; align-items: center; font-size: 11px; line-height: 1.3; padding: 2px 6px; border-radius: 6px; background: var(--accent-soft); color: var(--text); overflow: hidden; }
   .cal-month-cell .chip .ti { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
   .cal-month-cell .chip .tm { color: var(--muted); font-size: 10px; flex-shrink: 0; }
+  .cal-month-cell .chip .enrolled-mark { color: #16a34a; font-size: 11px; flex-shrink: 0; }
   .cal-month-cell .chip.cancelled { background: #f5f7fa; }
   .cal-month-cell .chip.cancelled .ti { text-decoration: line-through; color: var(--muted); }
   .cal-month-cell .more { font-size: 11px; color: var(--muted); padding: 2px 6px; }
@@ -67,7 +68,8 @@
             $cancelled = isset($cancelledMap[$c->id . ':' . $dateStr]);
             $enrolled = isset($enrolledSet[$c->id]);
           @endphp
-          <a href="{{ $weekLink }}" class="chip {{ $cancelled ? 'cancelled' : '' }}" title="{{ $c->title }}{{ $cancelled ? ' (aflyst)' : '' }}">
+          <a href="{{ $weekLink }}" class="chip {{ $cancelled ? 'cancelled' : '' }}" title="{{ $c->title }}{{ $enrolled ? ' (tilmeldt)' : '' }}{{ $cancelled ? ' (aflyst)' : '' }}">
+            @if ($enrolled)<i class="fa-solid fa-circle-check enrolled-mark" aria-label="Tilmeldt"></i>@endif
             <span class="ti">{{ $c->title }}</span>
             @if ($c->start_time)<span class="tm">{{ substr($c->start_time, 0, 5) }}</span>@endif
           </a>
