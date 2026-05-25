@@ -109,6 +109,17 @@
   syncKb();
   window.addEventListener('resize', function () { syncBar(); syncKb(); });
   window.addEventListener('orientationchange', function () { syncBar(); syncKb(); });
+  /* bfcache restore: when the user navigates back/forward, fire a fresh
+     measurement so a stale kb-open class doesn't leak across pages. */
+  window.addEventListener('pageshow', syncKb);
+  /* When the input loses focus — Android back, iOS keyboard "down" arrow,
+     tapping outside — the visual viewport can take a tick to settle, so
+     poll a couple of times after blur instead of trusting a single event. */
+  document.addEventListener('focusout', function () {
+    syncKb();
+    setTimeout(syncKb, 100);
+    setTimeout(syncKb, 400);
+  });
   if (vv) {
     vv.addEventListener('resize', syncKb);
     vv.addEventListener('scroll', syncKb);
