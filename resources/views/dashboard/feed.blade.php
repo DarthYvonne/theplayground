@@ -19,7 +19,26 @@
 
   /* Feed items */
   .feed-list { display: flex; flex-direction: column; gap: 14px; }
-  .feed-item { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 14px 16px; }
+  .feed-item { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 14px 16px; position: relative; }
+
+  /* Author menu (top-right kebab) */
+  .feed-menu { position: absolute; top: 8px; right: 8px; }
+  .feed-menu-btn { background: none; border: none; width: 30px; height: 30px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
+  .feed-menu-btn:hover { background: var(--hover); color: var(--text); }
+  .feed-menu-dd { position: absolute; top: calc(100% + 4px); right: 0; background: #fff; border-radius: 8px; box-shadow: 0 6px 18px rgba(0,0,0,0.16); min-width: 140px; padding: 4px; z-index: 50; display: none; }
+  .feed-menu.open .feed-menu-dd { display: block; }
+  .feed-menu-dd button { width: 100%; text-align: left; background: none; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+  .feed-menu-dd button:hover { background: var(--hover); }
+  .feed-menu-dd button.danger { color: var(--danger); }
+  .feed-menu-dd button.danger:hover { background: #fee2e2; }
+  .feed-menu-dd i { width: 14px; text-align: center; }
+
+  /* Edit-in-place */
+  .feed-edit { margin-top: 10px; }
+  .feed-edit textarea { width: 100%; resize: vertical; border: 1px solid var(--border); background: #fff; border-radius: 10px; padding: 10px 12px; font-family: inherit; font-size: 14px; line-height: 1.5; min-height: 60px; }
+  .feed-edit textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
+  .feed-edit-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+  .feed-edit-err { color: var(--danger); font-size: 12px; margin-top: 6px; }
   .feed-head { display: flex; gap: 10px; align-items: flex-start; }
   .feed-head .head-text { flex: 1; min-width: 0; }
   .feed-head .action { line-height: 1.35; word-break: break-word; }
@@ -128,9 +147,12 @@
     var el = document.createElement('article');
     el.className = 'feed-item';
     el.dataset.id = it.id;
+    el.dataset.type = it.type;
+    el.dataset.targetId = it.target_id;
 
     var action = '';
     var body = '';
+    var canManage = !!it.mine && (it.type === 'platform_message' || it.type === 'course_message');
 
     if (it.type === 'enrollment' && it.course) {
       action = userLink(it.user) + ' tilmeldte sig ' + courseLink(it.course, it.course.url);
@@ -143,10 +165,22 @@
       if (it.body) body = '<div class="feed-body">' + escapeHtml(it.body) + '</div>';
     }
 
+    var menu = canManage
+      ? '<div class="feed-menu">' +
+          '<button type="button" class="feed-menu-btn" aria-label="Indstillinger" aria-haspopup="true" aria-expanded="false">' +
+            '<i class="fa-solid fa-ellipsis"></i>' +
+          '</button>' +
+          '<div class="feed-menu-dd" role="menu">' +
+            '<button type="button" class="feed-edit-action"><i class="fa-solid fa-pen"></i> Rediger</button>' +
+            '<button type="button" class="feed-delete-action danger"><i class="fa-solid fa-trash"></i> Slet</button>' +
+          '</div>' +
+        '</div>'
+      : '';
+
     var head =
       '<div class="feed-head">' +
         avatar(it.user) +
-        '<div class="head-text">' +
+        '<div class="head-text" style="' + (canManage ? 'padding-right:28px;' : '') + '">' +
           '<div class="action">' + action + '</div>' +
           '<div class="meta">' + escapeHtml(it.time_human) + '</div>' +
         '</div>' +
@@ -166,8 +200,97 @@
         '</button>' +
       '</div>';
 
-    el.innerHTML = head + body + footer;
+    el.innerHTML = menu + head + body + footer;
     return el;
+  }
+
+  function closeAllMenus(except) {
+    list.querySelectorAll('.feed-menu.open').forEach(function (m) {
+      if (m !== except) {
+        m.classList.remove('open');
+        var btn = m.querySelector('.feed-menu-btn');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('.feed-menu')) closeAllMenus(null);
+  });
+
+  function startEdit(card) {
+    if (card.querySelector('.feed-edit')) return;
+    var bodyEl = card.querySelector('.feed-body, .feed-body-box');
+    var original = bodyEl ? bodyEl.textContent : '';
+    var isBox = bodyEl && bodyEl.classList.contains('feed-body-box');
+    var edit = document.createElement('div');
+    edit.className = 'feed-edit';
+    edit.innerHTML =
+      '<textarea maxlength="2000"></textarea>' +
+      '<div class="feed-edit-err" style="display:none;"></div>' +
+      '<div class="feed-edit-actions">' +
+        '<button type="button" class="btn btn-secondary btn-sm feed-edit-cancel">Annullér</button>' +
+        '<button type="button" class="btn btn-primary btn-sm feed-edit-save">Gem</button>' +
+      '</div>';
+    var ta = edit.querySelector('textarea');
+    ta.value = original;
+    if (bodyEl) { bodyEl.style.display = 'none'; bodyEl.parentNode.insertBefore(edit, bodyEl.nextSibling); }
+    else { card.querySelector('.feed-head').insertAdjacentElement('afterend', edit); }
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+
+    edit.querySelector('.feed-edit-cancel').addEventListener('click', function () {
+      edit.remove();
+      if (bodyEl) bodyEl.style.display = '';
+    });
+    edit.querySelector('.feed-edit-save').addEventListener('click', async function () {
+      var newBody = ta.value.trim();
+      var errBox = edit.querySelector('.feed-edit-err');
+      errBox.style.display = 'none';
+      if (!newBody) { errBox.textContent = 'Skriv noget tekst.'; errBox.style.display = 'block'; return; }
+      var saveBtn = edit.querySelector('.feed-edit-save');
+      saveBtn.disabled = true;
+      try {
+        var id = card.dataset.targetId;
+        var res = await fetch('{{ url('/api/messages') }}/' + encodeURIComponent(id), {
+          method: 'POST',
+          headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ body: newBody }),
+        });
+        if (!res.ok) throw new Error('Save failed');
+        var data = await res.json();
+        if (bodyEl) {
+          bodyEl.textContent = data.body;
+          bodyEl.style.display = '';
+        } else {
+          var newEl = document.createElement('div');
+          newEl.className = isBox ? 'feed-body-box' : 'feed-body';
+          newEl.textContent = data.body;
+          edit.parentNode.insertBefore(newEl, edit);
+        }
+        edit.remove();
+      } catch (err) {
+        errBox.textContent = 'Kunne ikke gemme. Prøv igen.';
+        errBox.style.display = 'block';
+        saveBtn.disabled = false;
+      }
+    });
+  }
+
+  async function doDelete(card) {
+    if (!confirm('Slet dette opslag?')) return;
+    var id = card.dataset.targetId;
+    try {
+      var res = await fetch('{{ url('/api/messages') }}/' + encodeURIComponent(id) + '/delete', {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json' },
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      seen.delete(card.dataset.id);
+      card.remove();
+      if (!list.children.length) empty.style.display = 'block';
+    } catch (err) {
+      alert('Kunne ikke slette. Prøv igen.');
+    }
   }
 
   function respektCountText(n) { return n > 0 ? '<i class="fa-solid fa-hand-fist"></i>' + n : ''; }
@@ -204,6 +327,33 @@
   }
 
   list.addEventListener('click', async function (e) {
+    var menuBtn = e.target.closest('.feed-menu-btn');
+    if (menuBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      var menu = menuBtn.closest('.feed-menu');
+      var wasOpen = menu.classList.contains('open');
+      closeAllMenus(null);
+      if (!wasOpen) {
+        menu.classList.add('open');
+        menuBtn.setAttribute('aria-expanded', 'true');
+      }
+      return;
+    }
+    var editAct = e.target.closest('.feed-edit-action');
+    if (editAct) {
+      e.preventDefault();
+      closeAllMenus(null);
+      startEdit(editAct.closest('.feed-item'));
+      return;
+    }
+    var delAct = e.target.closest('.feed-delete-action');
+    if (delAct) {
+      e.preventDefault();
+      closeAllMenus(null);
+      doDelete(delAct.closest('.feed-item'));
+      return;
+    }
     var countBtn = e.target.closest('.respekt-count');
     if (countBtn) {
       if (!countBtn.textContent.trim()) return; // empty count — nothing to show

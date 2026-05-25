@@ -7,6 +7,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\Message;
 use App\Models\MessageRead;
+use App\Models\Respekt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -65,6 +66,27 @@ class ChatController extends Controller
         ]);
         $this->notifyHoldMembers($course, $sender, $m);
         return response()->json(['message' => $this->serializeOne($m->load('user'), $sender->id)]);
+    }
+
+    public function updateMessage(Request $request, Message $message): JsonResponse
+    {
+        abort_unless($message->user_id === $request->user()->id, 403);
+        $data = $request->validate(['body' => ['required','string','max:2000']]);
+        $message->update(['body' => $data['body']]);
+        return response()->json([
+            'ok' => true,
+            'body' => $message->body,
+            'time_human' => $message->created_at->diffForHumans(),
+        ]);
+    }
+
+    public function destroyMessage(Request $request, Message $message): JsonResponse
+    {
+        abort_unless($message->user_id === $request->user()->id, 403);
+        $targetType = $message->channel_type === 'course' ? 'course_message' : 'platform_message';
+        Respekt::where('target_type', $targetType)->where('target_id', $message->id)->delete();
+        $message->delete();
+        return response()->json(['ok' => true]);
     }
 
     private function notifyHoldMembers(Course $course, $sender, Message $message): void

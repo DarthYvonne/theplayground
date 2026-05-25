@@ -80,6 +80,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/courses/{course}/chat', [ChatController::class, 'course'])->name('chat.course');
     Route::get('/api/chat/courses/{course}', [ChatController::class, 'listCourse']);
     Route::post('/api/chat/courses/{course}', [ChatController::class, 'sendCourse']);
+    Route::post('/api/messages/{message}', [ChatController::class, 'updateMessage']);
+    Route::post('/api/messages/{message}/delete', [ChatController::class, 'destroyMessage']);
 
     // Notifications
     Route::get('/api/notifications/counts', [NotificationController::class, 'unreadCount']);
