@@ -674,7 +674,7 @@
         '<i class="fa-solid fa-hand-fist"></i><span class="num">' + (c.respekt_count > 0 ? c.respekt_count : '') + '</span>' +
       '</span>';
     var mineActions = c.mine ? '<button type="button" class="cm-edit-btn">Rediger</button><button type="button" class="cm-delete-btn">Slet</button>' : '';
-    var replyBtn = !isReply ? '<button type="button" class="cm-reply-btn">Svar</button>' : '';
+    var replyBtn = '<button type="button" class="cm-reply-btn">Svar</button>';
     var meta =
       '<div class="cm-meta">' +
         '<button type="button" class="cm-respekt' + respektActive + '" data-target-type="comment" data-target-id="' + c.id + '">Respekt</button>' +
