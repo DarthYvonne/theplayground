@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
@@ -31,7 +32,7 @@ class NewMessageMail extends Mailable implements ShouldQueue
 
         return new Envelope(
             subject: $subject,
-            replyTo: [$this->sender->email => $this->sender->name],
+            replyTo: [new Address($this->sender->email, $this->sender->name)],
         );
     }
 
