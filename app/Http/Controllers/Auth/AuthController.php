@@ -42,7 +42,7 @@ class AuthController extends Controller
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'phone' => $data['phone'] ?? null,
-            'role' => 'assistant',
+            'role' => 'user',
         ]);
         Auth::login($user);
         $request->session()->regenerate();
