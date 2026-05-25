@@ -62,7 +62,7 @@ class RespektController extends Controller
             $courseId = $message->course_id;
             $link = $type === 'course_message' && $courseId
                 ? route('chat.course', $courseId)
-                : route('chat.platform');
+                : route('dashboard') . '#pm-' . $message->id;
         }
 
         if ($authorId === $actor->id) return;

@@ -30,7 +30,8 @@
 
   /* Feed items */
   .feed-list { display: flex; flex-direction: column; gap: 14px; }
-  .feed-item { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 14px 16px; position: relative; }
+  .feed-item { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); padding: 14px 16px; position: relative; transition: box-shadow 0.3s, background 0.3s; }
+  .feed-item.feed-item-highlight { background: #fffbea; box-shadow: 0 0 0 3px #fbbf24, 0 1px 2px rgba(0,0,0,0.08); }
 
   /* Author menu (top-right kebab) */
   .feed-menu { position: absolute; top: 8px; right: 8px; }
@@ -178,6 +179,7 @@
   function renderItem(it) {
     var el = document.createElement('article');
     el.className = 'feed-item';
+    el.id = it.id;
     el.dataset.id = it.id;
     el.dataset.type = it.type;
     el.dataset.targetId = it.target_id;
@@ -451,12 +453,24 @@
         });
         loading.style.display = 'none';
         empty.style.display = list.children.length ? 'none' : 'block';
+        scrollToHashTarget();
       } else {
         paint(data.items);
       }
     } catch (e) {
       loading.textContent = 'Kunne ikke hente feedet.';
     }
+  }
+
+  function scrollToHashTarget() {
+    var hash = window.location.hash;
+    if (!hash || hash.length < 2) return;
+    var id = hash.slice(1);
+    var target = document.getElementById(id);
+    if (!target) return;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('feed-item-highlight');
+    setTimeout(function () { target.classList.remove('feed-item-highlight'); }, 2400);
   }
 
   function refreshSubmitState() {
