@@ -77,6 +77,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/chat', [ChatController::class, 'platform'])->name('chat.platform');
     Route::get('/api/chat/platform', [ChatController::class, 'listPlatform']);
     Route::post('/api/chat/platform', [ChatController::class, 'sendPlatform']);
+    Route::post('/api/feed/upload-image', [ChatController::class, 'uploadImage']);
     Route::get('/courses/{course}/chat', [ChatController::class, 'course'])->name('chat.course');
     Route::get('/api/chat/courses/{course}', [ChatController::class, 'listCourse']);
     Route::post('/api/chat/courses/{course}', [ChatController::class, 'sendCourse']);

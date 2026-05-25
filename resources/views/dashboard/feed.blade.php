@@ -13,9 +13,21 @@
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
   .composer textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
-  .composer-actions { display: flex; justify-content: flex-end; margin-top: 10px; gap: 8px; }
+  .composer-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; gap: 8px; }
+  .composer-actions .left { display: flex; align-items: center; gap: 10px; min-width: 0; }
   .composer-actions .btn { padding: 9px 22px; }
   .composer-error { color: var(--danger); font-size: 12px; margin-top: 6px; }
+  .composer-attach-btn { background: none; border: none; width: 36px; height: 36px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; }
+  .composer-attach-btn:hover { background: var(--hover); color: var(--accent); }
+  .composer-attach-btn:disabled { cursor: default; opacity: 0.5; }
+  .composer-upload-status { color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+  .composer-upload-status .fa-spinner { color: var(--accent); }
+  .composer-preview { margin-top: 10px; display: inline-flex; position: relative; }
+  .composer-preview img { max-height: 140px; max-width: 100%; border-radius: 10px; display: block; }
+  .composer-preview-remove { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+  .composer-preview-remove:hover { background: rgba(0,0,0,0.8); }
+  .feed-image { margin-top: 10px; }
+  .feed-image img { max-width: 100%; max-height: 520px; border-radius: 10px; display: block; cursor: zoom-in; }
 
   /* Feed items */
   .feed-list { display: flex; flex-direction: column; gap: 14px; }
@@ -88,7 +100,20 @@
   <form id="feedComposer" class="composer" autocomplete="off">
     @csrf
     <textarea id="feedComposerInput" name="body" placeholder="Hvad sker der, {{ explode(' ', trim($user->name))[0] }}?" maxlength="2000" rows="1"></textarea>
+    <div id="feedComposerPreview" class="composer-preview" style="display:none;">
+      <img id="feedComposerPreviewImg" src="" alt="">
+      <button type="button" class="composer-preview-remove" id="feedComposerPreviewRemove" aria-label="Fjern billede"><i class="fa-solid fa-xmark"></i></button>
+    </div>
     <div class="composer-actions">
+      <div class="left">
+        <button type="button" class="composer-attach-btn" id="feedComposerImageBtn" aria-label="Vedhæft billede" title="Vedhæft billede">
+          <i class="fa-regular fa-image"></i>
+        </button>
+        <input type="file" id="feedComposerImageInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
+        <span id="feedComposerUploadStatus" class="composer-upload-status" style="display:none;">
+          <i class="fa-solid fa-spinner fa-spin"></i> Overfører…
+        </span>
+      </div>
       <button type="submit" class="btn btn-primary" id="feedComposerSubmit" disabled>Slå op</button>
     </div>
     <div id="feedComposerError" class="composer-error" style="display:none;"></div>
@@ -129,6 +154,16 @@
 
   var FEED_URL = '{{ url('/api/feed') }}';
   var SEND_URL = '{{ url('/api/chat/platform') }}';
+  var UPLOAD_URL = '{{ url('/api/feed/upload-image') }}';
+
+  var imageBtn = document.getElementById('feedComposerImageBtn');
+  var imageInput = document.getElementById('feedComposerImageInput');
+  var uploadStatus = document.getElementById('feedComposerUploadStatus');
+  var preview = document.getElementById('feedComposerPreview');
+  var previewImg = document.getElementById('feedComposerPreviewImg');
+  var previewRemove = document.getElementById('feedComposerPreviewRemove');
+  var pendingImagePath = null;
+  var uploading = false;
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; }); }
   function avatar(u) {
@@ -163,6 +198,9 @@
       // platform_message (or fallback)
       action = userLink(it.user);
       if (it.body) body = '<div class="feed-body">' + escapeHtml(it.body) + '</div>';
+      if (it.image_url) {
+        body += '<div class="feed-image"><a href="' + escapeHtml(it.image_url) + '" target="_blank" rel="noopener"><img src="' + escapeHtml(it.image_url) + '" alt=""></a></div>';
+      }
     }
 
     var menu = canManage
@@ -424,12 +462,61 @@
     }
   }
 
+  function refreshSubmitState() {
+    var hasText = input.value.trim().length > 0;
+    submit.disabled = uploading || (!hasText && !pendingImagePath);
+  }
   function autosize() {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 240) + 'px';
-    submit.disabled = input.value.trim().length === 0;
+    refreshSubmitState();
   }
   input.addEventListener('input', autosize);
+
+  function clearImage() {
+    pendingImagePath = null;
+    preview.style.display = 'none';
+    previewImg.src = '';
+    imageInput.value = '';
+    refreshSubmitState();
+  }
+  previewRemove.addEventListener('click', clearImage);
+  imageBtn.addEventListener('click', function () {
+    if (uploading) return;
+    imageInput.click();
+  });
+  imageInput.addEventListener('change', async function () {
+    var file = imageInput.files && imageInput.files[0];
+    if (!file) return;
+    errBox.style.display = 'none';
+    uploading = true;
+    imageBtn.disabled = true;
+    uploadStatus.style.display = 'inline-flex';
+    refreshSubmitState();
+    try {
+      var fd = new FormData();
+      fd.append('image', file);
+      var res = await fetch(UPLOAD_URL, {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json' },
+        body: fd,
+      });
+      if (!res.ok) throw new Error('Upload failed');
+      var data = await res.json();
+      pendingImagePath = data.path;
+      previewImg.src = data.url;
+      preview.style.display = 'inline-flex';
+    } catch (err) {
+      errBox.textContent = 'Kunne ikke uploade billedet. Prøv igen.';
+      errBox.style.display = 'block';
+      imageInput.value = '';
+    } finally {
+      uploading = false;
+      imageBtn.disabled = false;
+      uploadStatus.style.display = 'none';
+      refreshSubmitState();
+    }
+  });
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); composer.requestSubmit(); }
   });
@@ -437,17 +524,19 @@
   composer.addEventListener('submit', async function (e) {
     e.preventDefault();
     var body = input.value.trim();
-    if (!body) return;
+    if (!body && !pendingImagePath) return;
+    if (uploading) return;
     submit.disabled = true;
     errBox.style.display = 'none';
     try {
       var res = await fetch(SEND_URL, {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: body }),
+        body: JSON.stringify({ body: body, image_path: pendingImagePath }),
       });
       if (!res.ok) throw new Error('Send failed');
       input.value = '';
+      clearImage();
       autosize();
       await load(false);
     } catch (err) {

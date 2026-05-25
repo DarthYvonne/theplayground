@@ -34,6 +34,7 @@ class FeedController extends Controller
                     'created_at' => $m->created_at->toIso8601String(),
                     'time_human' => $m->created_at->diffForHumans(),
                     'body' => $m->body,
+                    'image_url' => $m->imageUrl(),
                     'mine' => $m->user_id === $user->id,
                     'user' => $this->serializeUser($m->user),
                     'course' => null,

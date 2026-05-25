@@ -33,12 +33,12 @@
   .compose-row > label { display: inline-block; margin-bottom: 6px; font-size: 13px; font-weight: 600; }
   .compose-row .find-link { margin-left: 8px; font-size: 13px; color: var(--accent); font-weight: 600; background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline; }
   .compose-row .find-link:hover { text-decoration-thickness: 2px; }
-  .chips-area { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+  .chips-area { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; margin-top: 12px; }
   .chips-area:empty::before { content: 'Ingen modtagere valgt.'; color: var(--muted); font-size: 13px; font-style: italic; }
   .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent); padding: 4px 8px 4px 4px; border-radius: 999px; font-weight: 600; font-size: 13px; }
   .pill button { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; }
   .pill .av { width: 22px; height: 22px; font-size: 10px; }
-  .pill.course { background: #fef3c7; color: #92400e; padding-left: 8px; }
+  .pill.course { background: var(--accent-soft); color: var(--accent); padding-left: 8px; }
 
   .compose-actions { display: flex; gap: 8px; align-items: center; }
   .compose-actions .hint { color: var(--muted); font-size: 12px; }
@@ -65,7 +65,7 @@
   .pick-row .meta { flex: 1; min-width: 0; }
   .pick-row .nm { font-weight: 600; line-height: 1.2; }
   .pick-row .sub { color: var(--muted); font-size: 12px; margin-top: 1px; }
-  .pick-row .course-icon { width: 32px; height: 32px; border-radius: 8px; background: #fef3c7; color: #92400e; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
+  .pick-row .course-icon { width: 32px; height: 32px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 14px; }
   .pick-empty, .pick-loading { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
   .pick-foot { padding: 12px 14px; border-top: 1px solid #f0f2f5; display: flex; gap: 8px; align-items: center; }
   .pick-foot .count { flex: 1; color: var(--muted); font-size: 13px; }
@@ -172,7 +172,7 @@
             <div class="name-row">
               <span class="name">{{ $t['user']->name }}</span>
               @if ($t['last']->viaCourse)
-                <span class="course-tag" title="Sendt via Hold-besked"><i class="fa-solid fa-bullhorn"></i> {{ $t['last']->viaCourse->title }}</span>
+                <span class="course-tag" title="Sendt via Hold-besked"><i class="fa-solid fa-dumbbell"></i> {{ $t['last']->viaCourse->title }}</span>
               @endif
               <span class="time">{{ $t['last']->created_at->diffForHumans(null, true) }}</span>
             </div>
@@ -220,7 +220,7 @@
     var html = '';
     Object.keys(selected.course).forEach(function (id) {
       var c = selected.course[id];
-      html += '<span class="pill course"><i class="fa-solid fa-bullhorn"></i> <span>' + escapeHtml(c.label) +
+      html += '<span class="pill course"><i class="fa-solid fa-dumbbell"></i> <span>' + escapeHtml(c.label) +
         '</span><button type="button" data-remove="course" data-id="' + id + '" aria-label="Fjern">×</button>' +
         '<input type="hidden" name="recipient_courses[]" value="' + id + '"></span>';
     });
@@ -349,7 +349,7 @@
       var isSel = !!pending[r.type][r.id];
       var left;
       if (r.type === 'course') {
-        left = '<div class="course-icon"><i class="fa-solid fa-bullhorn"></i></div>';
+        left = '<div class="course-icon"><i class="fa-solid fa-dumbbell"></i></div>';
       } else if (r.picture_url) {
         left = '<div class="av sm"><img src="' + escapeHtml(r.picture_url) + '"></div>';
       } else {

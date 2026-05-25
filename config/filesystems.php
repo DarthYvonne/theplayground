@@ -47,6 +47,15 @@ return [
             'report' => false,
         ],
 
+        'feed_images' => [
+            'driver' => 'local',
+            'root' => env('FEED_IMAGES_PATH', storage_path('app/public/feed-images')),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/feed-images',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -75,6 +84,7 @@ return [
 
     'links' => [
         public_path('storage') => storage_path('app/public'),
+        public_path('feed-images') => env('FEED_IMAGES_PATH', storage_path('app/public/feed-images')),
     ],
 
 ];

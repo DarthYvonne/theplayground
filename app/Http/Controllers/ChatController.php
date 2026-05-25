@@ -10,6 +10,8 @@ use App\Models\MessageRead;
 use App\Models\Respekt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class ChatController extends Controller
 {
@@ -44,13 +46,43 @@ class ChatController extends Controller
 
     public function sendPlatform(Request $request): JsonResponse
     {
-        $data = $request->validate(['body' => ['required','string','max:2000']]);
+        $data = $request->validate([
+            'body' => ['nullable','string','max:2000'],
+            'image_path' => ['nullable','string','max:255'],
+        ]);
+        $body = trim($data['body'] ?? '');
+        $imagePath = $this->resolveImagePath($data['image_path'] ?? null);
+        if ($body === '' && !$imagePath) {
+            abort(422, 'Skriv noget eller vedhæft et billede.');
+        }
         $m = Message::create([
             'channel_type' => 'platform',
             'user_id' => $request->user()->id,
-            'body' => $data['body'],
+            'body' => $body,
+            'image_path' => $imagePath,
         ]);
         return response()->json(['message' => $this->serializeOne($m->load('user'), $request->user()->id)]);
+    }
+
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => ['required','image','mimes:jpeg,jpg,png,gif,webp','max:8192'],
+        ]);
+        $file = $request->file('image');
+        $name = Str::ulid() . '.' . strtolower($file->getClientOriginalExtension() ?: $file->extension());
+        $path = $file->storeAs(now()->format('Y/m'), $name, 'feed_images');
+        return response()->json([
+            'path' => $path,
+            'url' => Storage::disk('feed_images')->url($path),
+        ]);
+    }
+
+    private function resolveImagePath(?string $path): ?string
+    {
+        if (!$path) return null;
+        if (str_contains($path, '..')) return null;
+        return Storage::disk('feed_images')->exists($path) ? $path : null;
     }
 
     public function sendCourse(Request $request, Course $course): JsonResponse
@@ -85,6 +117,9 @@ class ChatController extends Controller
         abort_unless($message->user_id === $request->user()->id, 403);
         $targetType = $message->channel_type === 'course' ? 'course_message' : 'platform_message';
         Respekt::where('target_type', $targetType)->where('target_id', $message->id)->delete();
+        if ($message->image_path) {
+            Storage::disk('feed_images')->delete($message->image_path);
+        }
         $message->delete();
         return response()->json(['ok' => true]);
     }
@@ -138,6 +173,7 @@ class ChatController extends Controller
         return [
             'id' => $m->id,
             'body' => $m->body,
+            'image_url' => $m->imageUrl(),
             'created_at' => $m->created_at->toIso8601String(),
             'time_human' => $m->created_at->diffForHumans(),
             'mine' => $m->user_id === $viewerId,
