@@ -76,7 +76,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/courses/{course}/cancel', [EnrollmentController::class, 'cancel'])->name('enroll.cancel');
 
     // Chat
-    Route::get('/chat', [ChatController::class, 'platform'])->name('chat.platform');
+    // Common chat is hidden — redirect any lingering links (old notifications, bookmarks) to the feed.
+    Route::get('/chat', fn () => redirect('/dashboard'))->name('chat.platform');
     Route::get('/api/chat/platform', [ChatController::class, 'listPlatform']);
     Route::post('/api/chat/platform', [ChatController::class, 'sendPlatform']);
     Route::post('/api/feed/upload-image', [ChatController::class, 'uploadImage']);
