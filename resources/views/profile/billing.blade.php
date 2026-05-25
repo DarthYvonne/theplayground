@@ -78,10 +78,19 @@
             @endif
             <div class="info">
               <a href="{{ route('courses.show', $e->course) }}" class="t" style="color:inherit;">{{ $e->course->title }}</a>
-              <div class="price">{{ $e->course->price() }} · tilmeldt {{ $e->enrolled_at?->format('d.m.Y') ?? '—' }}</div>
+              <div class="price">
+                {{ $e->course->price() }} · tilmeldt {{ $e->enrolled_at?->format('d.m.Y') ?? '—' }}
+                @if ($e->cancel_at_period_end && $e->current_period_end)
+                  · Slutter {{ $e->current_period_end->format('d.m.Y') }}
+                @elseif ($e->current_period_end && $e->status === 'active')
+                  · Fornyes {{ $e->current_period_end->format('d.m.Y') }}
+                @endif
+              </div>
             </div>
             <div>
-              @if ($e->status === 'active')
+              @if ($e->cancel_at_period_end)
+                <span class="status pending">Afmeldt</span>
+              @elseif ($e->status === 'active')
                 <span class="status active">Aktiv</span>
               @else
                 <span class="status pending">Afventer</span>

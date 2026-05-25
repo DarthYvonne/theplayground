@@ -129,6 +129,15 @@ class StripeWebhookController extends Controller
         };
         if ($enrollment->status === 'active' && !$enrollment->enrolled_at) $enrollment->enrolled_at = now();
         if ($enrollment->status === 'canceled' && !$enrollment->canceled_at) $enrollment->canceled_at = now();
+
+        // Mirror Stripe's billing period info so the UI can show "Adgang frem til X"
+        // without an extra API call. cancel_at_period_end may toggle either way.
+        if (isset($sub['current_period_end'])) {
+            $enrollment->current_period_end = \Carbon\Carbon::createFromTimestamp((int) $sub['current_period_end']);
+        }
+        if (array_key_exists('cancel_at_period_end', $sub)) {
+            $enrollment->cancel_at_period_end = (bool) $sub['cancel_at_period_end'];
+        }
         $enrollment->save();
 
         if ($oldStatus !== 'past_due' && $enrollment->status === 'past_due') {
