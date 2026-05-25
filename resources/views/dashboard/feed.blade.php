@@ -93,8 +93,10 @@
   .comments-toggle { background: none; border: none; padding: 0; font: inherit; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
   .comments-toggle:hover { color: var(--accent); }
   .comments-toggle i { font-size: 13px; }
-  .comments-wrap { margin: 10px -16px 0; border-top: 1px solid #f0f2f5; padding: 10px 16px 0; display: none; }
-  .comments-wrap.open { display: block; }
+  .comments-toggle.hidden { display: none; }
+  .comments-wrap { margin: 10px -16px 0; border-top: 1px solid #f0f2f5; padding: 10px 16px 0; }
+  .comments-list-box { display: none; }
+  .comments-list-box.open { display: block; }
   .comments-list { display: flex; flex-direction: column; gap: 6px; }
   .pc-comment { display: flex; gap: 10px; padding: 4px 0; }
   .pc-comment .av { width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0; background: #e4e6eb; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #65676b; overflow: hidden; }
@@ -276,7 +278,7 @@
     var canComment = !!it.can_comment;
     var commentsCount = Number(it.comments_count || 0);
     var commentsToggle = canComment
-      ? '<button type="button" class="comments-toggle" data-message-id="' + escapeHtml(String(it.target_id)) + '">' +
+      ? '<button type="button" class="comments-toggle' + (commentsCount > 0 ? '' : ' hidden') + '" data-message-id="' + escapeHtml(String(it.target_id)) + '">' +
           '<i class="fa-regular fa-comment"></i>' +
           '<span class="comments-count-num">' + commentsCount + '</span> kommentarer' +
         '</button>'
@@ -301,7 +303,9 @@
 
     var commentsWrap = canComment
       ? '<div class="comments-wrap" data-message-id="' + escapeHtml(String(it.target_id)) + '" data-loaded="0">' +
-          '<div class="comments-list"></div>' +
+          '<div class="comments-list-box">' +
+            '<div class="comments-list"></div>' +
+          '</div>' +
           '<div class="comment-input">' +
             avatar(VIEWER) +
             '<div style="flex:1;display:flex;flex-direction:column;">' +
@@ -728,8 +732,11 @@
   }
 
   function setCount(card, n) {
-    var t = card.querySelector('.comments-toggle .comments-count-num');
+    var toggle = card.querySelector('.comments-toggle');
+    if (!toggle) return;
+    var t = toggle.querySelector('.comments-count-num');
     if (t) t.textContent = String(n);
+    toggle.classList.toggle('hidden', Number(n) <= 0);
   }
 
   function restoreOpenComments() {
@@ -738,7 +745,8 @@
       if (!card) return;
       var wrap = card.querySelector('.comments-wrap');
       if (!wrap) return;
-      wrap.classList.add('open');
+      var box = wrap.querySelector('.comments-list-box');
+      if (box) box.classList.add('open');
       loadComments(wrap, false);
     });
   }
@@ -750,7 +758,8 @@
       e.preventDefault();
       var card = toggle.closest('.feed-item');
       var wrap = card.querySelector('.comments-wrap');
-      var isOpen = wrap.classList.toggle('open');
+      var box = wrap.querySelector('.comments-list-box');
+      var isOpen = box.classList.toggle('open');
       if (isOpen) {
         openComments.add(card.id);
         loadComments(wrap, false);
@@ -939,6 +948,12 @@
       ta.style.height = 'auto';
       if (rt) { rt.dataset.parentId = ''; rt.style.display = 'none'; rt.innerHTML = ''; }
       setCount(card, data.comments_count);
+      var box = wrap.querySelector('.comments-list-box');
+      if (box && !box.classList.contains('open')) {
+        box.classList.add('open');
+        openComments.add(card.id);
+        persistOpen();
+      }
       await loadComments(wrap, true);
     } catch (err) {
       btn.disabled = false;
