@@ -54,7 +54,12 @@
     </div>
     <form class="chat-composer" id="chatComposer" autocomplete="off">
       @csrf
+      {{-- readonly + onfocus-clear: Chrome skips the autofill scan for readonly
+           inputs at page load, then doesn't re-scan when readonly is removed.
+           Without this, Chrome offers saved passwords / cards / addresses
+           because it (incorrectly) classifies the form-with-csrf as a checkout. --}}
       <input type="text" name="body" placeholder="Skriv en besked…" maxlength="2000" required autofocus
+             readonly onfocus="this.removeAttribute('readonly')"
              autocomplete="off" autocorrect="off" autocapitalize="sentences" spellcheck="true"
              data-1p-ignore data-lpignore="true" data-form-type="other">
       <button type="submit" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>

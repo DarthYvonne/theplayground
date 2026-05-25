@@ -44,6 +44,7 @@
 </style>
 @endpush
 
+@auth
 <div class="view-header">
   <h1><i class="fa-solid fa-dumbbell" style="color:var(--text);margin-right:8px;"></i>Hold</h1>
   @include('partials.header-actions')
@@ -58,6 +59,7 @@
     <button type="button" class="clear" id="holdSearchClear" aria-label="Ryd"><i class="fa-solid fa-xmark"></i></button>
   </div>
 @endif
+@endauth
 
 @guest
 <div class="hero">

@@ -31,6 +31,7 @@
 
   /* App shell */
   .app { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+  .app.guest { grid-template-columns: 1fr; }
   .sidebar { background: #fff; border-right: 1px solid var(--border); padding: 16px 12px; position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
   .mobile-topbar { display: none; }
   .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1001; }
@@ -38,6 +39,13 @@
   .main { padding: 22px 26px 40px; min-width: 0; max-width: 100%; overflow-x: hidden; }
   /* Uniform content column — wide enough for 2 hold-tiles per row, left-aligned */
   .main > * { width: 100%; max-width: 720px; margin-left: 0; margin-right: auto; }
+
+  /* Guest header (logged-out top bar with logo only) */
+  .guest-header { background: #fff; border-bottom: 1px solid var(--border); padding: 14px 26px; }
+  .guest-header .logo-link { display: inline-block; }
+  .guest-header img { height: 36px; width: auto; display: block; }
+  .app.guest .main { padding: 24px 26px 40px; }
+  .app.guest .main > * { margin-left: auto; margin-right: auto; }
 
   /* Sidebar */
   .logo { padding: 6px 8px 18px; }
@@ -175,6 +183,9 @@
     .topbar-actions .feed-iconbtn .badge { border-color: #fff; }
     .topbar-actions .btn { padding: 7px 12px; font-size: 13px; }
     .main { padding: 70px 14px 24px; }
+    .app.guest .main { padding: 16px 14px 24px; }
+    .guest-header { padding: 12px 14px; }
+    .guest-header img { height: 30px; }
     .view-header { padding-left: 2px; }
     .view-header h1 { font-size: 18px; }
     .notif-dropdown { position: fixed; top: 60px; right: 8px; left: 8px; width: auto; max-width: none; }
@@ -184,58 +195,62 @@
 </head>
 <body>
 
+@auth
 <header class="mobile-topbar">
   <button class="topbar-toggle" id="sidebarToggle" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
   <span class="topbar-title" id="topbarTitle">{{ $title ?? 'The Playground' }}</span>
   <div class="topbar-actions" id="topbarActions"></div>
 </header>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+@endauth
 
-<div class="app">
+<div class="app {{ auth()->check() ? '' : 'guest' }}">
+  @auth
   <aside class="sidebar" id="sidebar">
     <div class="logo">
-      <a href="{{ auth()->check() ? url('/dashboard') : url('/') }}">
+      <a href="{{ url('/dashboard') }}">
         <img src="{{ asset('img/playground_logo.png') }}" alt="The Playground">
       </a>
     </div>
     <nav class="nav">
-      @auth
-        <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-heart"></i></span> Feed</a>
-        @php $myHoldCount = auth()->user()->activeEnrollments()->count(); @endphp
-        <a href="{{ route('catalog.mine') }}" class="{{ request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold @if ($myHoldCount > 0)({{ $myHoldCount }})@endif</a>
-        @php $beskederUnread = auth()->user()->unreadDirectMessageCount(); @endphp
-        <a href="{{ route('beskeder.index') }}" class="{{ request()->is('beskeder*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Beskeder @if ($beskederUnread > 0)<span class="badge-pill">{{ $beskederUnread > 99 ? '99+' : $beskederUnread }}</span>@endif</a>
-        <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-circle-user"></i></span> Find medlem</a>
+      <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-heart"></i></span> Feed</a>
+      @php $myHoldCount = auth()->user()->activeEnrollments()->count(); @endphp
+      <a href="{{ route('catalog.mine') }}" class="{{ request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold @if ($myHoldCount > 0)({{ $myHoldCount }})@endif</a>
+      @php $beskederUnread = auth()->user()->unreadDirectMessageCount(); @endphp
+      <a href="{{ route('beskeder.index') }}" class="{{ request()->is('beskeder*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Beskeder @if ($beskederUnread > 0)<span class="badge-pill">{{ $beskederUnread > 99 ? '99+' : $beskederUnread }}</span>@endif</a>
+      <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-circle-user"></i></span> Find medlem</a>
 
-        @if (auth()->user()->isTrainer() || auth()->user()->isOwner())
-          <div class="nav-divider"></div>
-          @if (auth()->user()->isTrainer())
-            <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> Hold du træner</a>
-          @endif
-          @if (auth()->user()->isOwner())
-            <a href="{{ route('admin.courses.index') }}" class="{{ request()->is('admin/courses*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-clipboard-list"></i></span> Alle hold</a>
-            <a href="{{ route('admin.settings.revenue') }}" class="{{ request()->is('admin/settings*') || request()->is('admin/users*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
-          @endif
+      @if (auth()->user()->isTrainer() || auth()->user()->isOwner())
+        <div class="nav-divider"></div>
+        @if (auth()->user()->isTrainer())
+          <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> Hold du træner</a>
         @endif
-      @else
-        <a href="{{ url('/hold') }}" class="{{ request()->is('/') || request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
-        <a href="{{ route('login') }}" class="{{ request()->is('login') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-right-to-bracket"></i></span> Log ind</a>
-        <a href="{{ route('register') }}" class="{{ request()->is('register') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-user-plus"></i></span> Opret konto</a>
-      @endauth
+        @if (auth()->user()->isOwner())
+          <a href="{{ route('admin.courses.index') }}" class="{{ request()->is('admin/courses*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-clipboard-list"></i></span> Alle hold</a>
+          <a href="{{ route('admin.settings.revenue') }}" class="{{ request()->is('admin/settings*') || request()->is('admin/users*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
+        @endif
+      @endif
     </nav>
-    @auth
-      <div class="sidebar-profile-wrap">
-        <a href="{{ url('/profile') }}" class="sidebar-profile {{ request()->is('profile*') ? 'active' : '' }}">
-          @include('partials.avatar', ['u' => auth()->user(), 'size' => 'sm'])
-          <span>{{ explode(' ', trim(auth()->user()->name))[0] }}</span>
-        </a>
-      </div>
-      <form method="POST" action="{{ route('logout') }}" class="logout-form">
-        @csrf
-        <button type="submit"><span class="ico"><i class="fa-solid fa-right-from-bracket"></i></span> Log ud</button>
-      </form>
-    @endauth
+    <div class="sidebar-profile-wrap">
+      <a href="{{ url('/profile') }}" class="sidebar-profile {{ request()->is('profile*') ? 'active' : '' }}">
+        @include('partials.avatar', ['u' => auth()->user(), 'size' => 'sm'])
+        <span>{{ explode(' ', trim(auth()->user()->name))[0] }}</span>
+      </a>
+    </div>
+    <form method="POST" action="{{ route('logout') }}" class="logout-form">
+      @csrf
+      <button type="submit"><span class="ico"><i class="fa-solid fa-right-from-bracket"></i></span> Log ud</button>
+    </form>
   </aside>
+  @endauth
+
+  @guest
+  <header class="guest-header">
+    <a href="{{ url('/') }}" class="logo-link" aria-label="The Playground">
+      <img src="{{ asset('img/playground_logo.png') }}" alt="The Playground">
+    </a>
+  </header>
+  @endguest
 
   <main class="main">
     @auth
