@@ -64,7 +64,9 @@ class FloatingController extends Controller
                 $key = $day['date'] . ' ' . $hhmm;
                 $taken = $bookings->get($key, collect());
                 $takenDeviceIds = $taken->pluck('device_id')->all();
-                $myBooking = $taken->firstWhere('user_id', $user?->id);
+                $myBookings = $user ? $taken->where('user_id', $user->id)->values() : collect();
+                $myBooking = $myBookings->first();
+                $mineDeviceIds = $myBookings->pluck('device_id')->all();
 
                 $takenByType = ['single' => 0, 'double' => 0];
                 foreach ($takenDeviceIds as $id) {
@@ -78,6 +80,7 @@ class FloatingController extends Controller
 
                 $row[$hhmm] = [
                     'taken_device_ids' => $takenDeviceIds,
+                    'mine_device_ids' => $mineDeviceIds,
                     'free_count' => max(0, $devices->count() - count($takenDeviceIds)),
                     'free_by_type' => $freeByType,
                     'mine' => $myBooking,

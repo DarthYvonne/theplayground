@@ -29,6 +29,8 @@
   .float-grid .slot.mine { background: #ecfdf5; border-color: #34d399; color: #065f46; flex-direction: column; align-items: flex-start; gap: 0; }
   .float-grid .slot.mine .lbl { font-weight: 700; font-size: 12px; }
   .float-grid .slot.mine .sub { font-size: 11px; }
+  .float-grid .slot.has-mine { border-color: #34d399; background: #f5fdf9; }
+  .float-grid .slot .mine-dot { color: #16a34a; font-size: 10px; }
   .float-grid .slot.past { opacity: 0.45; cursor: not-allowed; }
   .float-grid .slot .avail-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; color: #166534; font-weight: 600; }
   .float-grid .slot .avail-chip i { font-size: 10px; opacity: 0.75; }
@@ -47,6 +49,8 @@
   .book-body .device-pick { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; background: #fff; }
   .book-body .device-pick:hover { border-color: var(--accent); }
   .book-body .device-pick.taken { opacity: 0.4; cursor: not-allowed; background: #fafbfc; }
+  .book-body .device-pick.mine { background: #ecfdf5; border-color: #34d399; cursor: default; }
+  .book-body .device-pick.mine .meta { color: #065f46; font-weight: 700; }
   .book-body .device-pick .nm { font-weight: 600; flex: 1; }
   .book-body .device-pick .meta { color: var(--muted); font-size: 12px; }
   .book-foot { padding: 12px 20px; border-top: 1px solid #f0f2f5; display: flex; gap: 8px; align-items: center; }
@@ -128,9 +132,10 @@
                   $slotStart = \Carbon\Carbon::parse($day['date'] . ' ' . $hhmm);
                   $isPast = $slotStart->isPast();
                 @endphp
+                @php $hasMine = (bool) ($cell['mine'] ?? false); @endphp
                 @if (!$day['is_open'])
                   <td class="closed">@if ($loop->first && $hhmm === ($slots[0] ?? null))Lukket @endif</td>
-                @elseif ($cell['mine'] ?? false)
+                @elseif ($hasMine && $cell['free_count'] <= 0)
                   <td class="cell">
                     <button type="button" class="slot mine" disabled>
                       <span class="lbl">Din booking</span>
@@ -144,11 +149,16 @@
                 @else
                   <td class="cell">
                     <button type="button"
-                      class="slot {{ $isPast ? 'past' : '' }}"
+                      class="slot {{ $hasMine ? 'has-mine' : '' }} {{ $isPast ? 'past' : '' }}"
                       {{ $isPast ? 'disabled' : '' }}
                       data-slot="{{ $day['date'] }} {{ $hhmm }}"
                       data-taken="{{ implode(',', $cell['taken_device_ids']) }}"
+                      data-mine="{{ implode(',', $cell['mine_device_ids'] ?? []) }}"
+                      title="{{ $hasMine ? 'Du har booket — book endnu en tank til en ven' : '' }}"
                     >
+                      @if ($hasMine)
+                        <span class="mine-dot" title="Du har en booking på dette slot"><i class="fa-solid fa-circle-check"></i></span>
+                      @endif
                       @if (($cell['free_by_type']['single'] ?? 0) > 0)
                         <span class="avail-chip" title="Enkelt-tanke ledige"><i class="fa-solid fa-user"></i>{{ $cell['free_by_type']['single'] }}</span>
                       @endif
@@ -230,19 +240,29 @@
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
-  function open(slot, takenIds) {
-    var taken = new Set((takenIds || '').split(',').filter(Boolean).map(function (n) { return parseInt(n, 10); }));
+  function open(slot, takenIds, mineIds) {
+    var toIntSet = function (csv) {
+      return new Set((csv || '').split(',').filter(Boolean).map(function (n) { return parseInt(n, 10); }));
+    };
+    var taken = toIntSet(takenIds);
+    var mine = toIntSet(mineIds);
     var dt = slot.split(' ');
     whenEl.textContent = dt[0] + ' kl. ' + dt[1];
     listEl.innerHTML = DEVICES.map(function (d) {
-      var isTaken = taken.has(d.id);
-      return '<form method="POST" action="' + BOOK_URL + '" class="device-pick ' + (isTaken ? 'taken' : '') + '" ' + (isTaken ? '' : 'onsubmit="this.submitting=true;"') + '>' +
+      var isMine = mine.has(d.id);
+      var isTaken = taken.has(d.id) && !isMine;
+      var cls = isMine ? 'mine' : (isTaken ? 'taken' : '');
+      var trailing = isMine
+        ? '<span class="meta">Din booking</span>'
+        : (isTaken ? '<span class="meta">Optaget</span>' : '<button class="btn btn-primary btn-sm" type="submit">Book</button>');
+      var submitGuard = (isMine || isTaken) ? '' : 'onsubmit="this.submitting=true;"';
+      return '<form method="POST" action="' + BOOK_URL + '" class="device-pick ' + cls + '" ' + submitGuard + '>' +
         '<input type="hidden" name="_token" value="' + CSRF + '">' +
         '<input type="hidden" name="device_id" value="' + d.id + '">' +
         '<input type="hidden" name="slot_start" value="' + escapeHtml(slot) + '">' +
         '<span class="nm">' + escapeHtml(d.name) + '</span>' +
         '<span class="meta">' + escapeHtml(d.type_label) + ' · ' + escapeHtml(d.price_label) + '</span>' +
-        (isTaken ? '<span class="meta">Optaget</span>' : '<button class="btn btn-primary btn-sm" type="submit">Book</button>') +
+        trailing +
         '</form>';
     }).join('');
     backdrop.classList.add('open');
@@ -252,7 +272,7 @@
   document.querySelectorAll('.slot[data-slot]').forEach(function (btn) {
     btn.addEventListener('click', function () {
       if (btn.disabled) return;
-      open(btn.dataset.slot, btn.dataset.taken);
+      open(btn.dataset.slot, btn.dataset.taken, btn.dataset.mine);
     });
   });
   closeBtn.addEventListener('click', close);
