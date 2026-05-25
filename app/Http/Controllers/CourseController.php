@@ -70,7 +70,7 @@ class CourseController extends Controller
     public function show(Course $course, Request $request)
     {
         if (!$course->is_active && !($request->user()?->isOwner())) abort(404);
-        $course->load('trainer');
+        $course->load('trainers');
         $user = $request->user();
         $isEnrolled = $user?->enrolledIn($course) ?? false;
         $enrollment = $user
