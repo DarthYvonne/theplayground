@@ -10,6 +10,7 @@ use App\Models\MessageRead;
 use App\Models\Respekt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -66,20 +67,38 @@ class ChatController extends Controller
 
     public function uploadImage(Request $request): JsonResponse
     {
+        Log::info('feed.upload-image', [
+            'content_length' => $request->server('CONTENT_LENGTH'),
+            'content_type' => $request->server('CONTENT_TYPE'),
+            'has_file' => $request->hasFile('image'),
+            'files_keys' => array_keys($_FILES),
+            'files_image' => isset($_FILES['image']) ? array_diff_key($_FILES['image'], ['tmp_name' => '']) : null,
+            'post_keys' => array_keys($request->post()),
+            'php_upload_max' => ini_get('upload_max_filesize'),
+            'php_post_max' => ini_get('post_max_size'),
+            'php_file_uploads' => ini_get('file_uploads'),
+            'php_tmp_dir' => ini_get('upload_tmp_dir') ?: sys_get_temp_dir(),
+        ]);
+
         $file = $request->file('image');
 
-        if (!$request->hasFile('image')) {
+        if ($file === null) {
             $postMax = $this->iniBytes(ini_get('post_max_size'));
-            if ($postMax && $request->server('CONTENT_LENGTH') > $postMax) {
-                return response()->json(['message' => 'Billedet er for stort (over serverens grænse).'], 413);
+            $contentLength = (int) $request->server('CONTENT_LENGTH');
+            if ($postMax && $contentLength > $postMax) {
+                $mb = round($postMax / (1024 * 1024));
+                return response()->json(['message' => "Billedet er for stort. Maks {$mb} MB."], 413);
             }
             return response()->json(['message' => 'Intet billede modtaget.'], 422);
         }
 
         if (!$file->isValid()) {
             $err = $file->getError();
+            $uploadMax = $this->iniBytes(ini_get('upload_max_filesize'));
+            $mb = $uploadMax ? round($uploadMax / (1024 * 1024)) : null;
             $msg = match ($err) {
-                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Billedet er for stort.',
+                UPLOAD_ERR_INI_SIZE => $mb ? "Billedet er for stort. Maks {$mb} MB." : 'Billedet er for stort.',
+                UPLOAD_ERR_FORM_SIZE => 'Billedet er for stort.',
                 UPLOAD_ERR_PARTIAL => 'Upload blev afbrudt. Prøv igen.',
                 UPLOAD_ERR_NO_FILE => 'Intet billede valgt.',
                 UPLOAD_ERR_NO_TMP_DIR, UPLOAD_ERR_CANT_WRITE => 'Serveren kunne ikke gemme billedet.',
