@@ -138,7 +138,10 @@
                 @csrf
                 <button class="btn btn-ghost btn-sm" type="submit">
                   <i class="fa-solid fa-xmark"></i>
-                  Aflys@if (!$refundable) <span style="color:var(--muted);font-weight:400;">(ingen refundering)</span>@endif
+                  Aflys
+                  @if (!$refundable)
+                    <span style="color:var(--muted);font-weight:400;">(ingen refundering)</span>
+                  @endif
                 </button>
               </form>
             </div>
