@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\NewMessageMail;
+use App\Jobs\SendNewMessageMail;
 use App\Models\Course;
 use App\Models\DirectMessage;
 use App\Models\User;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Mail;
 
 class BeskederController extends Controller
 {
@@ -199,24 +198,10 @@ class BeskederController extends Controller
     private function afterSend(DirectMessage $msg, User $sender, User $recipient, ?Course $course): void
     {
         if (!$recipient->email_on_message || !$recipient->email) {
-            logger()->info('NewMessageMail skipped', [
-                'to' => $recipient->id,
-                'email' => $recipient->email,
-                'email_on_message' => $recipient->email_on_message,
-            ]);
             return;
         }
 
-        try {
-            Mail::to($recipient->email)->send(new NewMessageMail($msg, $sender, $recipient, $course));
-            logger()->info('NewMessageMail sent', ['to' => $recipient->id, 'email' => $recipient->email]);
-        } catch (\Throwable $e) {
-            logger()->error('NewMessageMail failed', [
-                'to' => $recipient->id,
-                'email' => $recipient->email,
-                'err' => $e->getMessage(),
-            ]);
-        }
+        SendNewMessageMail::dispatch($msg)->delay(now()->addSeconds(30));
     }
 
     /** @return \Illuminate\Support\Collection<int, \App\Models\Course> */
