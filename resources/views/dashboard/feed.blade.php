@@ -13,11 +13,10 @@
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
   .composer textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
-  .composer-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; gap: 8px; }
-  .composer-actions .left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .composer-actions { display: flex; align-items: center; justify-content: flex-end; margin-top: 10px; gap: 10px; }
   .composer-actions .btn { padding: 9px 22px; }
   .composer-error { color: var(--danger); font-size: 12px; margin-top: 6px; }
-  .composer-attach-btn { background: none; border: none; width: 36px; height: 36px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; }
+  .composer-attach-btn { background: none; border: none; width: 44px; height: 44px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; }
   .composer-attach-btn:hover { background: var(--hover); color: var(--accent); }
   .composer-attach-btn:disabled { cursor: default; opacity: 0.5; }
   .composer-upload-status { color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
@@ -105,15 +104,13 @@
       <button type="button" class="composer-preview-remove" id="feedComposerPreviewRemove" aria-label="Fjern billede"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="composer-actions">
-      <div class="left">
-        <button type="button" class="composer-attach-btn" id="feedComposerImageBtn" aria-label="Vedhæft billede" title="Vedhæft billede">
-          <i class="fa-regular fa-image"></i>
-        </button>
-        <input type="file" id="feedComposerImageInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
-        <span id="feedComposerUploadStatus" class="composer-upload-status" style="display:none;">
-          <i class="fa-solid fa-spinner fa-spin"></i> Overfører…
-        </span>
-      </div>
+      <span id="feedComposerUploadStatus" class="composer-upload-status" style="display:none;">
+        <i class="fa-solid fa-spinner fa-spin"></i> Overfører…
+      </span>
+      <button type="button" class="composer-attach-btn" id="feedComposerImageBtn" aria-label="Vedhæft billede" title="Vedhæft billede">
+        <i class="fa-regular fa-image"></i>
+      </button>
+      <input type="file" id="feedComposerImageInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
       <button type="submit" class="btn btn-primary" id="feedComposerSubmit" disabled>Slå op</button>
     </div>
     <div id="feedComposerError" class="composer-error" style="display:none;"></div>
@@ -501,13 +498,17 @@
         headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json' },
         body: fd,
       });
-      if (!res.ok) throw new Error('Upload failed');
-      var data = await res.json();
+      var data = null;
+      try { data = await res.json(); } catch (_) {}
+      if (!res.ok) {
+        var msg = (data && data.message) ? data.message : 'Kunne ikke uploade billedet. Prøv igen.';
+        throw new Error(msg);
+      }
       pendingImagePath = data.path;
       previewImg.src = data.url;
       preview.style.display = 'inline-flex';
     } catch (err) {
-      errBox.textContent = 'Kunne ikke uploade billedet. Prøv igen.';
+      errBox.textContent = err && err.message ? err.message : 'Kunne ikke uploade billedet. Prøv igen.';
       errBox.style.display = 'block';
       imageInput.value = '';
     } finally {

@@ -66,16 +66,67 @@ class ChatController extends Controller
 
     public function uploadImage(Request $request): JsonResponse
     {
-        $request->validate([
-            'image' => ['required','image','mimes:jpeg,jpg,png,gif,webp','max:8192'],
-        ]);
         $file = $request->file('image');
+
+        if (!$request->hasFile('image')) {
+            $postMax = $this->iniBytes(ini_get('post_max_size'));
+            if ($postMax && $request->server('CONTENT_LENGTH') > $postMax) {
+                return response()->json(['message' => 'Billedet er for stort (over serverens grænse).'], 413);
+            }
+            return response()->json(['message' => 'Intet billede modtaget.'], 422);
+        }
+
+        if (!$file->isValid()) {
+            $err = $file->getError();
+            $msg = match ($err) {
+                UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'Billedet er for stort.',
+                UPLOAD_ERR_PARTIAL => 'Upload blev afbrudt. Prøv igen.',
+                UPLOAD_ERR_NO_FILE => 'Intet billede valgt.',
+                UPLOAD_ERR_NO_TMP_DIR, UPLOAD_ERR_CANT_WRITE => 'Serveren kunne ikke gemme billedet.',
+                default => 'Billedet kunne ikke uploades.',
+            };
+            return response()->json(['message' => $msg], 422);
+        }
+
+        try {
+            $request->validate([
+                'image' => ['required','image','mimes:jpeg,jpg,png,gif,webp','max:8192'],
+            ], [
+                'image.required' => 'Vælg et billede.',
+                'image.image' => 'Filen er ikke et billede.',
+                'image.mimes' => 'Billedet skal være JPG, PNG, GIF eller WebP.',
+                'image.max' => 'Billedet må højst være 8 MB.',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $first = collect($e->errors())->flatten()->first() ?? 'Billedet kunne ikke uploades.';
+            return response()->json(['message' => $first], 422);
+        }
+
         $name = Str::ulid() . '.' . strtolower($file->getClientOriginalExtension() ?: $file->extension());
         $path = $file->storeAs(now()->format('Y/m'), $name, 'feed_images');
+
+        if (!$path) {
+            return response()->json(['message' => 'Kunne ikke gemme billedet på serveren.'], 500);
+        }
+
         return response()->json([
             'path' => $path,
             'url' => Storage::disk('feed_images')->url($path),
         ]);
+    }
+
+    private function iniBytes(?string $val): int
+    {
+        if (!$val) return 0;
+        $val = trim($val);
+        $unit = strtolower(substr($val, -1));
+        $num = (int) $val;
+        return match ($unit) {
+            'g' => $num * 1024 * 1024 * 1024,
+            'm' => $num * 1024 * 1024,
+            'k' => $num * 1024,
+            default => (int) $val,
+        };
     }
 
     private function resolveImagePath(?string $path): ?string
