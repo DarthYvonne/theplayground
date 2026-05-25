@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use App\Models\Enrollment;
 use App\Models\FloatingBooking;
 use App\Models\User;
 use Carbon\Carbon;
@@ -48,16 +47,11 @@ class SettingsController extends Controller
 
         $monthsInPeriod = $period === 'year' ? 12 : 1;
         $holdCentsInPeriod = 0;
+        $enrollmentsInPeriod = 0;
         foreach ($perCourse as $c) {
             $holdCentsInPeriod += (int) $c->price_cents * (int) $c->active_in_period * $monthsInPeriod;
+            $enrollmentsInPeriod += (int) $c->active_in_period;
         }
-
-        // Live "right now" MRR (always based on currently-active enrollments).
-        $activeEnrollmentsNow = Enrollment::where('status', 'active')->count();
-        $monthlyCentsNow = (int) Course::query()
-            ->join('enrollments', 'enrollments.course_id', '=', 'courses.id')
-            ->where('enrollments.status', 'active')
-            ->sum('courses.price_cents');
 
         // Members only (excluding owner/trainer/assistant).
         $membersCount = User::where('role', 'user')->count();
@@ -101,8 +95,7 @@ class SettingsController extends Controller
             'floatingBookingsCount' => $floatingBookingsCount,
             'totalCentsInPeriod' => $holdCentsInPeriod + $floatingCentsInPeriod,
             'monthsInPeriod' => $monthsInPeriod,
-            'activeEnrollmentsNow' => $activeEnrollmentsNow,
-            'monthlyCentsNow' => $monthlyCentsNow,
+            'enrollmentsInPeriod' => $enrollmentsInPeriod,
             'membersCount' => $membersCount,
             'perCourse' => $perCourse,
         ]);

@@ -87,9 +87,8 @@
     <div class="value">{{ $fmtKr($totalCentsInPeriod) }}</div>
   </div>
   <div class="stat">
-    <div class="label">Tilmeldinger</div>
-    <div class="value">{{ $activeEnrollmentsNow }}</div>
-    <div class="sub">{{ $fmtKr($monthlyCentsNow) }}/md</div>
+    <div class="label">Tilmeldte</div>
+    <div class="value">{{ $enrollmentsInPeriod }}</div>
   </div>
   <div class="stat">
     <div class="label">Medlemmer</div>
