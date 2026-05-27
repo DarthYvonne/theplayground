@@ -106,6 +106,10 @@
   .views-indicator { color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: default; }
   .views-indicator.hidden { display: none; }
   .views-indicator i { font-size: 13px; }
+  @media (max-width: 767px) {
+    .comments-toggle .label-text,
+    .views-indicator .label-text { display: none; }
+  }
   .comments-wrap { margin: 10px -16px 0; border-top: 1px solid #f0f2f5; padding: 10px 16px 0; }
   .comments-list-box { display: none; }
   .comments-list-box.open { display: block; }
@@ -320,7 +324,7 @@
     var commentsToggle = canComment
       ? '<button type="button" class="comments-toggle' + (commentsCount > 0 ? '' : ' hidden') + '" data-message-id="' + escapeHtml(String(it.target_id)) + '">' +
           '<i class="fa-regular fa-comment"></i>' +
-          '<span class="comments-count-num">' + commentsCount + '</span> kommentarer' +
+          '<span class="comments-count-num">' + commentsCount + '</span><span class="label-text"> kommentarer</span>' +
         '</button>'
       : '';
 
@@ -329,7 +333,7 @@
     var viewsIndicator = isMsg
       ? '<span class="views-indicator' + (viewsCount > 0 ? '' : ' hidden') + '">' +
           '<i class="fa-regular fa-eye"></i>' +
-          'Set af <span class="views-count-num">' + viewsCount + '</span>' +
+          '<span class="label-text">Set af </span><span class="views-count-num">' + viewsCount + '</span>' +
         '</span>'
       : '';
 
