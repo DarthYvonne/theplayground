@@ -102,8 +102,8 @@
   .course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
   .course-tile { margin-bottom: 0; display: flex; flex-direction: column; }
   .course-tile .img-wrap { position: relative; }
-  .course-tile-img { width: 100%; height: 140px; object-fit: cover; display: block; }
-  .course-tile-img-ph { background: linear-gradient(135deg, var(--accent-soft), #f5f7fb); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 40px; }
+  .course-tile-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; background: #000; }
+  .course-tile-img-ph { width: 100%; aspect-ratio: 16 / 9; background: linear-gradient(135deg, var(--accent-soft), #f5f7fb); display: flex; align-items: center; justify-content: center; color: var(--accent); font-size: 40px; }
   .course-tile-video-badge { position: absolute; bottom: 8px; left: 8px; display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.55); color: #fff; font-size: 12px; pointer-events: none; backdrop-filter: blur(4px); }
   .course-tile-video-badge.sm { width: 24px; height: 24px; font-size: 10px; bottom: 6px; left: 6px; }
   .course-tile-video-badge.processing i { animation: spin 1s linear infinite; }
