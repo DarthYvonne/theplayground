@@ -54,6 +54,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', fn (\Illuminate\Http\Request $r) => redirect('/feed' . ($r->getQueryString() ? '?' . $r->getQueryString() : '')))->name('dashboard');
     Route::get('/hold/dine', [CourseController::class, 'mine'])->name('catalog.mine');
     Route::get('/api/feed', [FeedController::class, 'list']);
+    Route::post('/api/messages/{message}/view', [FeedController::class, 'recordView']);
     Route::get('/api/respekt', [RespektController::class, 'list']);
     Route::post('/api/respekt', [RespektController::class, 'toggle']);
 

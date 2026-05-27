@@ -103,6 +103,9 @@
   .comments-toggle:hover { color: var(--accent); }
   .comments-toggle i { font-size: 13px; }
   .comments-toggle.hidden { display: none; }
+  .views-indicator { color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: default; }
+  .views-indicator.hidden { display: none; }
+  .views-indicator i { font-size: 13px; }
   .comments-wrap { margin: 10px -16px 0; border-top: 1px solid #f0f2f5; padding: 10px 16px 0; }
   .comments-list-box { display: none; }
   .comments-list-box.open { display: block; }
@@ -321,6 +324,15 @@
         '</button>'
       : '';
 
+    var isMsg = it.type === 'platform_message' || it.type === 'course_message';
+    var viewsCount = Number(it.views_count || 0);
+    var viewsIndicator = isMsg
+      ? '<span class="views-indicator' + (viewsCount > 0 ? '' : ' hidden') + '">' +
+          '<i class="fa-regular fa-eye"></i>' +
+          'Set af <span class="views-count-num">' + viewsCount + '</span>' +
+        '</span>'
+      : '';
+
     var footer =
       '<div class="feed-footer">' +
         '<div style="display:flex;align-items:center;gap:14px;">' +
@@ -330,6 +342,7 @@
             (it.respekt_count > 0 ? '<i class="fa-solid fa-hand-fist"></i>' + it.respekt_count : '') +
           '</button>' +
           commentsToggle +
+          viewsIndicator +
         '</div>' +
         '<button type="button" class="respekt-btn ' + (it.you_respekted ? 'active' : '') + '"' +
           ' data-target-type="' + escapeHtml(it.target_type) + '"' +
@@ -357,7 +370,54 @@
       : '';
 
     el.innerHTML = menu + head + body + footer + commentsWrap;
+    observeCardForViews(el);
     return el;
+  }
+
+  // ---------- Views ----------
+  var VIEW_URL = function (id) { return '{{ url('/api/messages') }}/' + encodeURIComponent(id) + '/view'; };
+  var viewedMessageIds = new Set();
+  var viewObserver = ('IntersectionObserver' in window)
+    ? new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          var card = entry.target;
+          var type = card.dataset.type;
+          if (type !== 'platform_message' && type !== 'course_message') return;
+          var messageId = card.dataset.targetId;
+          if (!messageId || viewedMessageIds.has(messageId)) return;
+          viewedMessageIds.add(messageId);
+          viewObserver.unobserve(card);
+          recordView(card, messageId);
+        });
+      }, { threshold: 0.5 })
+    : null;
+
+  function observeCardForViews(el) {
+    if (!viewObserver) return;
+    var type = el.dataset.type;
+    if (type !== 'platform_message' && type !== 'course_message') return;
+    if (el.dataset.viewObserved === '1') return;
+    el.dataset.viewObserved = '1';
+    viewObserver.observe(el);
+  }
+
+  async function recordView(card, messageId) {
+    try {
+      var res = await fetch(VIEW_URL(messageId), {
+        method: 'POST',
+        headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json' },
+      });
+      if (!res.ok) return;
+      var data = await res.json();
+      if (!data.counted) return;
+      var ind = card.querySelector('.views-indicator');
+      if (!ind) return;
+      var numEl = ind.querySelector('.views-count-num');
+      var n = Number(numEl.textContent || 0) + 1;
+      numEl.textContent = String(n);
+      ind.classList.toggle('hidden', n <= 0);
+    } catch (_) { /* silent */ }
   }
 
   function closeAllMenus(except) {

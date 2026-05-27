@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\Enrollment;
 use App\Models\FeedComment;
 use App\Models\Message;
+use App\Models\MessageView;
 use App\Models\Respekt;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -98,10 +99,42 @@ class FeedController extends Controller
 
         $merged = $this->attachRespekt($merged, $user->id);
         $merged = $this->attachCommentCounts($merged);
+        $merged = $this->attachViewCounts($merged);
 
         $payload = $merged->map(fn ($i) => collect($i)->except('sort_key')->all())->values();
 
         return response()->json(['items' => $payload]);
+    }
+
+    public function recordView(Request $request, Message $message): JsonResponse
+    {
+        $user = $request->user();
+
+        // Don't count author's own view
+        if ($message->user_id === $user->id) {
+            return response()->json(['ok' => true, 'counted' => false]);
+        }
+
+        // Gate by feed visibility: platform messages are public to auth users;
+        // course messages require access to the course.
+        if ($message->channel_type === 'course') {
+            $courseIds = $this->accessibleCourseIds($user);
+            if (!$courseIds->contains($message->course_id)) {
+                abort(403);
+            }
+        } elseif ($message->channel_type !== 'platform') {
+            abort(404);
+        }
+
+        $view = MessageView::firstOrCreate([
+            'message_id' => $message->id,
+            'user_id' => $user->id,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'counted' => $view->wasRecentlyCreated,
+        ]);
     }
 
     private function attachRespekt(\Illuminate\Support\Collection $items, int $viewerId): \Illuminate\Support\Collection
@@ -177,6 +210,35 @@ class FeedController extends Controller
             $isMsg = in_array($it['type'], ['platform_message', 'course_message'], true);
             $it['can_comment'] = $isMsg;
             $it['comments_count'] = $isMsg ? ($counts[(int) $it['target_id']] ?? 0) : 0;
+            return $it;
+        });
+    }
+
+    private function attachViewCounts(\Illuminate\Support\Collection $items): \Illuminate\Support\Collection
+    {
+        $messageIds = $items
+            ->filter(fn ($it) => in_array($it['type'], ['platform_message', 'course_message'], true))
+            ->map(fn ($it) => (int) $it['target_id'])
+            ->unique()
+            ->values()
+            ->all();
+
+        $counts = [];
+        if (!empty($messageIds)) {
+            foreach (
+                MessageView::selectRaw('message_id, COUNT(*) as c')
+                    ->whereIn('message_id', $messageIds)
+                    ->groupBy('message_id')
+                    ->get()
+                as $row
+            ) {
+                $counts[(int) $row->message_id] = (int) $row->c;
+            }
+        }
+
+        return $items->map(function ($it) use ($counts) {
+            $isMsg = in_array($it['type'], ['platform_message', 'course_message'], true);
+            $it['views_count'] = $isMsg ? ($counts[(int) $it['target_id']] ?? 0) : 0;
             return $it;
         });
     }
