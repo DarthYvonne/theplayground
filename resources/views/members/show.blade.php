@@ -75,7 +75,7 @@
       <div class="course-list">
         @foreach ($trainerCourses as $c)
           <a href="{{ route('courses.show', $c) }}">
-            @if ($c->image_path)<img src="{{ $c->imageUrl() }}" alt="">@else<div class="ph"><i class="fa-solid fa-chalkboard-user"></i></div>@endif
+            @if ($c->heroImageUrl())<img src="{{ $c->heroImageUrl() }}" alt="">@else<div class="ph"><i class="fa-solid fa-chalkboard-user"></i></div>@endif
             <div>
               <div class="t">{{ $c->title }}</div>
               <div class="sub">{{ $c->activeCount() }}/{{ $c->max_participants }} tilmeldte @if ($c->scheduleLabel()) · {{ $c->scheduleLabel() }}@endif</div>
@@ -92,7 +92,7 @@
       <div class="course-list">
         @foreach ($enrolledCourses as $c)
           <a href="{{ route('courses.show', $c) }}">
-            @if ($c->image_path)<img src="{{ $c->imageUrl() }}" alt="">@else<div class="ph"><i class="fa-solid fa-dumbbell"></i></div>@endif
+            @if ($c->heroImageUrl())<img src="{{ $c->heroImageUrl() }}" alt="">@else<div class="ph"><i class="fa-solid fa-dumbbell"></i></div>@endif
             <div>
               <div class="t">{{ $c->title }}</div>
               <div class="sub">{{ count($c->trainers) === 1 ? 'Træner' : 'Trænere' }} {{ $c->trainerNames() }} @if ($c->scheduleLabel()) · {{ $c->scheduleLabel() }}@endif</div>

@@ -71,8 +71,8 @@
       <div class="sub-list">
         @foreach ($enrollments as $e)
           <div class="sub-row">
-            @if ($e->course->image_path)
-              <img src="{{ $e->course->imageUrl() }}" alt="">
+            @if ($e->course->heroImageUrl())
+              <img src="{{ $e->course->heroImageUrl() }}" alt="">
             @else
               <div class="thumb-ph"><i class="fa-solid fa-dumbbell"></i></div>
             @endif

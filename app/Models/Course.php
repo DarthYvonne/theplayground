@@ -16,6 +16,7 @@ class Course extends Model
         'title','description','image_path','price_cents',
         'max_participants','is_active','free_enrollment','stripe_product_id','stripe_price_id',
         'start_time','end_time','weekdays',
+        'video_path','original_video_path','video_processing_status','video_thumbnail_path',
     ];
 
     protected function casts(): array
@@ -106,6 +107,31 @@ class Course extends Model
     public function imageUrl(): ?string
     {
         return $this->image_path ? Storage::disk('public')->url($this->image_path) : null;
+    }
+
+    public function videoUrl(): ?string
+    {
+        return $this->video_path ? Storage::disk('course_videos')->url($this->video_path) : null;
+    }
+
+    public function videoThumbnailUrl(): ?string
+    {
+        return $this->video_thumbnail_path ? Storage::disk('course_videos')->url($this->video_thumbnail_path) : null;
+    }
+
+    public function hasVideo(): bool
+    {
+        return !empty($this->video_path);
+    }
+
+    /**
+     * URL of the still image shown on listing tiles.
+     * Prefers the video thumbnail (auto-generated from an uploaded video) so that
+     * "Hold med video" still look right in catalogs that can't autoplay a player.
+     */
+    public function heroImageUrl(): ?string
+    {
+        return $this->videoThumbnailUrl() ?? $this->imageUrl();
     }
 
     public function price(): string

@@ -16,7 +16,7 @@
   .composer-actions { display: flex; align-items: center; justify-content: flex-end; margin-top: 10px; gap: 10px; }
   .composer-actions .btn { padding: 9px 22px; }
   .composer-error { color: var(--danger); font-size: 12px; margin-top: 6px; }
-  .composer-attach-btn { background: none; border: none; width: 44px; height: 44px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; }
+  .composer-attach-btn { background: none; border: none; width: 36px; height: 36px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; }
   .composer-attach-btn:hover { background: var(--hover); color: var(--accent); }
   .composer-attach-btn:disabled { cursor: default; opacity: 0.5; }
   .composer-upload-status { color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
@@ -32,8 +32,9 @@
   .feed-image img { max-width: 100%; max-height: 520px; border-radius: 10px; display: block; cursor: zoom-in; }
   .feed-video { margin-top: 10px; position: relative; }
   .feed-video video { width: 100%; max-height: 520px; border-radius: 10px; display: block; background: #000; }
-  .feed-video-status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); color: #fff; border-radius: 10px; font-size: 14px; gap: 8px; pointer-events: none; }
-  .feed-video-status i { font-size: 16px; }
+  .media-status { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.6); color: #fff; border-radius: 999px; padding: 4px 10px; font-size: 11px; line-height: 1; pointer-events: none; }
+  .media-status i { font-size: 11px; }
+  .media-status.error { background: rgba(180,40,40,0.85); }
 
   /* Feed items */
   .feed-list { display: flex; flex-direction: column; gap: 14px; }
@@ -163,11 +164,11 @@
           <span class="pct">Overfører…</span>
         </span>
       </span>
+      <button type="button" class="composer-attach-btn" id="feedComposerVideoBtn" aria-label="Vedhæft video" title="Vedhæft video">
+        <i class="fa-regular fa-circle-play"></i>
+      </button>
       <button type="button" class="composer-attach-btn" id="feedComposerImageBtn" aria-label="Vedhæft billede" title="Vedhæft billede">
         <i class="fa-regular fa-image"></i>
-      </button>
-      <button type="button" class="composer-attach-btn" id="feedComposerVideoBtn" aria-label="Vedhæft video" title="Vedhæft video">
-        <i class="fa-solid fa-video"></i>
       </button>
       <input type="file" id="feedComposerImageInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
       <input type="file" id="feedComposerVideoInput" accept="video/mp4,video/quicktime,video/webm,video/x-m4v,video/x-matroska,video/avi" style="display:none;">
@@ -279,12 +280,12 @@
       if (it.video_url) {
         var st = it.video_processing_status;
         var processing = st === 'pending' || st === 'processing';
-        var statusOverlay = processing
-          ? '<div class="feed-video-status"><i class="fa-solid fa-spinner fa-spin"></i> Videoen behandles…</div>'
-          : (st === 'failed' ? '<div class="feed-video-status"><i class="fa-solid fa-triangle-exclamation"></i> Videoen kunne ikke behandles</div>' : '');
+        var statusBadge = processing
+          ? '<div class="media-status"><i class="fa-solid fa-spinner fa-spin"></i> Behandler…</div>'
+          : (st === 'failed' ? '<div class="media-status error"><i class="fa-solid fa-triangle-exclamation"></i> Fejlede</div>' : '');
         body += '<div class="feed-video" data-status="' + escapeHtml(String(st || '')) + '">' +
           '<video src="' + escapeHtml(it.video_url) + '" controls preload="metadata" playsinline></video>' +
-          statusOverlay +
+          statusBadge +
         '</div>';
       }
     }

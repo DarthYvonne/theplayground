@@ -31,11 +31,7 @@
     @foreach ($enrolledCourses as $course)
       <a href="{{ route('courses.show', $course) }}" class="card course-tile" aria-label="{{ $course->title }}">
         <div class="img-wrap">
-          @if ($course->image_path)
-            <img src="{{ $course->imageUrl() }}" alt="" class="course-tile-img">
-          @else
-            <div class="course-tile-img course-tile-img-ph"><i class="fa-solid fa-dumbbell"></i></div>
-          @endif
+          @include('partials.course-hero-thumb', ['course' => $course])
           <span class="course-tile-enrolled-badge"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>
         </div>
         <div class="card-pad">

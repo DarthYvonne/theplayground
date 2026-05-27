@@ -24,11 +24,9 @@
   <div class="course-grid">
     @foreach ($courses as $c)
       <a href="{{ route('courses.show', $c) }}" class="card course-tile" aria-label="{{ $c->title }}">
-        @if ($c->image_path)
-          <img src="{{ $c->imageUrl() }}" alt="" class="course-tile-img">
-        @else
-          <div class="course-tile-img course-tile-img-ph"><i class="fa-solid fa-dumbbell"></i></div>
-        @endif
+        <div class="img-wrap">
+          @include('partials.course-hero-thumb', ['course' => $c])
+        </div>
         <div class="card-pad">
           <div class="course-tile-title">{{ $c->title }}</div>
           <div class="course-tile-meta">

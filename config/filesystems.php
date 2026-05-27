@@ -65,6 +65,15 @@ return [
             'report' => false,
         ],
 
+        'course_videos' => [
+            'driver' => 'local',
+            'root' => env('COURSE_VIDEOS_PATH', storage_path('app/public/course-videos')),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/course-videos',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -95,6 +104,7 @@ return [
         public_path('storage') => storage_path('app/public'),
         public_path('feed-images') => env('FEED_IMAGES_PATH', storage_path('app/public/feed-images')),
         public_path('feed-videos') => env('FEED_VIDEOS_PATH', storage_path('app/public/feed-videos')),
+        public_path('course-videos') => env('COURSE_VIDEOS_PATH', storage_path('app/public/course-videos')),
     ],
 
 ];

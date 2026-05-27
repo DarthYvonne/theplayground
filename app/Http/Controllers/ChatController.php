@@ -68,7 +68,7 @@ class ChatController extends Controller
         ]);
 
         if ($videoPath) {
-            ProcessVideoJob::dispatch($m->id, $videoPath);
+            ProcessVideoJob::dispatch(\App\Models\Message::class, $m->id, $videoPath, 'feed_videos');
         }
 
         return response()->json(['message' => $this->serializeOne($m->load('user'), $request->user()->id)]);
@@ -117,8 +117,14 @@ class ChatController extends Controller
             return response()->json(['message' => $first], 422);
         }
 
-        $name = Str::ulid() . '.' . strtolower($file->getClientOriginalExtension() ?: $file->extension());
-        $path = $file->storeAs(now()->format('Y/m'), $name, 'feed_images');
+        $compressed = $this->compressImage($file);
+        if (!$compressed) {
+            return response()->json(['message' => 'Kunne ikke behandle billedet.'], 500);
+        }
+
+        $name = Str::ulid() . '.' . $compressed['ext'];
+        $path = Storage::disk('feed_images')->putFileAs(now()->format('Y/m'), $compressed['file'], $name);
+        @unlink($compressed['tmp']);
 
         if (!$path) {
             return response()->json(['message' => 'Kunne ikke gemme billedet på serveren.'], 500);
@@ -128,6 +134,91 @@ class ChatController extends Controller
             'path' => $path,
             'url' => Storage::disk('feed_images')->url($path),
         ]);
+    }
+
+    /**
+     * Resize + recompress an uploaded image. Returns null on failure.
+     * GIFs are kept as-is (preserves animation). Everything else is normalised to JPEG q85, max 2048px.
+     */
+    private function compressImage(\Illuminate\Http\UploadedFile $upload): ?array
+    {
+        $mime = strtolower($upload->getMimeType() ?? '');
+        $sourcePath = $upload->getRealPath();
+
+        if ($mime === 'image/gif') {
+            return [
+                'file' => new \Symfony\Component\HttpFoundation\File\File($sourcePath),
+                'tmp' => null,
+                'ext' => 'gif',
+            ];
+        }
+
+        $img = match (true) {
+            str_contains($mime, 'jpeg') || str_contains($mime, 'jpg') => @imagecreatefromjpeg($sourcePath),
+            str_contains($mime, 'png') => @imagecreatefrompng($sourcePath),
+            str_contains($mime, 'webp') && function_exists('imagecreatefromwebp') => @imagecreatefromwebp($sourcePath),
+            default => null,
+        };
+        if (!$img) return null;
+
+        // Honour EXIF orientation for JPEG
+        if (str_contains($mime, 'jpeg') && function_exists('exif_read_data')) {
+            $exif = @exif_read_data($sourcePath);
+            $orientation = $exif['Orientation'] ?? 0;
+            $rotate = match ($orientation) { 3 => 180, 6 => -90, 8 => 90, default => 0 };
+            if ($rotate !== 0) {
+                $img = imagerotate($img, $rotate, 0);
+            }
+        }
+
+        $width = imagesx($img);
+        $height = imagesy($img);
+        $maxDim = 2048;
+
+        if ($width > $maxDim || $height > $maxDim) {
+            $ratio = $width / $height;
+            if ($ratio >= 1) {
+                $newW = $maxDim;
+                $newH = (int) round($maxDim / $ratio);
+            } else {
+                $newH = $maxDim;
+                $newW = (int) round($maxDim * $ratio);
+            }
+            $resized = imagecreatetruecolor($newW, $newH);
+            imagecopyresampled($resized, $img, 0, 0, 0, 0, $newW, $newH, $width, $height);
+            imagedestroy($img);
+            $img = $resized;
+        }
+
+        $tmp = tempnam(sys_get_temp_dir(), 'feed_img_');
+        if (!$tmp) {
+            imagedestroy($img);
+            return null;
+        }
+
+        // Flatten onto white for PNG (drops transparency, fine for feed) and save as JPEG
+        if (str_contains($mime, 'png')) {
+            $flat = imagecreatetruecolor(imagesx($img), imagesy($img));
+            $white = imagecolorallocate($flat, 255, 255, 255);
+            imagefilledrectangle($flat, 0, 0, imagesx($img), imagesy($img), $white);
+            imagecopy($flat, $img, 0, 0, 0, 0, imagesx($img), imagesy($img));
+            imagedestroy($img);
+            $img = $flat;
+        }
+
+        $ok = imagejpeg($img, $tmp, 85);
+        imagedestroy($img);
+
+        if (!$ok) {
+            @unlink($tmp);
+            return null;
+        }
+
+        return [
+            'file' => new \Symfony\Component\HttpFoundation\File\File($tmp),
+            'tmp' => $tmp,
+            'ext' => 'jpg',
+        ];
     }
 
     private function iniBytes(?string $val): int

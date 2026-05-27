@@ -56,7 +56,11 @@
 
 <div class="course-detail">
   <div class="card">
-    @if ($course->image_path)
+    @if ($course->hasVideo())
+      <video class="hero-img" controls preload="metadata" playsinline
+        @if ($course->videoThumbnailUrl()) poster="{{ $course->videoThumbnailUrl() }}" @endif
+        src="{{ $course->videoUrl() }}"></video>
+    @elseif ($course->image_path)
       <img src="{{ $course->imageUrl() }}" alt="" class="hero-img">
     @else
       <div class="hero-ph"><i class="fa-solid fa-dumbbell"></i></div>

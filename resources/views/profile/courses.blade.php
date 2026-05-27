@@ -23,11 +23,9 @@
     <div class="course-grid">
       @foreach ($trainerCourses as $c)
         <div class="card course-tile">
-          @if ($c->image_path)
-            <img src="{{ $c->imageUrl() }}" alt="" class="course-tile-img">
-          @else
-            <div class="course-tile-img course-tile-img-ph"><i class="fa-solid fa-chalkboard-user"></i></div>
-          @endif
+          <div class="img-wrap">
+            @include('partials.course-hero-thumb', ['course' => $c, 'placeholderIcon' => 'fa-chalkboard-user'])
+          </div>
           <div class="card-pad">
             <div class="course-tile-title">{{ $c->title }}</div>
             <div class="course-tile-meta">{{ $c->activeCount() }}/{{ $c->max_participants }} tilmeldte · {{ $c->is_active ? 'Aktiv' : 'Kladde' }}</div>
@@ -50,11 +48,9 @@
     <div class="course-grid">
       @foreach ($enrolledCourses as $c)
         <div class="card course-tile">
-          @if ($c->image_path)
-            <img src="{{ $c->imageUrl() }}" alt="" class="course-tile-img">
-          @else
-            <div class="course-tile-img course-tile-img-ph"><i class="fa-solid fa-dumbbell"></i></div>
-          @endif
+          <div class="img-wrap">
+            @include('partials.course-hero-thumb', ['course' => $c])
+          </div>
           <div class="card-pad">
             <div class="course-tile-title">{{ $c->title }}</div>
             <div class="course-tile-meta">{{ count($c->trainers) === 1 ? 'Træner' : 'Trænere' }} {{ $c->trainerNames() }} · {{ $c->price() }}</div>

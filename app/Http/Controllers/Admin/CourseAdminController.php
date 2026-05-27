@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\ProcessVideoJob;
 use App\Models\Course;
 use App\Models\CourseCancellation;
 use App\Models\User;
@@ -52,9 +53,18 @@ class CourseAdminController extends Controller
     public function store(Request $request): RedirectResponse {
         [$data, $trainerIds] = $this->validateData($request);
         if ($request->hasFile('image')) $data['image_path'] = $request->file('image')->store('courses', 'public');
+        $videoPath = null;
+        if ($request->hasFile('video')) {
+            $videoPath = $this->storeCourseVideo($request->file('video'));
+            $data['video_path'] = $videoPath;
+            $data['video_processing_status'] = 'pending';
+        }
         $course = Course::create($data);
         $course->trainers()->sync($trainerIds);
         $this->syncStripe($course);
+        if ($videoPath) {
+            ProcessVideoJob::dispatch(Course::class, $course->id, $videoPath, 'course_videos', true);
+        }
         return redirect()->route('admin.courses.edit', $course)->with('status', $this->saveMessage($course, 'oprettet'));
     }
 
@@ -68,10 +78,29 @@ class CourseAdminController extends Controller
             if ($course->image_path) Storage::disk('public')->delete($course->image_path);
             $data['image_path'] = $request->file('image')->store('courses', 'public');
         }
+        $newVideoPath = null;
+        if ($request->boolean('remove_video')) {
+            $this->deleteCourseVideoFiles($course);
+            $data['video_path'] = null;
+            $data['original_video_path'] = null;
+            $data['video_processing_status'] = null;
+            $data['video_thumbnail_path'] = null;
+        }
+        if ($request->hasFile('video')) {
+            $this->deleteCourseVideoFiles($course);
+            $newVideoPath = $this->storeCourseVideo($request->file('video'));
+            $data['video_path'] = $newVideoPath;
+            $data['original_video_path'] = null;
+            $data['video_processing_status'] = 'pending';
+            $data['video_thumbnail_path'] = null;
+        }
         $priceChanged = (int) $data['price_cents'] !== (int) $course->price_cents;
         $course->update($data);
         $course->trainers()->sync($trainerIds);
         $this->syncStripe($course, $priceChanged);
+        if ($newVideoPath) {
+            ProcessVideoJob::dispatch(Course::class, $course->id, $newVideoPath, 'course_videos', true);
+        }
         return back()->with('status', $this->saveMessage($course, 'opdateret'));
     }
 
@@ -81,8 +110,23 @@ class CourseAdminController extends Controller
             StripeService::archiveProduct($course->stripe_product_id);
         }
         if ($course->image_path) Storage::disk('public')->delete($course->image_path);
+        $this->deleteCourseVideoFiles($course);
         $course->delete();
         return redirect()->route('admin.courses.index')->with('status', 'Holdet er slettet.');
+    }
+
+    private function storeCourseVideo(\Illuminate\Http\UploadedFile $file): string
+    {
+        $name = \Illuminate\Support\Str::ulid() . '.' . strtolower($file->getClientOriginalExtension() ?: $file->extension());
+        return $file->storeAs(now()->format('Y/m'), $name, 'course_videos');
+    }
+
+    private function deleteCourseVideoFiles(Course $course): void
+    {
+        $disk = Storage::disk('course_videos');
+        foreach (['video_path','original_video_path','video_thumbnail_path'] as $col) {
+            if ($course->{$col}) $disk->delete($course->{$col});
+        }
     }
 
     /**
@@ -126,6 +170,8 @@ class CourseAdminController extends Controller
             'trainer_ids' => ['required','array','min:1'],
             'trainer_ids.*' => ['integer','exists:users,id'],
             'image' => ['nullable','image','max:16384'],
+            'video' => ['nullable','file','mimes:mp4,mov,avi,webm,m4v,mkv','max:512000'],
+            'remove_video' => ['nullable','boolean'],
             'price_kr' => ['required','numeric','min:0','max:100000'],
             'max_participants' => ['required','integer','min:1','max:1000'],
             'is_active' => ['nullable','boolean'],
@@ -142,6 +188,7 @@ class CourseAdminController extends Controller
         $data['is_active'] = $request->boolean('is_active');
         $data['free_enrollment'] = $request->boolean('free_enrollment');
         $data['weekdays'] = !empty($data['weekdays']) ? implode(',', $data['weekdays']) : null;
+        unset($data['video'], $data['remove_video']);
         return [$data, $trainerIds];
     }
 

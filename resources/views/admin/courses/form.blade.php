@@ -83,6 +83,37 @@
       @if ($course->image_path)
         <div style="margin-top:8px;"><img src="{{ $course->imageUrl() }}" alt="" style="max-height:160px;border-radius:8px;"></div>
       @endif
+      <div class="hint">Bruges hvis du ikke uploader en video.</div>
+    </div>
+    <div class="form-row">
+      <label for="video">Forsidevideo (valgfri)</label>
+      <input id="video" type="file" name="video" accept="video/mp4,video/quicktime,video/webm,video/x-m4v,video/x-matroska,video/avi">
+      <div class="hint">MP4, MOV, AVI, WebM, M4V eller MKV. Maks 500 MB. Erstatter forsidebilledet på listesider.</div>
+      @if ($course->hasVideo())
+        <div style="margin-top:10px; display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
+          @if ($course->videoThumbnailUrl())
+            <img src="{{ $course->videoThumbnailUrl() }}" alt="" style="max-height:120px;border-radius:8px;">
+          @endif
+          <div style="font-size:13px;color:var(--muted);">
+            Status:
+            @switch($course->video_processing_status)
+              @case('pending') Afventer behandling… @break
+              @case('processing') Behandler… @break
+              @case('completed') Klar (omkodet) @break
+              @case('skipped') Klar @break
+              @case('failed') Fejlede @break
+              @default —
+            @endswitch
+            <div style="margin-top:6px;">
+              <label class="switch" style="font-size:13px;">
+                <input type="checkbox" name="remove_video" value="1">
+                <span class="knob"></span>
+                <span>Fjern videoen ved gem</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      @endif
     </div>
     <div class="form-row">
       <label class="switch">
