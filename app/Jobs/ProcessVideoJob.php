@@ -93,9 +93,18 @@ class ProcessVideoJob implements ShouldQueue
             : $outputFilename;
 
         $format = new X264();
-        $format->setKiloBitrate(1000)
-               ->setAudioCodec($settings['audio_codec'])
-               ->setAudioKiloBitrate(128);
+        $format->setAudioCodec($settings['audio_codec'])
+               ->setAudioKiloBitrate(128)
+               ->setAdditionalParameters([
+                   '-preset', $settings['preset'],
+                   '-crf', (string) $settings['crf'],
+                   '-profile:v', $settings['profile'],
+                   '-level', $settings['level'],
+                   '-pix_fmt', $settings['pix_fmt'],
+                   '-ar', (string) $settings['audio_sample_rate'],
+                   '-sample_fmt', 's16',
+                   '-movflags', $settings['movflags'],
+               ]);
 
         $media = FFMpeg::fromDisk($this->disk)->open($this->videoPath);
 
@@ -118,20 +127,6 @@ class ProcessVideoJob implements ShouldQueue
                 $media = $media->resize(new Dimension($newWidth, $newHeight));
             }
         }
-
-        $media->addFilter([
-            '-c:v', 'libx264',
-            '-preset', $settings['preset'],
-            '-crf', (string) $settings['crf'],
-            '-profile:v', $settings['profile'],
-            '-level', $settings['level'],
-            '-pix_fmt', $settings['pix_fmt'],
-            '-c:a', $settings['audio_codec'],
-            '-b:a', $settings['audio_bitrate'],
-            '-ar', (string) $settings['audio_sample_rate'],
-            '-sample_fmt', 's16',
-            '-movflags', $settings['movflags'],
-        ]);
 
         $media->export()
             ->toDisk($this->disk)
