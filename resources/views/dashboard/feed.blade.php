@@ -16,7 +16,8 @@
   .composer-actions { display: flex; align-items: center; justify-content: flex-end; margin-top: 10px; gap: 10px; }
   .composer-actions .btn { padding: 9px 22px; }
   .composer-error { color: var(--danger); font-size: 12px; margin-top: 6px; }
-  .composer-attach-btn { background: none; border: none; width: 36px; height: 36px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; }
+  .composer-attach-btn { background: none; border: none; width: 44px; height: 44px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; }
+  .composer-attach-btn + .composer-attach-btn { margin-left: -10px; }
   .composer-attach-btn:hover { background: var(--hover); color: var(--accent); }
   .composer-attach-btn:disabled { cursor: default; opacity: 0.5; }
   .composer-upload-status { color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
@@ -165,7 +166,7 @@
         </span>
       </span>
       <button type="button" class="composer-attach-btn" id="feedComposerVideoBtn" aria-label="Vedhæft video" title="Vedhæft video">
-        <i class="fa-regular fa-circle-play"></i>
+        <i class="fa-solid fa-circle-play"></i>
       </button>
       <button type="button" class="composer-attach-btn" id="feedComposerImageBtn" aria-label="Vedhæft billede" title="Vedhæft billede">
         <i class="fa-regular fa-image"></i>
