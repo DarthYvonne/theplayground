@@ -9,133 +9,149 @@
   @include('partials.header-actions')
 </div>
 
-<div style="max-width: 720px;">
-  <form method="POST" action="{{ $course->exists ? route('admin.courses.update', $course) : route('admin.courses.store') }}" enctype="multipart/form-data" class="card card-pad">
+@php
+  $existingTrainerIds = $course->exists ? $course->trainers->pluck('id')->all() : [];
+  $oldTrainerIds = old('trainer_ids', $existingTrainerIds);
+  $oldTrainerIds = array_map('intval', is_array($oldTrainerIds) ? $oldTrainerIds : []);
+  $trainersPayload = $trainers->map(fn ($t) => [
+    'id' => $t->id,
+    'name' => $t->name,
+    'role' => ['owner' => 'Ejer', 'trainer' => 'Træner'][$t->role] ?? $t->role,
+    'picture_url' => $t->pictureUrl(),
+    'initials' => $t->initials(),
+  ])->values();
+  $priceKr = ($course->price_cents ?? 0) / 100;
+  $priceKrDisplay = $priceKr == (int) $priceKr ? (string) (int) $priceKr : rtrim(rtrim(number_format($priceKr, 2, '.', ''), '0'), '.');
+  $selectedDays = is_array(old('weekdays')) ? old('weekdays') : $course->weekdaysList();
+  $videoStatusLabel = [
+    'pending' => 'Afventer behandling…',
+    'processing' => 'Behandler…',
+    'completed' => 'Klar (omkodet)',
+    'skipped' => 'Klar',
+    'failed' => 'Fejlede',
+  ][$course->video_processing_status] ?? null;
+@endphp
+
+<div class="course-form-shell">
+  <form method="POST" action="{{ $course->exists ? route('admin.courses.update', $course) : route('admin.courses.store') }}" enctype="multipart/form-data" class="card course-form">
     @csrf
-    <div class="form-row">
-      <label for="title">Titel</label>
-      <input id="title" type="text" name="title" value="{{ old('title', $course->title) }}" required>
-    </div>
-    <div class="form-row">
-      <label for="description">Beskrivelse</label>
-      <textarea id="description" name="description" rows="6" required>{{ old('description', $course->description) }}</textarea>
-    </div>
-    @php
-      $existingTrainerIds = $course->exists ? $course->trainers->pluck('id')->all() : [];
-      $oldTrainerIds = old('trainer_ids', $existingTrainerIds);
-      $oldTrainerIds = array_map('intval', is_array($oldTrainerIds) ? $oldTrainerIds : []);
-      $trainersPayload = $trainers->map(fn ($t) => [
-        'id' => $t->id,
-        'name' => $t->name,
-        'role' => ['owner' => 'Ejer', 'trainer' => 'Træner'][$t->role] ?? $t->role,
-        'picture_url' => $t->pictureUrl(),
-        'initials' => $t->initials(),
-      ])->values();
-    @endphp
-    <div class="form-row">
-      <label>Trænere</label>
-      <button type="button" class="find-link" id="openTrainerPicker"><i class="fa-solid fa-magnifying-glass"></i> Find trænere</button>
-      <div class="trainer-chips chips-area" id="trainerChips"></div>
-      @error('trainer_ids')<div class="hint" style="color:var(--danger);margin-top:6px;">{{ $message }}</div>@enderror
-    </div>
-    @php
-      $priceKr = ($course->price_cents ?? 0) / 100;
-      $priceKrDisplay = $priceKr == (int) $priceKr ? (string) (int) $priceKr : rtrim(rtrim(number_format($priceKr, 2, '.', ''), '0'), '.');
-    @endphp
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" class="grid-2">
-      <div class="form-row">
-        <label for="price_kr">Pris (kr/måned)</label>
-        <input id="price_kr" type="number" name="price_kr" min="0" step="0.01" value="{{ old('price_kr', $priceKrDisplay) }}" required>
-        <div class="hint">Hele kroner pr. måned. Brug 0 hvis holdet er gratis.</div>
-      </div>
-      <div class="form-row">
-        <label for="max_participants">Maks. deltagere</label>
-        <input id="max_participants" type="number" name="max_participants" min="1" value="{{ old('max_participants', $course->max_participants ?? 10) }}" required>
-      </div>
-    </div>
 
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;" class="grid-2">
+    <section class="cf-section">
+      <h2 class="cf-section-title">Grundlæggende</h2>
       <div class="form-row">
-        <label for="start_time">Fra</label>
-        <input id="start_time" type="time" name="start_time" value="{{ old('start_time', $course->start_time ? substr((string) $course->start_time, 0, 5) : '') }}">
+        <label for="title">Titel</label>
+        <input id="title" type="text" name="title" value="{{ old('title', $course->title) }}" required>
       </div>
       <div class="form-row">
-        <label for="end_time">Til</label>
-        <input id="end_time" type="time" name="end_time" value="{{ old('end_time', $course->end_time ? substr((string) $course->end_time, 0, 5) : '') }}">
+        <label for="description">Beskrivelse</label>
+        <textarea id="description" name="description" rows="5" required>{{ old('description', $course->description) }}</textarea>
       </div>
-    </div>
+      <div class="form-row">
+        <div class="cf-label-row">
+          <label>Trænere</label>
+          <button type="button" class="cf-link-btn" id="openTrainerPicker"><i class="fa-solid fa-magnifying-glass"></i> Find trænere</button>
+        </div>
+        <div class="trainer-chips chips-area" id="trainerChips"></div>
+        @error('trainer_ids')<div class="cf-error">{{ $message }}</div>@enderror
+      </div>
+    </section>
 
-    <div class="form-row">
-      <label>Ugedag(e)</label>
-      @php $selectedDays = is_array(old('weekdays')) ? old('weekdays') : $course->weekdaysList(); @endphp
-      <div class="weekday-row">
-        @foreach (\App\Models\Course::WEEKDAYS as $code => $name)
-          <label class="weekday-chip">
-            <input type="checkbox" name="weekdays[]" value="{{ $code }}" {{ in_array($code, $selectedDays, true) ? 'checked' : '' }}>
-            <span>{{ $name }}</span>
-          </label>
-        @endforeach
+    <section class="cf-section">
+      <h2 class="cf-section-title">Skema</h2>
+      <div class="form-row">
+        <label>Ugedag(e)</label>
+        <div class="weekday-row">
+          @foreach (\App\Models\Course::WEEKDAYS as $code => $name)
+            <label class="weekday-chip">
+              <input type="checkbox" name="weekdays[]" value="{{ $code }}" {{ in_array($code, $selectedDays, true) ? 'checked' : '' }}>
+              <span>{{ $name }}</span>
+            </label>
+          @endforeach
+        </div>
       </div>
-    </div>
-    <div class="form-row">
-      <label for="image">Forsidebillede</label>
-      <input id="image" type="file" name="image" accept="image/*">
-      @if ($course->image_path)
-        <div style="margin-top:8px;"><img src="{{ $course->imageUrl() }}" alt="" style="max-height:160px;border-radius:8px;"></div>
-      @endif
-      <div class="hint">Bruges hvis du ikke uploader en video.</div>
-    </div>
-    <div class="form-row">
-      <label for="video">Forsidevideo (valgfri)</label>
-      <input id="video" type="file" name="video" accept="video/mp4,video/quicktime,video/webm,video/x-m4v,video/x-matroska,video/avi">
-      <div class="hint">MP4, MOV, AVI, WebM, M4V eller MKV. Maks 500 MB. Erstatter forsidebilledet på listesider.</div>
-      @if ($course->hasVideo())
-        <div style="margin-top:10px; display:flex; gap:12px; align-items:flex-start; flex-wrap:wrap;">
-          @if ($course->videoThumbnailUrl())
-            <img src="{{ $course->videoThumbnailUrl() }}" alt="" style="max-height:120px;border-radius:8px;">
+      <div class="cf-grid-2">
+        <div class="form-row">
+          <label for="start_time">Fra</label>
+          <input id="start_time" type="time" name="start_time" value="{{ old('start_time', $course->start_time ? substr((string) $course->start_time, 0, 5) : '') }}">
+        </div>
+        <div class="form-row">
+          <label for="end_time">Til</label>
+          <input id="end_time" type="time" name="end_time" value="{{ old('end_time', $course->end_time ? substr((string) $course->end_time, 0, 5) : '') }}">
+        </div>
+      </div>
+    </section>
+
+    <section class="cf-section">
+      <h2 class="cf-section-title">Pris &amp; tilmelding</h2>
+      <div class="cf-grid-2">
+        <div class="form-row">
+          <label for="price_kr">Pris (kr/måned)</label>
+          <input id="price_kr" type="number" name="price_kr" min="0" step="0.01" value="{{ old('price_kr', $priceKrDisplay) }}" required>
+          <div class="hint">Brug 0 hvis holdet er gratis.</div>
+        </div>
+        <div class="form-row">
+          <label for="max_participants">Maks. deltagere</label>
+          <input id="max_participants" type="number" name="max_participants" min="1" value="{{ old('max_participants', $course->max_participants ?? 10) }}" required>
+        </div>
+      </div>
+      <div class="cf-switch-stack">
+        <label class="switch">
+          <input type="checkbox" name="is_active" value="1" {{ old('is_active', $course->is_active) ? 'checked' : '' }}>
+          <span class="knob"></span>
+          <span>Aktiv (vises på forsiden)</span>
+        </label>
+        <label class="switch">
+          <input type="checkbox" name="free_enrollment" value="1" {{ old('free_enrollment', $course->free_enrollment) ? 'checked' : '' }}>
+          <span class="knob"></span>
+          <span>Gratis tilmelding (spring Stripe over &mdash; mest til test)</span>
+        </label>
+      </div>
+    </section>
+
+    <section class="cf-section">
+      <h2 class="cf-section-title">Forsidemedie</h2>
+      <p class="cf-section-hint">Upload enten et billede eller en video. En video erstatter billedet på listesider og spilles på holdets side.</p>
+
+      <div class="cf-media-grid">
+        <div class="cf-media">
+          <label for="image" class="cf-media-label"><i class="fa-regular fa-image"></i> Billede</label>
+          @if ($course->image_path)
+            <div class="cf-media-preview"><img src="{{ $course->imageUrl() }}" alt=""></div>
           @endif
-          <div style="font-size:13px;color:var(--muted);">
-            Status:
-            @switch($course->video_processing_status)
-              @case('pending') Afventer behandling… @break
-              @case('processing') Behandler… @break
-              @case('completed') Klar (omkodet) @break
-              @case('skipped') Klar @break
-              @case('failed') Fejlede @break
-              @default —
-            @endswitch
-            <div style="margin-top:6px;">
-              <label class="switch" style="font-size:13px;">
+          <input id="image" type="file" name="image" accept="image/*" class="cf-file">
+          <div class="hint">JPG, PNG eller WebP.</div>
+        </div>
+
+        <div class="cf-media">
+          <label for="video" class="cf-media-label"><i class="fa-solid fa-circle-play"></i> Video</label>
+          @if ($course->hasVideo() && $course->videoThumbnailUrl())
+            <div class="cf-media-preview"><img src="{{ $course->videoThumbnailUrl() }}" alt=""></div>
+          @elseif ($course->hasVideo())
+            <div class="cf-media-preview cf-media-preview-ph"><i class="fa-solid fa-film"></i></div>
+          @endif
+          <input id="video" type="file" name="video" accept="video/mp4,video/quicktime,video/webm,video/x-m4v,video/x-matroska,video/avi" class="cf-file">
+          <div class="hint">MP4, MOV, AVI, WebM, M4V eller MKV. Maks 500 MB.</div>
+          @if ($course->hasVideo())
+            <div class="cf-video-meta">
+              @if ($videoStatusLabel)<span class="cf-status">{{ $videoStatusLabel }}</span>@endif
+              <label class="cf-remove">
                 <input type="checkbox" name="remove_video" value="1">
-                <span class="knob"></span>
                 <span>Fjern videoen ved gem</span>
               </label>
             </div>
-          </div>
+          @endif
         </div>
-      @endif
-    </div>
-    <div class="form-row">
-      <label class="switch">
-        <input type="checkbox" name="is_active" value="1" {{ old('is_active', $course->is_active) ? 'checked' : '' }}>
-        <span class="knob"></span>
-        <span>Aktiv (vises på forsiden)</span>
-      </label>
-    </div>
-    <div class="form-row">
-      <label class="switch">
-        <input type="checkbox" name="free_enrollment" value="1" {{ old('free_enrollment', $course->free_enrollment) ? 'checked' : '' }}>
-        <span class="knob"></span>
-        <span>Gratis tilmelding (spring Stripe over &mdash; mest til test)</span>
-      </label>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      </div>
+    </section>
+
+    <div class="cf-footer">
       <button class="btn btn-primary" type="submit">{{ $course->exists ? 'Gem ændringer' : 'Opret hold' }}</button>
       @if ($course->exists)
         <a href="{{ route('courses.show', $course) }}" class="btn btn-secondary"><i class="fa-regular fa-eye"></i> Vis</a>
+        <span class="cf-footer-spacer"></span>
         <form method="POST" action="{{ route('admin.courses.destroy', $course) }}" onsubmit="return confirm('Slet holdet og alle relaterede tilmeldinger?');">
           @csrf
-          <button class="btn btn-danger" type="submit"><i class="fa-solid fa-trash"></i> Slet</button>
+          <button class="btn btn-danger" type="submit"><i class="fa-solid fa-trash"></i> Slet hold</button>
         </form>
       @endif
     </div>
@@ -144,16 +160,51 @@
 
 @push('styles')
 <style>
-  @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr !important; } }
+  .course-form-shell { max-width: 760px; }
+  .course-form { padding: 0; overflow: hidden; }
+
+  .cf-section { padding: 22px 24px; border-bottom: 1px solid #f0f2f5; }
+  .cf-section:last-of-type { border-bottom: none; }
+  .cf-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 14px; }
+  .cf-section-hint { color: var(--muted); font-size: 13px; margin: -6px 0 14px; }
+
+  .cf-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 600px) { .cf-grid-2 { grid-template-columns: 1fr; } }
+
+  .cf-label-row { display: flex; align-items: baseline; gap: 14px; }
+  .cf-label-row label { margin-bottom: 0; }
+  .cf-link-btn { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; padding: 0; text-decoration: underline; }
+  .cf-link-btn:hover { text-decoration-thickness: 2px; }
+  .cf-link-btn i { margin-right: 4px; }
+  .cf-error { color: var(--danger); font-size: 12px; margin-top: 6px; }
+
+  .cf-switch-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+
+  .cf-media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  @media (max-width: 600px) { .cf-media-grid { grid-template-columns: 1fr; } }
+  .cf-media { display: flex; flex-direction: column; gap: 8px; }
+  .cf-media-label { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; margin-bottom: 0; }
+  .cf-media-label i { color: var(--accent); }
+  .cf-media-preview { border-radius: 10px; overflow: hidden; aspect-ratio: 16 / 9; background: #f0f2f5; }
+  .cf-media-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cf-media-preview-ph { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 30px; }
+  .cf-file { font-size: 13px; }
+  .cf-video-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 10px; background: #f7f8fa; border-radius: 8px; font-size: 12px; }
+  .cf-status { color: var(--muted); }
+  .cf-remove { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text); }
+  .cf-remove input { accent-color: var(--danger); }
+
+  .cf-footer { display: flex; align-items: center; gap: 10px; padding: 18px 24px; background: #fafbfc; border-top: 1px solid #f0f2f5; flex-wrap: wrap; }
+  .cf-footer-spacer { flex: 1; min-width: 8px; }
+  .cf-footer form { margin: 0; }
+
   .weekday-row { display: flex; flex-wrap: wrap; gap: 6px; }
-  .weekday-chip { display: inline-flex; align-items: center; gap: 0; cursor: pointer; user-select: none; font-weight: 500; }
+  .weekday-chip { display: inline-flex; align-items: center; cursor: pointer; user-select: none; font-weight: 500; }
   .weekday-chip input { position: absolute; opacity: 0; pointer-events: none; }
   .weekday-chip span { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: #fff; font-size: 13px; transition: background 0.1s, border-color 0.1s, color 0.1s; }
   .weekday-chip:hover span { background: var(--hover); }
   .weekday-chip input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-  .find-link { margin-left: 4px; font-size: 13px; color: var(--accent); font-weight: 600; background: none; border: none; cursor: pointer; padding: 0; text-decoration: underline; }
-  .find-link:hover { text-decoration-thickness: 2px; }
   .chips-area { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; margin-top: 10px; }
   .chips-area:empty::before { content: 'Ingen valgt.'; color: var(--muted); font-size: 13px; font-style: italic; }
   .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent); padding: 4px 8px 4px 4px; border-radius: 999px; font-weight: 600; font-size: 13px; }
