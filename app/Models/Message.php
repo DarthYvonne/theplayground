@@ -8,7 +8,16 @@ use Illuminate\Support\Facades\Storage;
 
 class Message extends Model
 {
-    protected $fillable = ['channel_type','course_id','user_id','body','image_path'];
+    protected $fillable = [
+        'channel_type',
+        'course_id',
+        'user_id',
+        'body',
+        'image_path',
+        'video_path',
+        'original_video_path',
+        'video_processing_status',
+    ];
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function course(): BelongsTo { return $this->belongsTo(Course::class); }
@@ -16,5 +25,10 @@ class Message extends Model
     public function imageUrl(): ?string
     {
         return $this->image_path ? Storage::disk('feed_images')->url($this->image_path) : null;
+    }
+
+    public function videoUrl(): ?string
+    {
+        return $this->video_path ? Storage::disk('feed_videos')->url($this->video_path) : null;
     }
 }

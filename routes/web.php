@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\Route;
 
 // Root: send logged-in users to their feed; guests see the public catalog
 Route::get('/', function (\Illuminate\Http\Request $request) {
-    if ($request->user()) return redirect('/dashboard');
+    if ($request->user()) return redirect('/feed');
     return app(CourseController::class)->index($request);
 })->name('home');
 
@@ -49,7 +49,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 
 // Authenticated
 Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'feed'])->name('dashboard');
+    Route::get('/feed', [DashboardController::class, 'feed'])->name('feed');
+    // Legacy: keep /dashboard working for old bookmarks, emailed links, notifications.
+    Route::get('/dashboard', fn (\Illuminate\Http\Request $r) => redirect('/feed' . ($r->getQueryString() ? '?' . $r->getQueryString() : '')))->name('dashboard');
     Route::get('/hold/dine', [CourseController::class, 'mine'])->name('catalog.mine');
     Route::get('/api/feed', [FeedController::class, 'list']);
     Route::get('/api/respekt', [RespektController::class, 'list']);
@@ -78,10 +80,11 @@ Route::middleware('auth')->group(function () {
 
     // Chat
     // Common chat is hidden — redirect any lingering links (old notifications, bookmarks) to the feed.
-    Route::get('/chat', fn () => redirect('/dashboard'))->name('chat.platform');
+    Route::get('/chat', fn () => redirect('/feed'))->name('chat.platform');
     Route::get('/api/chat/platform', [ChatController::class, 'listPlatform']);
     Route::post('/api/chat/platform', [ChatController::class, 'sendPlatform']);
     Route::post('/api/feed/upload-image', [ChatController::class, 'uploadImage']);
+    Route::post('/api/feed/upload-video', [ChatController::class, 'uploadVideo']);
     Route::get('/courses/{course}/chat', [ChatController::class, 'course'])->name('chat.course');
     Route::get('/api/chat/courses/{course}', [ChatController::class, 'listCourse']);
     Route::post('/api/chat/courses/{course}', [ChatController::class, 'sendCourse']);

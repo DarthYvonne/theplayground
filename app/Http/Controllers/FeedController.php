@@ -36,6 +36,8 @@ class FeedController extends Controller
                     'time_human' => $m->created_at->diffForHumans(),
                     'body' => $m->body,
                     'image_url' => $m->imageUrl(),
+                    'video_url' => $m->videoUrl(),
+                    'video_processing_status' => $m->video_processing_status,
                     'mine' => $m->user_id === $user->id,
                     'user' => $this->serializeUser($m->user),
                     'course' => null,

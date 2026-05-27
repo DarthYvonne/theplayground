@@ -21,6 +21,6 @@ class PreviewRoleController extends Controller
             $request->session()->put('preview_role', $data['role']);
         }
 
-        return redirect('/dashboard');
+        return redirect('/feed');
     }
 }

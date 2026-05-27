@@ -207,12 +207,12 @@
   @auth
   <aside class="sidebar" id="sidebar">
     <div class="logo">
-      <a href="{{ url('/dashboard') }}">
+      <a href="{{ url('/feed') }}">
         <img src="{{ asset('img/playground_logo.png') }}" alt="The Playground">
       </a>
     </div>
     <nav class="nav">
-      <a href="{{ url('/dashboard') }}" class="{{ request()->is('dashboard*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-heart"></i></span> Feed</a>
+      <a href="{{ url('/feed') }}" class="{{ request()->is('feed*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-heart"></i></span> Feed</a>
       <a href="{{ route('catalog.mine') }}" class="{{ request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
       <a href="{{ route('floating.index') }}" class="{{ request()->is('floating*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-water"></i></span> Floating</a>
       @php $beskederUnread = auth()->user()->unreadDirectMessageCount(); @endphp

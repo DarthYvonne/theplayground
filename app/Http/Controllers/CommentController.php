@@ -157,7 +157,7 @@ class CommentController extends Controller
         $actor = $request->user();
         $link = $message->channel_type === 'course' && $message->course_id
             ? route('chat.course', $message->course_id)
-            : route('dashboard') . '#pm-' . $message->id;
+            : route('feed') . '#pm-' . $message->id;
 
         // Notify the post author (unless commenting on own post)
         if ($message->user_id !== $actor->id) {

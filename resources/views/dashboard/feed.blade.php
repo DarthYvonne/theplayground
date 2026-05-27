@@ -21,12 +21,19 @@
   .composer-attach-btn:disabled { cursor: default; opacity: 0.5; }
   .composer-upload-status { color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
   .composer-upload-status .fa-spinner { color: var(--accent); }
-  .composer-preview { margin-top: 10px; display: inline-flex; position: relative; }
-  .composer-preview img { max-height: 140px; max-width: 100%; border-radius: 10px; display: block; }
-  .composer-preview-remove { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; }
+  .composer-preview { margin-top: 10px; display: inline-flex; position: relative; max-width: 100%; }
+  .composer-preview img, .composer-preview video { max-height: 200px; max-width: 100%; border-radius: 10px; display: block; background: #000; }
+  .composer-preview-remove { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; background: rgba(0,0,0,0.6); color: #fff; border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; z-index: 2; }
   .composer-preview-remove:hover { background: rgba(0,0,0,0.8); }
+  .composer-upload-progress { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+  .composer-upload-progress .bar { width: 120px; height: 6px; background: #e4e6eb; border-radius: 3px; overflow: hidden; }
+  .composer-upload-progress .bar > span { display: block; height: 100%; background: var(--accent); width: 0; transition: width 0.15s linear; }
   .feed-image { margin-top: 10px; }
   .feed-image img { max-width: 100%; max-height: 520px; border-radius: 10px; display: block; cursor: zoom-in; }
+  .feed-video { margin-top: 10px; position: relative; }
+  .feed-video video { width: 100%; max-height: 520px; border-radius: 10px; display: block; background: #000; }
+  .feed-video-status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.55); color: #fff; border-radius: 10px; font-size: 14px; gap: 8px; pointer-events: none; }
+  .feed-video-status i { font-size: 16px; }
 
   /* Feed items */
   .feed-list { display: flex; flex-direction: column; gap: 14px; }
@@ -144,17 +151,26 @@
     @csrf
     <textarea id="feedComposerInput" name="body" placeholder="Hvad sker der, {{ explode(' ', trim($user->name))[0] }}?" maxlength="2000" rows="1"></textarea>
     <div id="feedComposerPreview" class="composer-preview" style="display:none;">
-      <img id="feedComposerPreviewImg" src="" alt="">
-      <button type="button" class="composer-preview-remove" id="feedComposerPreviewRemove" aria-label="Fjern billede"><i class="fa-solid fa-xmark"></i></button>
+      <img id="feedComposerPreviewImg" src="" alt="" style="display:none;">
+      <video id="feedComposerPreviewVideo" src="" controls playsinline style="display:none;"></video>
+      <button type="button" class="composer-preview-remove" id="feedComposerPreviewRemove" aria-label="Fjern vedhæftning"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="composer-actions">
       <span id="feedComposerUploadStatus" class="composer-upload-status" style="display:none;">
-        <i class="fa-solid fa-spinner fa-spin"></i> Overfører…
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <span class="composer-upload-progress" id="feedComposerUploadProgress">
+          <span class="bar"><span></span></span>
+          <span class="pct">Overfører…</span>
+        </span>
       </span>
       <button type="button" class="composer-attach-btn" id="feedComposerImageBtn" aria-label="Vedhæft billede" title="Vedhæft billede">
         <i class="fa-regular fa-image"></i>
       </button>
+      <button type="button" class="composer-attach-btn" id="feedComposerVideoBtn" aria-label="Vedhæft video" title="Vedhæft video">
+        <i class="fa-solid fa-video"></i>
+      </button>
       <input type="file" id="feedComposerImageInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
+      <input type="file" id="feedComposerVideoInput" accept="video/mp4,video/quicktime,video/webm,video/x-m4v,video/x-matroska,video/avi" style="display:none;">
       <button type="submit" class="btn btn-primary" id="feedComposerSubmit" disabled>Slå op</button>
     </div>
     <div id="feedComposerError" class="composer-error" style="display:none;"></div>
@@ -204,15 +220,23 @@
 
   var FEED_URL = '{{ url('/api/feed') }}';
   var SEND_URL = '{{ url('/api/chat/platform') }}';
-  var UPLOAD_URL = '{{ url('/api/feed/upload-image') }}';
+  var UPLOAD_IMAGE_URL = '{{ url('/api/feed/upload-image') }}';
+  var UPLOAD_VIDEO_URL = '{{ url('/api/feed/upload-video') }}';
 
   var imageBtn = document.getElementById('feedComposerImageBtn');
   var imageInput = document.getElementById('feedComposerImageInput');
+  var videoBtn = document.getElementById('feedComposerVideoBtn');
+  var videoInput = document.getElementById('feedComposerVideoInput');
   var uploadStatus = document.getElementById('feedComposerUploadStatus');
+  var uploadProgressEl = document.getElementById('feedComposerUploadProgress');
+  var uploadProgressBar = uploadProgressEl.querySelector('.bar > span');
+  var uploadProgressLabel = uploadProgressEl.querySelector('.pct');
   var preview = document.getElementById('feedComposerPreview');
   var previewImg = document.getElementById('feedComposerPreviewImg');
+  var previewVideo = document.getElementById('feedComposerPreviewVideo');
   var previewRemove = document.getElementById('feedComposerPreviewRemove');
   var pendingImagePath = null;
+  var pendingVideoPath = null;
   var uploading = false;
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; }); }
@@ -251,6 +275,17 @@
       if (it.body) body = '<div class="feed-body">' + escapeHtml(it.body) + '</div>';
       if (it.image_url) {
         body += '<div class="feed-image"><a href="' + escapeHtml(it.image_url) + '" target="_blank" rel="noopener"><img src="' + escapeHtml(it.image_url) + '" alt=""></a></div>';
+      }
+      if (it.video_url) {
+        var st = it.video_processing_status;
+        var processing = st === 'pending' || st === 'processing';
+        var statusOverlay = processing
+          ? '<div class="feed-video-status"><i class="fa-solid fa-spinner fa-spin"></i> Videoen behandles…</div>'
+          : (st === 'failed' ? '<div class="feed-video-status"><i class="fa-solid fa-triangle-exclamation"></i> Videoen kunne ikke behandles</div>' : '');
+        body += '<div class="feed-video" data-status="' + escapeHtml(String(st || '')) + '">' +
+          '<video src="' + escapeHtml(it.video_url) + '" controls preload="metadata" playsinline></video>' +
+          statusOverlay +
+        '</div>';
       }
     }
 
@@ -557,7 +592,7 @@
 
   function refreshSubmitState() {
     var hasText = input.value.trim().length > 0;
-    submit.disabled = uploading || (!hasText && !pendingImagePath);
+    submit.disabled = uploading || (!hasText && !pendingImagePath && !pendingVideoPath);
   }
   function autosize() {
     input.style.height = 'auto';
@@ -566,52 +601,113 @@
   }
   input.addEventListener('input', autosize);
 
-  function clearImage() {
+  function clearAttachments() {
     pendingImagePath = null;
+    pendingVideoPath = null;
     preview.style.display = 'none';
+    previewImg.style.display = 'none';
     previewImg.src = '';
+    previewVideo.style.display = 'none';
+    previewVideo.removeAttribute('src');
+    previewVideo.load();
     imageInput.value = '';
+    videoInput.value = '';
     refreshSubmitState();
   }
-  previewRemove.addEventListener('click', clearImage);
+  previewRemove.addEventListener('click', clearAttachments);
   imageBtn.addEventListener('click', function () {
     if (uploading) return;
     imageInput.click();
   });
+  videoBtn.addEventListener('click', function () {
+    if (uploading) return;
+    videoInput.click();
+  });
+
+  function setUploading(active, label) {
+    uploading = active;
+    imageBtn.disabled = active;
+    videoBtn.disabled = active;
+    uploadStatus.style.display = active ? 'inline-flex' : 'none';
+    if (active) {
+      uploadProgressBar.style.width = '0%';
+      uploadProgressLabel.textContent = label || 'Overfører…';
+    }
+    refreshSubmitState();
+  }
+
+  function uploadWithProgress(url, formData, label) {
+    return new Promise(function (resolve, reject) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', url);
+      xhr.setRequestHeader('X-CSRF-TOKEN', CSRF);
+      xhr.setRequestHeader('Accept', 'application/json');
+      xhr.upload.addEventListener('progress', function (e) {
+        if (e.lengthComputable) {
+          var pct = Math.round((e.loaded / e.total) * 100);
+          uploadProgressBar.style.width = pct + '%';
+          uploadProgressLabel.textContent = label + ' ' + pct + '%';
+        }
+      });
+      xhr.onload = function () {
+        var data = null;
+        try { data = JSON.parse(xhr.responseText); } catch (_) {}
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(data || {});
+        } else {
+          reject(new Error((data && data.message) ? data.message : 'Upload fejlede.'));
+        }
+      };
+      xhr.onerror = function () { reject(new Error('Netværksfejl under upload.')); };
+      xhr.send(formData);
+    });
+  }
+
   imageInput.addEventListener('change', async function () {
     var file = imageInput.files && imageInput.files[0];
     if (!file) return;
+    if (pendingVideoPath) clearAttachments();
     errBox.style.display = 'none';
-    uploading = true;
-    imageBtn.disabled = true;
-    uploadStatus.style.display = 'inline-flex';
-    refreshSubmitState();
+    setUploading(true, 'Overfører billede');
     try {
       var fd = new FormData();
       fd.append('image', file);
-      var res = await fetch(UPLOAD_URL, {
-        method: 'POST',
-        headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json' },
-        body: fd,
-      });
-      var data = null;
-      try { data = await res.json(); } catch (_) {}
-      if (!res.ok) {
-        var msg = (data && data.message) ? data.message : 'Kunne ikke uploade billedet. Prøv igen.';
-        throw new Error(msg);
-      }
+      var data = await uploadWithProgress(UPLOAD_IMAGE_URL, fd, 'Overfører billede');
       pendingImagePath = data.path;
       previewImg.src = data.url;
+      previewImg.style.display = 'block';
+      previewVideo.style.display = 'none';
       preview.style.display = 'inline-flex';
     } catch (err) {
       errBox.textContent = err && err.message ? err.message : 'Kunne ikke uploade billedet. Prøv igen.';
       errBox.style.display = 'block';
       imageInput.value = '';
     } finally {
-      uploading = false;
-      imageBtn.disabled = false;
-      uploadStatus.style.display = 'none';
-      refreshSubmitState();
+      setUploading(false);
+    }
+  });
+
+  videoInput.addEventListener('change', async function () {
+    var file = videoInput.files && videoInput.files[0];
+    if (!file) return;
+    if (pendingImagePath) clearAttachments();
+    errBox.style.display = 'none';
+    setUploading(true, 'Overfører video');
+    try {
+      var fd = new FormData();
+      fd.append('video', file);
+      var data = await uploadWithProgress(UPLOAD_VIDEO_URL, fd, 'Overfører video');
+      pendingVideoPath = data.path;
+      previewVideo.src = data.url;
+      previewVideo.style.display = 'block';
+      previewImg.style.display = 'none';
+      preview.style.display = 'inline-flex';
+    } catch (err) {
+      errBox.textContent = err && err.message ? err.message : 'Kunne ikke uploade videoen. Prøv igen.';
+      errBox.style.display = 'block';
+      videoInput.value = '';
+    } finally {
+      setUploading(false);
     }
   });
   input.addEventListener('keydown', function (e) {
@@ -621,7 +717,7 @@
   composer.addEventListener('submit', async function (e) {
     e.preventDefault();
     var body = input.value.trim();
-    if (!body && !pendingImagePath) return;
+    if (!body && !pendingImagePath && !pendingVideoPath) return;
     if (uploading) return;
     submit.disabled = true;
     errBox.style.display = 'none';
@@ -629,11 +725,11 @@
       var res = await fetch(SEND_URL, {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: body, image_path: pendingImagePath }),
+        body: JSON.stringify({ body: body, image_path: pendingImagePath, video_path: pendingVideoPath }),
       });
       if (!res.ok) throw new Error('Send failed');
       input.value = '';
-      clearImage();
+      clearAttachments();
       autosize();
       await load(false);
     } catch (err) {

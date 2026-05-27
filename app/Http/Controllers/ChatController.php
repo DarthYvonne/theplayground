@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\ProcessVideoJob;
 use App\Models\AppNotification;
 use App\Models\Course;
 use App\Models\Enrollment;
@@ -49,18 +50,27 @@ class ChatController extends Controller
         $data = $request->validate([
             'body' => ['nullable','string','max:2000'],
             'image_path' => ['nullable','string','max:255'],
+            'video_path' => ['nullable','string','max:255'],
         ]);
         $body = trim($data['body'] ?? '');
         $imagePath = $this->resolveImagePath($data['image_path'] ?? null);
-        if ($body === '' && !$imagePath) {
-            abort(422, 'Skriv noget eller vedhæft et billede.');
+        $videoPath = $this->resolveVideoPath($data['video_path'] ?? null);
+        if ($body === '' && !$imagePath && !$videoPath) {
+            abort(422, 'Skriv noget eller vedhæft et billede eller en video.');
         }
         $m = Message::create([
             'channel_type' => 'platform',
             'user_id' => $request->user()->id,
             'body' => $body,
             'image_path' => $imagePath,
+            'video_path' => $videoPath,
+            'video_processing_status' => $videoPath ? 'pending' : null,
         ]);
+
+        if ($videoPath) {
+            ProcessVideoJob::dispatch($m->id, $videoPath);
+        }
+
         return response()->json(['message' => $this->serializeOne($m->load('user'), $request->user()->id)]);
     }
 
@@ -141,6 +151,69 @@ class ChatController extends Controller
         return Storage::disk('feed_images')->exists($path) ? $path : null;
     }
 
+    private function resolveVideoPath(?string $path): ?string
+    {
+        if (!$path) return null;
+        if (str_contains($path, '..')) return null;
+        return Storage::disk('feed_videos')->exists($path) ? $path : null;
+    }
+
+    public function uploadVideo(Request $request): JsonResponse
+    {
+        $file = $request->file('video');
+
+        if ($file === null) {
+            $postMax = $this->iniBytes(ini_get('post_max_size'));
+            $contentLength = (int) $request->server('CONTENT_LENGTH');
+            if ($postMax && $contentLength > $postMax) {
+                $mb = round($postMax / (1024 * 1024));
+                return response()->json(['message' => "Videoen er for stor. Maks {$mb} MB."], 413);
+            }
+            return response()->json(['message' => 'Ingen video modtaget.'], 422);
+        }
+
+        if (!$file->isValid()) {
+            $err = $file->getError();
+            $uploadMax = $this->iniBytes(ini_get('upload_max_filesize'));
+            $mb = $uploadMax ? round($uploadMax / (1024 * 1024)) : null;
+            $msg = match ($err) {
+                UPLOAD_ERR_INI_SIZE => $mb ? "Videoen er for stor. Maks {$mb} MB." : 'Videoen er for stor.',
+                UPLOAD_ERR_FORM_SIZE => 'Videoen er for stor.',
+                UPLOAD_ERR_PARTIAL => 'Upload blev afbrudt. Prøv igen.',
+                UPLOAD_ERR_NO_FILE => 'Ingen video valgt.',
+                UPLOAD_ERR_NO_TMP_DIR, UPLOAD_ERR_CANT_WRITE => 'Serveren kunne ikke gemme videoen.',
+                default => 'Videoen kunne ikke uploades.',
+            };
+            return response()->json(['message' => $msg], 422);
+        }
+
+        try {
+            $request->validate([
+                'video' => ['required','file','mimes:mp4,mov,avi,webm,m4v,mkv','max:512000'],
+            ], [
+                'video.required' => 'Vælg en video.',
+                'video.file' => 'Filen er ikke gyldig.',
+                'video.mimes' => 'Videoen skal være MP4, MOV, AVI, WebM, M4V eller MKV.',
+                'video.max' => 'Videoen må højst være 500 MB.',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            $first = collect($e->errors())->flatten()->first() ?? 'Videoen kunne ikke uploades.';
+            return response()->json(['message' => $first], 422);
+        }
+
+        $name = Str::ulid() . '.' . strtolower($file->getClientOriginalExtension() ?: $file->extension());
+        $path = $file->storeAs(now()->format('Y/m'), $name, 'feed_videos');
+
+        if (!$path) {
+            return response()->json(['message' => 'Kunne ikke gemme videoen på serveren.'], 500);
+        }
+
+        return response()->json([
+            'path' => $path,
+            'url' => Storage::disk('feed_videos')->url($path),
+        ]);
+    }
+
     public function sendCourse(Request $request, Course $course): JsonResponse
     {
         $this->authorizeCourse($request, $course);
@@ -175,6 +248,12 @@ class ChatController extends Controller
         Respekt::where('target_type', $targetType)->where('target_id', $message->id)->delete();
         if ($message->image_path) {
             Storage::disk('feed_images')->delete($message->image_path);
+        }
+        if ($message->video_path) {
+            Storage::disk('feed_videos')->delete($message->video_path);
+        }
+        if ($message->original_video_path) {
+            Storage::disk('feed_videos')->delete($message->original_video_path);
         }
         $message->delete();
         return response()->json(['ok' => true]);
@@ -230,6 +309,8 @@ class ChatController extends Controller
             'id' => $m->id,
             'body' => $m->body,
             'image_url' => $m->imageUrl(),
+            'video_url' => $m->videoUrl(),
+            'video_processing_status' => $m->video_processing_status,
             'created_at' => $m->created_at->toIso8601String(),
             'time_human' => $m->created_at->diffForHumans(),
             'mine' => $m->user_id === $viewerId,

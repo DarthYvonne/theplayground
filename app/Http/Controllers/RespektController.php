@@ -53,7 +53,7 @@ class RespektController extends Controller
             $enrollment = Enrollment::with('course')->find($targetId);
             if (!$enrollment) return;
             $authorId = $enrollment->user_id;
-            $link = $enrollment->course ? route('courses.show', $enrollment->course) : route('dashboard');
+            $link = $enrollment->course ? route('courses.show', $enrollment->course) : route('feed');
             $courseId = $enrollment->course_id;
         } elseif ($type === 'comment') {
             $comment = \App\Models\FeedComment::with('message')->find($targetId);
@@ -63,7 +63,7 @@ class RespektController extends Controller
             $courseId = $message?->course_id;
             $link = $message && $message->channel_type === 'course' && $courseId
                 ? route('chat.course', $courseId)
-                : route('dashboard') . ($message ? ('#pm-' . $message->id) : '');
+                : route('feed') . ($message ? ('#pm-' . $message->id) : '');
         } else {
             $message = Message::find($targetId);
             if (!$message) return;
@@ -71,7 +71,7 @@ class RespektController extends Controller
             $courseId = $message->course_id;
             $link = $type === 'course_message' && $courseId
                 ? route('chat.course', $courseId)
-                : route('dashboard') . '#pm-' . $message->id;
+                : route('feed') . '#pm-' . $message->id;
         }
 
         if ($authorId === $actor->id) return;
