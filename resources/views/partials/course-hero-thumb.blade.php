@@ -9,9 +9,9 @@
 @endphp
 @if ($heroUrl)
   <img src="{{ $heroUrl }}" alt="" class="{{ $imgClass }}">
-  @if ($course->hasVideo())
-    <span class="{{ $badgeClass }} {{ $processing ? 'processing' : '' }}" aria-hidden="true">
-      <i class="fa-solid {{ $processing ? 'fa-spinner' : 'fa-play' }}"></i>
+  @if ($processing)
+    <span class="{{ $badgeClass }} processing" aria-hidden="true">
+      <i class="fa-solid fa-spinner"></i>
     </span>
   @endif
 @else
