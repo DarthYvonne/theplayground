@@ -108,10 +108,11 @@ class ProcessVideoJob implements ShouldQueue
 
         $media = FFMpeg::fromDisk($this->disk)->open($this->videoPath);
 
-        $videoStream = $media->getStreams()->videos()->first();
+        $videoStream = $media->getVideoStream();
         if ($videoStream) {
-            $width = $videoStream->getDimensions()->getWidth();
-            $height = $videoStream->getDimensions()->getHeight();
+            $dimensions = $videoStream->getDimensions();
+            $width = $dimensions->getWidth();
+            $height = $dimensions->getHeight();
 
             if ($width > $settings['max_width'] || $height > $settings['max_height']) {
                 $aspectRatio = $width / $height;

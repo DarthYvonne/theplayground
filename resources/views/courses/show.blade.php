@@ -7,6 +7,9 @@
 
   .hero-img { display: block; width: 100%; max-height: 360px; object-fit: cover; }
   .hero-ph { width: 100%; height: 240px; background: linear-gradient(135deg, var(--accent-soft), #f5f7fb); display: flex; align-items: center; justify-content: center; font-size: 80px; color: var(--accent); }
+  .hero-video-wrap { position: relative; }
+  .hero-video-pending { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: linear-gradient(135deg, var(--accent-soft), #f5f7fb); color: var(--muted); font-size: 14px; font-weight: 600; pointer-events: none; }
+  .hero-video-pending i { font-size: 28px; color: var(--accent); }
 
   .course-body { padding: 24px; }
   .course-title { font-size: 28px; font-weight: 800; line-height: 1.2; }
@@ -57,9 +60,15 @@
 <div class="course-detail">
   <div class="card">
     @if ($course->hasVideo())
-      <video class="hero-img" controls preload="metadata" playsinline
-        @if ($course->videoThumbnailUrl()) poster="{{ $course->videoThumbnailUrl() }}" @endif
-        src="{{ $course->videoUrl() }}"></video>
+      @php $videoProcessing = !$course->videoThumbnailUrl() && in_array($course->video_processing_status, ['pending','processing'], true); @endphp
+      <div class="hero-video-wrap">
+        <video class="hero-img" controls preload="metadata" playsinline
+          @if ($course->videoThumbnailUrl()) poster="{{ $course->videoThumbnailUrl() }}" @endif
+          src="{{ $course->videoUrl() }}"></video>
+        @if ($videoProcessing)
+          <div class="hero-video-pending"><i class="fa-solid fa-spinner fa-spin"></i><span>Videobillede på vej</span></div>
+        @endif
+      </div>
     @elseif ($course->image_path)
       <img src="{{ $course->imageUrl() }}" alt="" class="hero-img">
     @else
