@@ -3,7 +3,6 @@
 namespace App\Jobs;
 
 use App\Services\VideoCompatibilityService;
-use FFMpeg\Coordinate\Dimension;
 use FFMpeg\Coordinate\TimeCode;
 use FFMpeg\Format\Video\X264;
 use Illuminate\Bus\Queueable;
@@ -129,7 +128,7 @@ class ProcessVideoJob implements ShouldQueue
                 // x264 requires even dimensions.
                 $newWidth -= $newWidth % 2;
                 $newHeight -= $newHeight % 2;
-                $media = $media->resize(new Dimension($newWidth, $newHeight));
+                $media = $media->resize($newWidth, $newHeight);
             }
         }
 
