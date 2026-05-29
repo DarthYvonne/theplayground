@@ -56,13 +56,14 @@ class VideoCompatibilityService
                 $reasons[] = "Audio codec '{$details['audio_codec']}' is not AAC or MP3";
             }
 
-            if ($audioStream && $details['audio_sample_fmt']) {
-                $unsafe32bitFormats = ['flt', 'fltp', 'dbl', 'dblp', 's32', 's32p'];
-                if (in_array($details['audio_sample_fmt'], $unsafe32bitFormats)) {
-                    $compatible = false;
-                    $reasons[] = "Audio format '{$details['audio_sample_fmt']}' is 32-bit, which doesn't play on iPhone (needs 16-bit)";
-                }
-            }
+            // NOTE: We intentionally do NOT check audio_sample_fmt. ffprobe reports
+            // 'fltp' for virtually all AAC streams — that's the codec's internal
+            // sample format, not a playback concern; AAC plays fine on iPhone. The
+            // native ffmpeg AAC encoder only ever outputs fltp anyway, so flagging
+            // it as incompatible triggered a transcode that could never satisfy the
+            // check (and failed outright, since we also forced an unsupported s16).
+            // Genuinely problematic uncompressed PCM is already caught above by the
+            // audio-codec check.
 
             if (!$videoStream) {
                 $compatible = false;

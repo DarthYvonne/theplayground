@@ -102,7 +102,9 @@ class ProcessVideoJob implements ShouldQueue
                    '-level', $settings['level'],
                    '-pix_fmt', $settings['pix_fmt'],
                    '-ar', (string) $settings['audio_sample_rate'],
-                   '-sample_fmt', 's16',
+                   // No '-sample_fmt': ffmpeg's native AAC encoder only supports
+                   // fltp and errors out ("Specified sample format s16 is not
+                   // supported by the aac encoder") if we force s16.
                    '-movflags', $settings['movflags'],
                ]);
 
