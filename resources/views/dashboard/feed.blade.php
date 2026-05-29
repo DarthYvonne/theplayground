@@ -288,9 +288,12 @@
       if (it.video_url) {
         var st = it.video_processing_status;
         var processing = st === 'pending' || st === 'processing';
+        // The video always plays from the original upload, so a failed badge is
+        // only meaningful to the uploader (who can re-upload). Hide it from other
+        // viewers — to them it's just noise on a video that works fine.
         var statusBadge = processing
           ? '<div class="media-status"><i class="fa-solid fa-spinner fa-spin"></i> Behandler…</div>'
-          : (st === 'failed' ? '<div class="media-status error"><i class="fa-solid fa-triangle-exclamation"></i> Fejlede</div>' : '');
+          : (st === 'failed' && canManage ? '<div class="media-status error"><i class="fa-solid fa-triangle-exclamation"></i> Fejlede</div>' : '');
         body += '<div class="feed-video" data-status="' + escapeHtml(String(st || '')) + '">' +
           '<video src="' + escapeHtml(it.video_url) + '" controls preload="metadata" playsinline></video>' +
           statusBadge +
