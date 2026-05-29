@@ -96,16 +96,20 @@ class VideoCompatibilityService
             'video_codec' => 'libx264',
             'audio_codec' => 'aac',
             'preset' => 'medium',
-            'crf' => 23,
+            // Tuned for smooth playback on weak connections: 720p, ~2 Mbps with a
+            // hard 2.5 Mbps ceiling, and faststart so playback can begin before
+            // the whole file has downloaded.
+            'crf' => 26,
+            'maxrate' => '2500k',
+            'bufsize' => '5000k',
             'profile' => 'high',
             'level' => '4.1',
             'pix_fmt' => 'yuv420p',
             'audio_bitrate' => '128k',
             'audio_sample_rate' => 48000,
-            'audio_sample_fmt' => 's16',
             'movflags' => '+faststart',
-            'max_width' => 1920,
-            'max_height' => 1080,
+            'max_short_edge' => 720,
+            'max_long_edge' => 1280,
         ];
     }
 }

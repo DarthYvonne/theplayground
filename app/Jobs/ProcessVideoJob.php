@@ -47,23 +47,17 @@ class ProcessVideoJob implements ShouldQueue
         $model->update(['video_processing_status' => 'processing']);
 
         try {
-            $fullPath = Storage::disk($this->disk)->path($this->videoPath);
-
             Log::info('ProcessVideoJob: Starting', [
                 'class' => $this->modelClass,
                 'id' => $this->modelId,
                 'path' => $this->videoPath,
             ]);
 
-            $compatibilityCheck = $compatibilityService->checkCompatibility($fullPath);
-
-            if ($compatibilityCheck['compatible']) {
-                $model->update(['video_processing_status' => 'skipped']);
-                $finalPath = $this->videoPath;
-            } else {
-                Log::info('ProcessVideoJob: transcoding', ['reason' => $compatibilityCheck['reason']]);
-                $finalPath = $this->transcodeVideo($model, $compatibilityService);
-            }
+            // Always transcode to a web-optimized profile (720p, capped bitrate,
+            // +faststart) so videos start quickly and don't stall on weak
+            // connections — even when the source is an already-"compatible" but
+            // bloated phone clip (e.g. 1080p60 at 20 Mbps).
+            $finalPath = $this->transcodeVideo($model, $compatibilityService);
 
             if ($this->generateThumbnail) {
                 $this->generateThumbnail($model, $finalPath);
@@ -98,6 +92,10 @@ class ProcessVideoJob implements ShouldQueue
                ->setAdditionalParameters([
                    '-preset', $settings['preset'],
                    '-crf', (string) $settings['crf'],
+                   // Cap the peak bitrate so a complex/high-motion source can't
+                   // balloon past what a weak connection can stream.
+                   '-maxrate', $settings['maxrate'],
+                   '-bufsize', $settings['bufsize'],
                    '-profile:v', $settings['profile'],
                    '-level', $settings['level'],
                    '-pix_fmt', $settings['pix_fmt'],
@@ -116,17 +114,21 @@ class ProcessVideoJob implements ShouldQueue
             $width = $dimensions->getWidth();
             $height = $dimensions->getHeight();
 
-            if ($width > $settings['max_width'] || $height > $settings['max_height']) {
-                $aspectRatio = $width / $height;
-                if ($width > $height) {
-                    $newWidth = min($width, $settings['max_width']);
-                    $newHeight = (int) round($newWidth / $aspectRatio);
-                } else {
-                    $newHeight = min($height, $settings['max_height']);
-                    $newWidth = (int) round($newHeight * $aspectRatio);
-                }
-                $newWidth = $newWidth % 2 === 0 ? $newWidth : $newWidth - 1;
-                $newHeight = $newHeight % 2 === 0 ? $newHeight : $newHeight - 1;
+            // Cap to 720p on the short edge (and 1280 on the long edge),
+            // preserving aspect ratio, so landscape AND portrait clips both land
+            // near 720p instead of portrait being over-shrunk.
+            $short = min($width, $height);
+            $long = max($width, $height);
+            if ($short > $settings['max_short_edge'] || $long > $settings['max_long_edge']) {
+                $scale = min(
+                    $settings['max_short_edge'] / $short,
+                    $settings['max_long_edge'] / $long
+                );
+                $newWidth = (int) round($width * $scale);
+                $newHeight = (int) round($height * $scale);
+                // x264 requires even dimensions.
+                $newWidth -= $newWidth % 2;
+                $newHeight -= $newHeight % 2;
                 $media = $media->resize(new Dimension($newWidth, $newHeight));
             }
         }
