@@ -8,19 +8,24 @@
   .cmedia-actions { display: flex; gap: 10px; margin-bottom: 16px; }
   .cmedia-actions .btn { flex: 1; justify-content: center; display: inline-flex; align-items: center; gap: 8px; padding: 12px 16px; font-size: 15px; font-weight: 700; }
 
-  .cmedia-list { display: flex; flex-direction: column; gap: 14px; }
-  .cmedia-card { background: #fff; border-radius: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); overflow: hidden; }
-  .cmedia-card video { display: block; width: 100%; max-height: 460px; background: #000; }
-  .cmedia-card img.cm-img { display: block; width: 100%; max-height: 460px; object-fit: contain; background: #f0f2f5; cursor: zoom-in; }
-  .cmedia-card .cm-audio { padding: 14px 14px 0; }
-  .cmedia-card .cm-state { padding: 34px 14px; text-align: center; color: var(--muted); font-size: 13px; background: #f0f2f5; }
+  /* Same compact card grid as the Mediebibliotek */
+  .cmedia-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .cmedia-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.06); display: flex; flex-direction: column; }
+  .cmedia-card video { display: block; width: 100%; height: 130px; background: #000; object-fit: contain; }
+  .cmedia-card img.cm-img { display: block; width: 100%; height: 130px; object-fit: cover; background: #f0f2f5; cursor: zoom-in; }
+  .cmedia-card .cm-audio-head { height: 130px; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); font-size: 32px; }
+  .cmedia-card .cm-audio { padding: 10px 12px 0; }
+  .cmedia-card .cm-state { height: 130px; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--muted); font-size: 12px; background: #f0f2f5; padding: 0 12px; }
   .cmedia-card .cm-state.failed { color: var(--danger); }
-  .cmedia-card .cm-body { padding: 12px 14px; }
-  .cmedia-card .cm-comment { font-size: 15px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-  .cmedia-card .cm-meta { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 8px; }
-  .cmedia-card .cm-comment + .cm-meta { margin-top: 8px; }
-  .cmedia-card .cm-meta .del { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px 8px; border-radius: 6px; font-size: 13px; }
+  .cmedia-card .cm-body { padding: 10px 12px; display: flex; flex-direction: column; flex: 1; }
+  .cmedia-card .cm-comment { font-size: 13px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .cmedia-card .cm-meta { color: var(--muted); font-size: 11px; display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 6px; }
+  .cmedia-card .cm-meta .del { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--muted); padding: 2px 6px; border-radius: 6px; font-size: 13px; }
   .cmedia-card .cm-meta .del:hover { background: #fdeaea; color: var(--danger); }
+  @media (max-width: 480px) {
+    .cmedia-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .cmedia-card video, .cmedia-card img.cm-img, .cmedia-card .cm-audio-head, .cmedia-card .cm-state { height: 110px; }
+  }
 
   .cmedia-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
   .cmedia-empty h3 { color: var(--text); margin-bottom: 6px; }
@@ -101,7 +106,7 @@
       <p>Upload eller tilføj fra mediebiblioteket med knapperne ovenfor.</p>
     </div>
   @else
-    <div class="cmedia-list">
+    <div class="cmedia-grid">
       @foreach ($items as $item)
         @continue(!$item->url() && !$item->isProcessing() && !$item->hasFailed())
         <div class="cmedia-card">
@@ -117,8 +122,9 @@
           @elseif ($item->type === 'image')
             <img class="cm-img" src="{{ $item->url() }}" alt="" loading="lazy" data-full="{{ $item->url() }}">
           @elseif ($item->type === 'audio')
+            <div class="cm-audio-head"><i class="fa-solid fa-music"></i></div>
             <div class="cm-audio">
-              <div class="tp-audio" data-src="{{ $item->url() }}"></div>
+              <div class="tp-audio sm" data-src="{{ $item->url() }}"></div>
             </div>
           @endif
 
