@@ -32,12 +32,16 @@
   .pl-name .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pl-name .pl-count { color: var(--muted); font-weight: 600; }
   .pl-desc { padding: 10px 14px; border-bottom: 1px solid #f0f2f5; color: var(--muted); font-size: 12px; line-height: 1.45; white-space: pre-wrap; }
-  .pl-foot { display: flex; justify-content: flex-end; gap: 2px; padding: 6px 8px; border-top: 1px solid #f0f2f5; }
-  .pl-foot .ibtn { background: none; border: none; cursor: pointer; color: var(--muted); padding: 6px 9px; border-radius: 6px; font-size: 13px; }
-  .pl-foot .ibtn:hover { background: var(--hover); color: var(--accent); }
-  .pl-foot .ibtn.danger:hover { background: #fdeaea; color: var(--danger); }
-  .pl-playall { border: none; background: var(--accent); color: #fff; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; flex: 0 0 auto; }
-  .pl-playall:hover { background: var(--accent-hover); }
+  .pl-actions { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
+  .pl-actions .ibtn { background: none; border: none; cursor: pointer; color: var(--muted); padding: 6px 8px; border-radius: 6px; font-size: 13px; }
+  .pl-actions .ibtn:hover { background: var(--hover); color: var(--accent); }
+  .pl-actions .ibtn.danger:hover { background: #fdeaea; color: var(--danger); }
+  .pl-actions form { display: inline-flex; margin: 0; }
+  .pl-playall { width: 36px; height: 36px; border: none; border-radius: 50%; background: linear-gradient(135deg, #4d97ff 0%, #1664d8 100%); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex: 0 0 auto; box-shadow: 0 2px 8px rgba(24,119,242,0.35); transition: transform 0.12s, box-shadow 0.12s; }
+  .pl-playall:hover { transform: scale(1.07); box-shadow: 0 4px 12px rgba(24,119,242,0.45); }
+  .pl-playall:active { transform: scale(0.96); }
+  .pl-playall i { margin-left: 2px; }
+  .pl-playall i.fa-pause { margin-left: 0; }
   .pl-tracks { display: flex; flex-direction: column; padding: 6px; flex: 1; }
   .pl-track { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: none; background: none; border-radius: 8px; font: inherit; text-align: left; cursor: pointer; color: var(--text); width: 100%; }
   .pl-track:hover { background: var(--hover); }
@@ -240,9 +244,18 @@
                 <img class="pl-cover" src="{{ $pl->imageUrl() }}" alt="" loading="lazy">
               @endif
               <div class="pl-head">
-                <div class="pl-name"><span class="nm">{{ $pl->name }}</span> <span class="pl-count">({{ $pl->mediaItems->count() }})</span></div>
                 @if ($pl->mediaItems->contains(fn ($mi) => $mi->type === 'audio' && $mi->url()))
-                  <button type="button" class="pl-playall"><i class="fa-solid fa-play"></i> Afspil alle</button>
+                  <button type="button" class="pl-playall" aria-label="Afspil alle" title="Afspil alle"><i class="fa-solid fa-play"></i></button>
+                @endif
+                <div class="pl-name"><span class="nm">{{ $pl->name }}</span> <span class="pl-count">({{ $pl->mediaItems->count() }})</span></div>
+                @if ($isOwner)
+                  <div class="pl-actions">
+                    <button type="button" class="ibtn pl-edit" title="Rediger playliste" aria-label="Rediger playliste"><i class="fa-solid fa-pen"></i></button>
+                    <form method="POST" action="{{ route('media.playlists.destroy', $pl) }}" onsubmit="return confirm('Slet playlisten “{{ $pl->name }}”? Medierne i den slettes ikke.');">
+                      @csrf
+                      <button type="submit" class="ibtn danger" title="Slet playliste" aria-label="Slet playliste"><i class="fa-solid fa-trash"></i></button>
+                    </form>
+                  </div>
                 @endif
               </div>
               @if (trim((string) $pl->description) !== '')
@@ -278,15 +291,6 @@
                 <div class="pl-bar"><div class="pl-prog"></div></div>
                 <span class="pl-time">0:00</span>
               </div>
-              @if ($isOwner)
-                <div class="pl-foot">
-                  <button type="button" class="ibtn pl-edit" title="Rediger playliste" aria-label="Rediger playliste"><i class="fa-solid fa-pen"></i></button>
-                  <form method="POST" action="{{ route('media.playlists.destroy', $pl) }}" onsubmit="return confirm('Slet playlisten “{{ $pl->name }}”? Medierne i den slettes ikke.');">
-                    @csrf
-                    <button type="submit" class="ibtn danger" title="Slet playliste" aria-label="Slet playliste"><i class="fa-solid fa-trash"></i></button>
-                  </form>
-                </div>
-              @endif
             </div>
           @endforeach
         </div>
@@ -513,9 +517,10 @@
         t.querySelector('.ticon i').className = 'fa-solid ' + (isCurrent && !audio.paused ? 'fa-pause' : 'fa-play');
       });
       if (playAll) {
-        playAll.innerHTML = (!audio.paused && queue)
-          ? '<i class="fa-solid fa-pause"></i> Pause'
-          : '<i class="fa-solid fa-play"></i> Afspil alle';
+        var pausing = !audio.paused && queue;
+        playAll.innerHTML = pausing ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
+        playAll.setAttribute('aria-label', pausing ? 'Pause' : 'Afspil alle');
+        playAll.title = pausing ? 'Pause' : 'Afspil alle';
       }
     }
     function playIndex(i) {
