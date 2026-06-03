@@ -13,9 +13,8 @@
   .members-head .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
 
   .members-sec { padding: 12px 6px 6px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin: 4px 16px 0; }
-  .members-sec.has-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-right: 4px; }
-  .btn-broadcast { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); text-transform: none; letter-spacing: 0; }
-  .btn-broadcast:hover { background: #dbe6fb; }
+  .broadcast-divider { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px 16px; margin-top: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 14px; border-top: 1px solid #e3edfc; border-bottom: 1px solid #e3edfc; }
+  .broadcast-divider:hover { background: #dbe6fb; }
 
   .member-row { display: flex; gap: 12px; align-items: center; padding: 12px 18px; color: inherit; text-decoration: none; border-top: 1px solid #f0f2f5; transition: background 0.1s; }
   .member-row:first-of-type { border-top: none; }
@@ -45,13 +44,11 @@
   <div class="card">
     @php
       $u = auth()->user();
-      $canBroadcastHere = $u && ($course->hasTrainer($u) || $u->isOwner());
+      // Only the hold's trainer can message everyone — not owners in general.
+      $canBroadcastHere = $u && $course->hasTrainer($u);
     @endphp
-    <div class="members-sec {{ $canBroadcastHere ? 'has-action' : '' }}">
+    <div class="members-sec">
       <span>{{ count($course->trainers) === 1 ? 'Træner' : 'Trænere' }}</span>
-      @if ($canBroadcastHere)
-        <a href="{{ route('beskeder.index', ['hold' => $course->id]) }}" class="btn btn-primary btn-sm"><i class="fa-solid fa-envelope"></i> Send besked til alle</a>
-      @endif
     </div>
     @foreach ($course->trainers as $trainer)
       <a href="{{ route('members.show', $trainer) }}" class="member-row">
@@ -68,6 +65,12 @@
         <i class="fa-solid fa-chevron-right chev"></i>
       </a>
     @endforeach
+
+    @if ($canBroadcastHere)
+      <a href="{{ route('beskeder.index', ['hold' => $course->id]) }}" class="broadcast-divider">
+        <i class="fa-solid fa-envelope"></i> Send besked til alle
+      </a>
+    @endif
 
     <div class="members-sec">Deltagere ({{ $members->count() }})</div>
     @if ($members->isEmpty())
