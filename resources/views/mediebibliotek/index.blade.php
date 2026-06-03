@@ -36,6 +36,7 @@
   .pl-track { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: none; background: none; border-radius: 8px; font: inherit; text-align: left; cursor: pointer; color: var(--text); width: 100%; }
   .pl-track:hover { background: var(--hover); }
   .pl-track .ticon { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex: 0 0 auto; }
+  .pl-track .tthumb { width: 42px; height: 26px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; background: #f0f2f5; display: block; }
   .pl-track .t { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .pl-track.playing { background: var(--accent-soft); }
   .pl-track.playing .ticon { background: var(--accent); color: #fff; }
@@ -240,7 +241,12 @@
                     </button>
                   @else
                     <div class="pl-track na">
-                      <span class="ticon"><i class="fa-solid {{ $mi->type === 'video' ? 'fa-film' : 'fa-image' }}"></i></span>
+                      @php $tinyThumb = $mi->type === 'video' ? $mi->thumbnailUrl() : ($mi->type === 'image' ? $mi->url() : null); @endphp
+                      @if ($tinyThumb)
+                        <img class="tthumb" src="{{ $tinyThumb }}" alt="" loading="lazy">
+                      @else
+                        <span class="ticon"><i class="fa-solid {{ $mi->type === 'video' ? 'fa-film' : 'fa-image' }}"></i></span>
+                      @endif
                       <span class="t">{{ $mi->title }}</span>
                     </div>
                   @endif
