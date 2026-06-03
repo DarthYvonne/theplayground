@@ -17,32 +17,35 @@
   .media-nav { display: flex; flex-wrap: wrap; align-items: center; font-size: 14px; flex: 1; min-width: 0; }
   .media-nav a { color: var(--muted); font-weight: 600; padding: 2px 0; }
   .media-nav a:hover { color: var(--accent); }
+  .media-nav a.active { color: var(--accent); }
+  .media-nav a.active .cnt { color: var(--accent); }
   .media-nav a::before { content: "|"; color: var(--border); margin: 0 10px; font-weight: 400; }
   .media-nav a.lead::before { content: none; }
   .media-nav a .cnt { color: var(--text); font-weight: 700; }
 
-  .media-section { margin-bottom: 26px; scroll-margin-top: 16px; }
-  @media (max-width: 900px) {
-    /* Clear the fixed 56px mobile topbar when scrolling to a section */
-    .media-section { scroll-margin-top: 72px; }
-  }
+  .media-section { margin-bottom: 26px; }
   .media-section > h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); margin-bottom: 10px; }
 
-  .media-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
-  .media-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
-  .media-card .body { padding: 12px 14px; }
-  .media-card .title { font-weight: 700; font-size: 15px; display: flex; align-items: flex-start; gap: 10px; }
+  .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+  .media-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.06); display: flex; flex-direction: column; }
+  .media-card .body { padding: 10px 12px; display: flex; flex-direction: column; flex: 1; }
+  .media-card .title { font-weight: 700; font-size: 13px; line-height: 1.3; display: flex; align-items: flex-start; gap: 6px; }
   .media-card .title .txt { flex: 1; }
-  .media-card .desc { color: var(--muted); font-size: 13px; margin-top: 4px; white-space: pre-wrap; }
-  .media-card .meta { color: var(--muted); font-size: 11px; margin-top: 8px; }
-  .media-card video, .media-card img.thumb { display: block; width: 100%; background: #000; max-height: 460px; object-fit: contain; }
-  .media-card img.thumb { background: #f0f2f5; cursor: zoom-in; }
-  .media-card .audio-wrap { padding: 12px 14px 0; }
-  .media-card audio { width: 100%; }
-  .media-card .state { padding: 28px 14px; text-align: center; color: var(--muted); font-size: 13px; background: #f0f2f5; }
+  .media-card .desc { color: var(--muted); font-size: 12px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .media-card .meta { color: var(--muted); font-size: 11px; margin-top: auto; padding-top: 6px; }
+  .media-card video, .media-card img.thumb { display: block; width: 100%; height: 130px; background: #000; object-fit: contain; }
+  .media-card img.thumb { background: #f0f2f5; object-fit: cover; cursor: zoom-in; }
+  .media-card .audio-head { height: 130px; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); font-size: 32px; }
+  .media-card .audio-wrap { padding: 10px 12px 0; }
+  .media-card audio { width: 100%; height: 36px; }
+  .media-card .state { height: 130px; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--muted); font-size: 12px; background: #f0f2f5; padding: 0 12px; }
   .media-card .state.failed { color: var(--danger); }
-  .media-card .del { background: none; border: none; cursor: pointer; color: var(--muted); padding: 4px 8px; border-radius: 6px; font-size: 14px; }
+  .media-card .del { background: none; border: none; cursor: pointer; color: var(--muted); padding: 2px 6px; border-radius: 6px; font-size: 13px; }
   .media-card .del:hover { background: #fdeaea; color: var(--danger); }
+  @media (max-width: 480px) {
+    .media-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .media-card video, .media-card img.thumb, .media-card .audio-head, .media-card .state { height: 110px; }
+  }
 
   .media-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
   .media-empty h3 { color: var(--text); margin-bottom: 6px; }
@@ -153,6 +156,7 @@
                   </video>
                 @endif
               @elseif ($item->type === 'audio')
+                <div class="audio-head"><i class="fa-solid fa-music"></i></div>
                 <div class="audio-wrap">
                   <audio controls preload="none" src="{{ $item->url() }}"></audio>
                 </div>
@@ -231,13 +235,16 @@
   var noResults = document.getElementById('mediaNoResults');
   var sections = Array.prototype.slice.call(document.querySelectorAll('.media-section'));
   var navLinks = {};
+  var activeType = null; // category filter — null shows everything
+
   document.querySelectorAll('#mediaNav a[data-type]').forEach(function (a) {
     navLinks[a.dataset.type] = { el: a, cnt: a.querySelector('.cnt') };
-    // Scroll in-page instead of navigating — no reload, no URL hash, no jump.
+    // Filter in place — no navigation, no scrolling. Clicking the active
+    // category again shows everything.
     a.addEventListener('click', function (e) {
       e.preventDefault();
-      var sec = document.getElementById('sec-' + a.dataset.type);
-      if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      activeType = (activeType === a.dataset.type) ? null : a.dataset.type;
+      apply();
     });
   });
 
@@ -249,21 +256,25 @@
     var firstVisibleLink = null;
 
     sections.forEach(function (sec) {
-      var visible = 0;
+      var matches = 0;
       sec.querySelectorAll('.media-card').forEach(function (card) {
         var match = q === '' || (card.getAttribute('data-search') || '').indexOf(q) !== -1;
         card.style.display = match ? '' : 'none';
-        if (match) visible++;
+        if (match) matches++;
       });
-      sec.style.display = visible ? '' : 'none';
-      totalVisible += visible;
+      // Search looks across all categories; the category filter only applies
+      // when not searching.
+      var show = matches > 0 && (q !== '' || !activeType || sec.dataset.type === activeType);
+      sec.style.display = show ? '' : 'none';
+      totalVisible += show ? matches : 0;
 
       var link = navLinks[sec.dataset.type];
       if (link) {
-        if (link.cnt) link.cnt.textContent = visible;
-        link.el.style.display = visible ? '' : 'none';
+        if (link.cnt) link.cnt.textContent = matches;
+        link.el.style.display = matches ? '' : 'none';
+        link.el.classList.toggle('active', q === '' && activeType === sec.dataset.type);
         link.el.classList.remove('lead');
-        if (visible && !firstVisibleLink) firstVisibleLink = link.el;
+        if (matches && !firstVisibleLink) firstVisibleLink = link.el;
       }
     });
 
@@ -272,7 +283,11 @@
   }
 
   if (search) {
-    search.addEventListener('input', apply);
+    search.addEventListener('input', function () {
+      // Typing a search resets the category filter — søg searches everything.
+      if (search.value.trim() !== '') activeType = null;
+      apply();
+    });
     clearBtn.addEventListener('click', function () { search.value = ''; apply(); search.focus(); });
     apply();
   }
