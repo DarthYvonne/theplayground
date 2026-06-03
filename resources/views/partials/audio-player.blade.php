@@ -4,18 +4,29 @@
 @once
 @push('styles')
 <style>
-  .tp-audio { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--border); border-radius: 999px; padding: 7px 16px 7px 7px; }
-  .tp-audio .pa-btn { width: 38px; height: 38px; border-radius: 50%; border: none; background: var(--accent); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; flex: 0 0 auto; transition: background 0.1s; }
-  .tp-audio .pa-btn:hover { background: var(--accent-hover); }
-  .tp-audio .pa-btn i { margin-left: 1px; }
+  .tp-audio { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, #f6faff 0%, #e7f0fe 100%); border: 1px solid #d6e4fa; border-radius: 16px; padding: 10px 16px 10px 10px; box-shadow: 0 1px 3px rgba(24,119,242,0.08); }
+  .tp-audio .pa-btn { width: 42px; height: 42px; border-radius: 50%; border: none; background: linear-gradient(135deg, #4d97ff 0%, #1664d8 100%); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 15px; flex: 0 0 auto; box-shadow: 0 3px 10px rgba(24,119,242,0.35); transition: transform 0.12s, box-shadow 0.12s; }
+  .tp-audio .pa-btn:hover { transform: scale(1.07); box-shadow: 0 5px 14px rgba(24,119,242,0.45); }
+  .tp-audio .pa-btn:active { transform: scale(0.96); }
+  .tp-audio .pa-btn i { margin-left: 2px; }
   .tp-audio .pa-btn i.fa-pause { margin-left: 0; }
-  .tp-audio .pa-track { flex: 1; height: 6px; background: #e4e6eb; border-radius: 3px; cursor: pointer; position: relative; min-width: 40px; }
+  .tp-audio .pa-eq { display: flex; align-items: flex-end; gap: 2px; height: 16px; flex: 0 0 auto; opacity: 0.3; }
+  .tp-audio .pa-eq span { width: 3px; height: 30%; background: var(--accent); border-radius: 2px; }
+  .tp-audio.playing .pa-eq { opacity: 1; }
+  .tp-audio.playing .pa-eq span { animation: tp-eq 0.9s ease-in-out infinite; }
+  .tp-audio.playing .pa-eq span:nth-child(2) { animation-delay: 0.25s; }
+  .tp-audio.playing .pa-eq span:nth-child(3) { animation-delay: 0.5s; }
+  @keyframes tp-eq { 0%, 100% { height: 30%; } 50% { height: 100%; } }
+  .tp-audio .pa-track { flex: 1; height: 8px; background: rgba(24,119,242,0.14); border-radius: 4px; cursor: pointer; position: relative; min-width: 40px; }
   .tp-audio .pa-track::before { content: ""; position: absolute; inset: -8px 0; } /* bigger touch target */
-  .tp-audio .pa-progress { height: 100%; width: 0; background: var(--accent); border-radius: 3px; pointer-events: none; }
-  .tp-audio .pa-time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+  .tp-audio .pa-progress { height: 100%; width: 0; background: linear-gradient(90deg, #4d97ff, #1877f2); border-radius: 4px; pointer-events: none; position: relative; }
+  .tp-audio .pa-progress::after { content: ""; position: absolute; right: -6px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 3px solid var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,0.25); opacity: 0; transition: opacity 0.12s; }
+  .tp-audio:hover .pa-progress::after, .tp-audio.playing .pa-progress::after { opacity: 1; }
+  .tp-audio .pa-time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; flex: 0 0 auto; font-weight: 600; }
   /* Compact variant for small cards */
-  .tp-audio.sm { gap: 8px; padding: 5px 10px 5px 5px; }
+  .tp-audio.sm { gap: 8px; padding: 6px 10px 6px 6px; border-radius: 12px; }
   .tp-audio.sm .pa-btn { width: 30px; height: 30px; font-size: 12px; }
+  .tp-audio.sm .pa-eq { display: none; }
   .tp-audio.sm .pa-time { font-size: 11px; }
 </style>
 @endpush
@@ -33,6 +44,7 @@ window.tpAudio = (function () {
     el.dataset.ready = '1';
     el.innerHTML =
       '<button type="button" class="pa-btn" aria-label="Afspil"><i class="fa-solid fa-play"></i></button>' +
+      '<span class="pa-eq"><span></span><span></span><span></span></span>' +
       '<div class="pa-track"><div class="pa-progress"></div></div>' +
       '<span class="pa-time">0:00</span>';
     var audio = new Audio();
@@ -57,10 +69,12 @@ window.tpAudio = (function () {
       });
       icon.className = 'fa-solid fa-pause';
       btn.setAttribute('aria-label', 'Pause');
+      el.classList.add('playing');
     });
     audio.addEventListener('pause', function () {
       icon.className = 'fa-solid fa-play';
       btn.setAttribute('aria-label', 'Afspil');
+      el.classList.remove('playing');
     });
     audio.addEventListener('ended', function () { audio.currentTime = 0; });
 

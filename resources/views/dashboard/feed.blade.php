@@ -35,8 +35,6 @@
   .feed-image { margin-top: 10px; }
   .feed-image img { max-width: 100%; max-height: 520px; border-radius: 10px; display: block; cursor: zoom-in; }
   .feed-audio { margin-top: 10px; }
-  .feed-media-caption { margin-top: 6px; color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
-  .feed-media-caption i { font-size: 11px; }
   .feed-video { margin-top: 10px; position: relative; }
   .feed-video video { width: 100%; max-height: 520px; border-radius: 10px; display: block; background: #000; }
   .media-status { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.6); color: #fff; border-radius: 999px; padding: 4px 10px; font-size: 11px; line-height: 1; pointer-events: none; }
@@ -364,17 +362,17 @@
         '</div>';
       }
       if (it.media_item && it.media_item.url) {
+        // No title/caption here — library names can be internal nonsense.
         var mi = it.media_item;
-        var cap = '<div class="feed-media-caption"><i class="fa-solid fa-photo-film"></i> ' + escapeHtml(mi.title) + '</div>';
         if (mi.type === 'image') {
-          body += '<div class="feed-image"><a href="' + escapeHtml(mi.url) + '" target="_blank" rel="noopener"><img src="' + escapeHtml(mi.url) + '" alt=""></a>' + cap + '</div>';
+          body += '<div class="feed-image"><a href="' + escapeHtml(mi.url) + '" target="_blank" rel="noopener"><img src="' + escapeHtml(mi.url) + '" alt=""></a></div>';
         } else if (mi.type === 'video') {
           body += '<div class="feed-video">' +
             '<video src="' + escapeHtml(mi.url) + '"' + (mi.thumbnail_url ? ' poster="' + escapeHtml(mi.thumbnail_url) + '"' : '') + ' controls preload="metadata" playsinline></video>' +
             (mi.processing ? '<div class="media-status"><i class="fa-solid fa-spinner fa-spin"></i> Behandler…</div>' : '') +
-            cap + '</div>';
+            '</div>';
         } else if (mi.type === 'audio') {
-          body += '<div class="feed-audio">' + tpAudio.markup(mi.url) + cap + '</div>';
+          body += '<div class="feed-audio">' + tpAudio.markup(mi.url) + '</div>';
         }
       }
     }
