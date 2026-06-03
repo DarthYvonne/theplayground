@@ -46,24 +46,20 @@
   .cm-modal .foot { padding: 12px 18px 16px; border-top: 1px solid #f0f2f5; display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
   .cm-modal .foot .btn { width: 100%; justify-content: center; display: inline-flex; align-items: center; gap: 8px; padding: 13px 16px; font-size: 15px; font-weight: 700; }
 
-  /* Library picker rows */
-  .cm-modal .lib-search { position: relative; padding: 10px 14px; border-bottom: 1px solid #f0f2f5; flex: 0 0 auto; }
-  .cm-modal .lib-search i { position: absolute; left: 26px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; }
-  .cm-modal .lib-search input { width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--border); border-radius: 999px; font: inherit; }
-  .cm-modal .lib-search input:focus { outline: none; border-color: var(--accent); }
-  .cm-modal .lib-body { overflow-y: auto; padding: 8px; }
-  .lib-row { display: flex; width: 100%; align-items: center; gap: 12px; padding: 8px; border: none; background: none; border-radius: 10px; cursor: pointer; text-align: left; font: inherit; }
-  .lib-row:hover { background: var(--hover); }
+  /* Selected media summary in the attach modal */
   .lib-thumb { width: 56px; height: 42px; border-radius: 8px; overflow: hidden; flex: 0 0 auto; background: #f0f2f5; display: flex; align-items: center; justify-content: center; }
   .lib-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .lib-thumb .ph { color: var(--muted); font-size: 18px; }
-  .lib-thumb .ph.audio { color: var(--accent); }
+  .lib-thumb .ph.audio, .lib-thumb .ph.playlist { color: var(--accent); }
   .lib-meta { min-width: 0; flex: 1; }
   .lib-meta .ttl { display: block; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .lib-meta .sub { display: block; color: var(--muted); font-size: 12px; }
-  .lib-empty { color: var(--muted); padding: 18px; text-align: center; font-size: 13px; }
   .lib-selected { display: flex; align-items: center; gap: 12px; background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; }
   .lib-selected .back { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; padding: 4px 8px; }
+
+  /* Shared playlist entries span the full grid width */
+  .cmedia-card.span-full { grid-column: 1 / -1; }
+  .cmedia-card .tp-playlist { border: none; border-radius: 0; border-bottom: 1px solid #f0f2f5; }
 
   @media (max-width: 600px) {
     .cm-backdrop { padding: 0; align-items: flex-end; }
@@ -90,6 +86,9 @@
 
 @include('partials.course-tabs')
 @include('partials.audio-player')
+@if ($canManage)
+  @include('partials.media-picker')
+@endif
 
 <div class="cmedia-shell">
   @if ($canManage)
@@ -107,9 +106,11 @@
   @else
     <div class="cmedia-grid">
       @foreach ($items as $item)
-        @continue(!$item->url() && !$item->isProcessing() && !$item->hasFailed())
-        <div class="cmedia-card">
-          @if ($item->type === 'video')
+        @continue($item->type === 'playlist' ? !$item->playlist : (!$item->url() && !$item->isProcessing() && !$item->hasFailed()))
+        <div class="cmedia-card {{ $item->type === 'playlist' ? 'span-full' : '' }}">
+          @if ($item->type === 'playlist')
+            <div class="tp-playlist" data-playlist="{{ json_encode($item->playlist->toPayload()) }}"></div>
+          @elseif ($item->type === 'video')
             @if ($item->isProcessing())
               <div class="cm-state"><i class="fa-solid fa-spinner fa-spin"></i> Videoen behandles…</div>
             @elseif ($item->hasFailed())
@@ -173,25 +174,17 @@
     </div>
   </div>
 
-  {{-- Library picker modal --}}
+  {{-- Attach-from-library modal: the pick itself happens in the shared media picker --}}
   <div class="cm-backdrop" id="cmLibBackdrop" role="dialog" aria-modal="true">
     <div class="cm-modal">
       <div class="head">
-        <div class="title"><i class="fa-solid fa-photo-film"></i> Mediebibliotek</div>
+        <div class="title"><i class="fa-solid fa-photo-film"></i> Tilføj til holdet</div>
         <button type="button" class="close" data-close="cmLibBackdrop" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
       </div>
-      <div id="cmLibPick">
-        <div class="lib-search">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="cmLibSearch" placeholder="Søg…" autocomplete="off" aria-label="Søg i mediebiblioteket">
-        </div>
-        <div class="lib-body" id="cmLibBody">
-          <div class="lib-empty">Indlæser…</div>
-        </div>
-      </div>
-      <form method="POST" action="{{ route('courses.media.store', $course) }}" id="cmLibForm" style="display:none;">
+      <form method="POST" action="{{ route('courses.media.store', $course) }}" id="cmLibForm">
         @csrf
         <input type="hidden" name="media_item_id" id="cmLibItemId">
+        <input type="hidden" name="playlist_id" id="cmLibPlaylistId">
         <div class="mbody">
           <div class="lib-selected" id="cmLibSelected"></div>
           <div>
@@ -245,19 +238,15 @@
     });
   }
 
-  // ---- Library picker ----
+  // ---- Library picker — shared modal, then a comment step ----
   var libOpenBtn = document.getElementById('cmLibOpen');
-  if (libOpenBtn) {
-    var LIB_URL = '{{ url('/api/media-library') }}';
-    var libBody = document.getElementById('cmLibBody');
-    var libSearch = document.getElementById('cmLibSearch');
-    var libPick = document.getElementById('cmLibPick');
+  if (libOpenBtn && window.mediaPicker) {
     var libForm = document.getElementById('cmLibForm');
     var libItemId = document.getElementById('cmLibItemId');
+    var libPlaylistId = document.getElementById('cmLibPlaylistId');
     var libSelected = document.getElementById('cmLibSelected');
     var libComment = document.getElementById('cmLibComment');
     var libSubmit = document.getElementById('cmLibSubmit');
-    var libItems = [];
     var typeLabel = { video: 'Video', audio: 'Lyd', image: 'Billede' };
 
     function thumbFor(it) {
@@ -266,60 +255,36 @@
       if (it.type === 'video') return '<span class="ph"><i class="fa-solid fa-film"></i></span>';
       return '<span class="ph audio"><i class="fa-solid fa-music"></i></span>';
     }
-    function libRender() {
-      var q = (libSearch.value || '').toLowerCase().trim();
-      var rows = libItems.filter(function (it) {
-        return !q || ((it.title || '') + ' ' + (it.description || '')).toLowerCase().indexOf(q) !== -1;
-      });
-      if (!rows.length) {
-        libBody.innerHTML = '<div class="lib-empty">' + (libItems.length ? 'Ingen resultater.' : 'Mediebiblioteket er tomt.') + '</div>';
-        return;
-      }
-      libBody.innerHTML = rows.map(function (it) {
-        return '<button type="button" class="lib-row" data-id="' + it.id + '">' +
-          '<span class="lib-thumb">' + thumbFor(it) + '</span>' +
-          '<span class="lib-meta"><span class="ttl">' + escapeHtml(it.title) + '</span><span class="sub">' + (typeLabel[it.type] || '') + '</span></span>' +
-          '</button>';
-      }).join('');
-    }
-    function showPickPhase() {
-      libForm.style.display = 'none';
-      libPick.style.display = '';
-    }
 
-    libOpenBtn.addEventListener('click', async function () {
-      showPickPhase();
-      libSearch.value = '';
-      openModal('cmLibBackdrop');
-      libBody.innerHTML = '<div class="lib-empty">Indlæser…</div>';
-      try {
-        var res = await fetch(LIB_URL, { headers: { Accept: 'application/json' }});
-        if (!res.ok) throw new Error('fetch failed');
-        var data = await res.json();
-        libItems = data.items || [];
-        libRender();
-      } catch (err) {
-        libBody.innerHTML = '<div class="lib-empty">Kunne ikke hente mediebiblioteket.</div>';
+    function handlePick(sel) {
+      var thumb, ttl, sub;
+      if (sel.kind === 'playlist') {
+        libItemId.value = '';
+        libPlaylistId.value = sel.playlist.id;
+        thumb = sel.playlist.image_url ? '<img src="' + escapeHtml(sel.playlist.image_url) + '" alt="">' : '<span class="ph playlist"><i class="fa-solid fa-list-ul"></i></span>';
+        ttl = sel.playlist.name;
+        sub = 'Playliste · ' + sel.playlist.count + ' medier';
+      } else {
+        libItemId.value = sel.item.id;
+        libPlaylistId.value = '';
+        thumb = thumbFor(sel.item);
+        ttl = sel.item.title;
+        sub = typeLabel[sel.item.type] || '';
       }
-    });
-    libSearch.addEventListener('input', libRender);
-
-    libBody.addEventListener('click', function (e) {
-      var row = e.target.closest('.lib-row');
-      if (!row) return;
-      var it = libItems.find(function (x) { return String(x.id) === row.dataset.id; });
-      if (!it) return;
-      libItemId.value = it.id;
       libComment.value = '';
       libSelected.innerHTML =
-        '<span class="lib-thumb">' + thumbFor(it) + '</span>' +
-        '<span class="lib-meta"><span class="ttl">' + escapeHtml(it.title) + '</span><span class="sub">' + (typeLabel[it.type] || '') + '</span></span>' +
+        '<span class="lib-thumb">' + thumb + '</span>' +
+        '<span class="lib-meta"><span class="ttl">' + escapeHtml(ttl) + '</span><span class="sub">' + sub + '</span></span>' +
         '<button type="button" class="back" id="cmLibBack">Skift</button>';
-      libPick.style.display = 'none';
-      libForm.style.display = '';
-      document.getElementById('cmLibBack').addEventListener('click', showPickPhase);
+      openModal('cmLibBackdrop');
+      document.getElementById('cmLibBack').addEventListener('click', function () {
+        closeModal('cmLibBackdrop');
+        mediaPicker.open(handlePick);
+      });
       libComment.focus();
-    });
+    }
+
+    libOpenBtn.addEventListener('click', function () { mediaPicker.open(handlePick); });
 
     libForm.addEventListener('submit', function () {
       libSubmit.disabled = true;

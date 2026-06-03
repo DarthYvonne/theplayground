@@ -32,11 +32,16 @@ class MediaLibraryController extends Controller
         ]);
     }
 
-    /** JSON list for the feed-composer media picker. */
+    /** JSON list for the shared media picker (feed + Hold). */
     public function list(): JsonResponse
     {
         $items = MediaItem::orderByDesc('id')->get()->map->toPayload()->values();
-        return response()->json(['items' => $items]);
+        $playlists = Playlist::with('mediaItems')->orderBy('name')->get()
+            ->filter(fn ($p) => $p->mediaItems->isNotEmpty())
+            ->map->toPayload()
+            ->values();
+
+        return response()->json(['items' => $items, 'playlists' => $playlists]);
     }
 
     public function store(Request $request): RedirectResponse

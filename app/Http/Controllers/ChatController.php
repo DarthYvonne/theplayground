@@ -29,7 +29,7 @@ class ChatController extends Controller
 
     public function listPlatform(Request $request): JsonResponse
     {
-        $messages = Message::with(['user', 'mediaItem'])->where('channel_type','platform')->orderByDesc('id')->limit(100)->get()->reverse()->values();
+        $messages = Message::with(['user', 'mediaItem', 'playlist.mediaItems'])->where('channel_type','platform')->orderByDesc('id')->limit(100)->get()->reverse()->values();
         $request->user()->forceFill(['last_seen_platform_chat_at' => now()])->save();
         return response()->json(['messages' => $this->serialize($messages, $request->user()->id)]);
     }
@@ -52,15 +52,17 @@ class ChatController extends Controller
             'image_path' => ['nullable','string','max:255'],
             'video_path' => ['nullable','string','max:255'],
             'media_item_id' => ['nullable','integer','exists:media_items,id'],
+            'playlist_id' => ['nullable','integer','exists:playlists,id'],
         ]);
         $body = trim($data['body'] ?? '');
         $imagePath = $this->resolveImagePath($data['image_path'] ?? null);
         $videoPath = $this->resolveVideoPath($data['video_path'] ?? null);
         $mediaItemId = $data['media_item_id'] ?? null;
-        if ($mediaItemId && !$request->user()->isOwner()) {
+        $playlistId = $data['playlist_id'] ?? null;
+        if (($mediaItemId || $playlistId) && !$request->user()->isOwner()) {
             abort(403, 'Kun ejere kan dele fra mediebiblioteket.');
         }
-        if ($body === '' && !$imagePath && !$videoPath && !$mediaItemId) {
+        if ($body === '' && !$imagePath && !$videoPath && !$mediaItemId && !$playlistId) {
             abort(422, 'Skriv noget eller vedhæft et billede eller en video.');
         }
         $m = Message::create([
@@ -71,13 +73,14 @@ class ChatController extends Controller
             'video_path' => $videoPath,
             'video_processing_status' => $videoPath ? 'pending' : null,
             'media_item_id' => $mediaItemId,
+            'playlist_id' => $playlistId,
         ]);
 
         if ($videoPath) {
             ProcessVideoJob::dispatch(\App\Models\Message::class, $m->id, $videoPath, 'feed_videos');
         }
 
-        return response()->json(['message' => $this->serializeOne($m->load(['user', 'mediaItem']), $request->user()->id)]);
+        return response()->json(['message' => $this->serializeOne($m->load(['user', 'mediaItem', 'playlist.mediaItems']), $request->user()->id)]);
     }
 
     public function uploadImage(Request $request): JsonResponse
@@ -409,6 +412,7 @@ class ChatController extends Controller
             'video_url' => $m->videoUrl(),
             'video_processing_status' => $m->video_processing_status,
             'media_item' => $m->mediaItem?->toPayload(),
+            'playlist' => $m->playlist?->toPayload(),
             'created_at' => $m->created_at->toIso8601String(),
             'time_human' => $m->created_at->diffForHumans(),
             'mine' => $m->user_id === $viewerId,

@@ -16,4 +16,23 @@ class Playlist extends Model
     {
         return $this->image_path ? Storage::disk('media')->url($this->image_path) : null;
     }
+
+    /** JSON shape for the media picker and shared playlist players. */
+    public function toPayload(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'description' => $this->description,
+            'image_url' => $this->imageUrl(),
+            'count' => $this->mediaItems->count(),
+            'tracks' => $this->mediaItems->map(fn ($mi) => [
+                'id' => $mi->id,
+                'type' => $mi->type,
+                'title' => $mi->title,
+                'url' => $mi->url(),
+                'thumbnail_url' => $mi->thumbnailUrl(),
+            ])->values()->all(),
+        ];
+    }
 }

@@ -14,6 +14,7 @@ class CourseMedia extends Model
         'course_id',
         'user_id',
         'media_item_id',
+        'playlist_id',
         'type',
         'file_path',
         'video_path',
@@ -26,6 +27,7 @@ class CourseMedia extends Model
     public function course(): BelongsTo { return $this->belongsTo(Course::class); }
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function mediaItem(): BelongsTo { return $this->belongsTo(MediaItem::class); }
+    public function playlist(): BelongsTo { return $this->belongsTo(Playlist::class); }
 
     public function url(): ?string
     {

@@ -18,11 +18,13 @@ class Message extends Model
         'original_video_path',
         'video_processing_status',
         'media_item_id',
+        'playlist_id',
     ];
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
     public function course(): BelongsTo { return $this->belongsTo(Course::class); }
     public function mediaItem(): BelongsTo { return $this->belongsTo(MediaItem::class); }
+    public function playlist(): BelongsTo { return $this->belongsTo(Playlist::class); }
 
     public function imageUrl(): ?string
     {

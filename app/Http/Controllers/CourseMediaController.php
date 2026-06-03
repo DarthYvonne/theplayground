@@ -20,7 +20,7 @@ class CourseMediaController extends Controller
         $canManage = $this->canManage($user, $course);
         abort_unless($canManage || $user->enrolledIn($course), 403);
 
-        $items = CourseMedia::with(['mediaItem', 'user'])
+        $items = CourseMedia::with(['mediaItem', 'user', 'playlist.mediaItems'])
             ->where('course_id', $course->id)
             ->orderByDesc('id')
             ->get();
@@ -45,10 +45,22 @@ class CourseMediaController extends Controller
         $data = $request->validate([
             'comment' => ['nullable', 'string', 'max:2000'],
             'media_item_id' => ['nullable', 'integer', 'exists:media_items,id'],
-            'file' => ['nullable', 'file', 'required_without:media_item_id'],
+            'playlist_id' => ['nullable', 'integer', 'exists:playlists,id'],
+            'file' => ['nullable', 'file', 'required_without_all:media_item_id,playlist_id'],
         ], [
-            'file.required_without' => 'Vælg en fil eller et medie fra biblioteket.',
+            'file.required_without_all' => 'Vælg en fil eller et medie fra biblioteket.',
         ]);
+
+        if (!empty($data['playlist_id'])) {
+            CourseMedia::create([
+                'course_id' => $course->id,
+                'user_id' => $request->user()->id,
+                'playlist_id' => $data['playlist_id'],
+                'type' => 'playlist',
+                'comment' => $data['comment'] ?? null,
+            ]);
+            return redirect()->route('courses.media', $course)->with('status', 'Playliste tilføjet.');
+        }
 
         if (!empty($data['media_item_id'])) {
             $item = MediaItem::findOrFail($data['media_item_id']);
