@@ -29,8 +29,14 @@
   .composer-upload-progress { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
   .composer-upload-progress .bar { width: 120px; height: 6px; background: #e4e6eb; border-radius: 3px; overflow: hidden; }
   .composer-upload-progress .bar > span { display: block; height: 100%; background: var(--accent); width: 0; transition: width 0.15s linear; }
+  .composer-media-chip { display: none; align-items: center; gap: 10px; background: var(--accent-soft); color: var(--accent); border-radius: 10px; padding: 12px 42px 12px 14px; font-weight: 600; font-size: 13px; max-width: 100%; }
+  .composer-media-chip i { font-size: 16px; flex: 0 0 auto; }
+  .composer-media-chip .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .feed-image { margin-top: 10px; }
   .feed-image img { max-width: 100%; max-height: 520px; border-radius: 10px; display: block; cursor: zoom-in; }
+  .feed-audio { margin-top: 10px; }
+  .feed-media-caption { margin-top: 6px; color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 6px; }
+  .feed-media-caption i { font-size: 11px; }
   .feed-video { margin-top: 10px; position: relative; }
   .feed-video video { width: 100%; max-height: 520px; border-radius: 10px; display: block; background: #000; }
   .media-status { position: absolute; top: 8px; right: 8px; display: inline-flex; align-items: center; gap: 6px; background: rgba(0,0,0,0.6); color: #fff; border-radius: 999px; padding: 4px 10px; font-size: 11px; line-height: 1; pointer-events: none; }
@@ -98,6 +104,36 @@
   .feed-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); }
   .feed-loading { color: var(--muted); text-align: center; padding: 20px; font-size: 13px; }
 
+  /* Media library picker */
+  .lib-backdrop { position: fixed; inset: 0; width: 100%; max-width: none; margin: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .lib-backdrop.open { display: flex; }
+  .lib-modal { background: #fff; border-radius: 12px; width: 100%; max-width: 480px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 10px 32px rgba(0,0,0,0.22); overflow: hidden; }
+  .lib-head { padding: 14px 18px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+  .lib-head .title { font-weight: 700; flex: 1; }
+  .lib-head .title i { color: var(--accent); margin-right: 6px; }
+  .lib-close { background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: 6px; color: var(--muted); font-size: 16px; }
+  .lib-close:hover { background: var(--hover); color: var(--text); }
+  .lib-search { position: relative; padding: 10px 14px; border-bottom: 1px solid #f0f2f5; flex: 0 0 auto; }
+  .lib-search i { position: absolute; left: 26px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; }
+  .lib-search input { width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--border); border-radius: 999px; font: inherit; }
+  .lib-search input:focus { outline: none; border-color: var(--accent); }
+  .lib-body { overflow-y: auto; padding: 8px; }
+  .lib-row { display: flex; width: 100%; align-items: center; gap: 12px; padding: 8px; border: none; background: none; border-radius: 10px; cursor: pointer; text-align: left; font: inherit; }
+  .lib-row:hover { background: var(--hover); }
+  .lib-thumb { width: 56px; height: 42px; border-radius: 8px; overflow: hidden; flex: 0 0 auto; background: #f0f2f5; display: flex; align-items: center; justify-content: center; }
+  .lib-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .lib-thumb .ph { color: var(--muted); font-size: 18px; }
+  .lib-thumb .ph.audio { color: var(--accent); }
+  .lib-meta { min-width: 0; flex: 1; }
+  .lib-meta .ttl { display: block; font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lib-meta .sub { display: block; color: var(--muted); font-size: 12px; }
+  .lib-empty { color: var(--muted); padding: 18px; text-align: center; font-size: 13px; }
+  @media (max-width: 600px) {
+    .lib-backdrop { padding: 0; align-items: flex-end; }
+    .lib-modal { max-width: none; border-radius: 16px 16px 0 0; max-height: 85dvh; }
+    .lib-search input { font-size: 16px; }
+  }
+
   /* Comments */
   .comments-toggle { background: none; border: none; padding: 0; font: inherit; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
   .comments-toggle:hover { color: var(--accent); }
@@ -155,6 +191,8 @@
   @include('partials.header-actions')
 </div>
 
+@include('partials.audio-player')
+
 <div class="feed-shell">
   <form id="feedComposer" class="composer" autocomplete="off">
     @csrf
@@ -162,6 +200,7 @@
     <div id="feedComposerPreview" class="composer-preview" style="display:none;">
       <img id="feedComposerPreviewImg" src="" alt="" style="display:none;">
       <video id="feedComposerPreviewVideo" src="" controls playsinline style="display:none;"></video>
+      <div id="feedComposerPreviewChip" class="composer-media-chip" style="display:none;"></div>
       <button type="button" class="composer-preview-remove" id="feedComposerPreviewRemove" aria-label="Fjern vedhæftning"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="composer-actions">
@@ -172,8 +211,13 @@
           <span class="pct">Overfører…</span>
         </span>
       </span>
+      @if ($user->isOwner())
+        <button type="button" class="composer-attach-btn" id="feedComposerLibraryBtn" aria-label="Vælg fra mediebibliotek" title="Vælg fra mediebibliotek">
+          <i class="fa-solid fa-photo-film"></i>
+        </button>
+      @endif
       <button type="button" class="composer-attach-btn" id="feedComposerVideoBtn" aria-label="Vedhæft video" title="Vedhæft video">
-        <i class="fa-solid fa-circle-play"></i>
+        <i class="fa-solid fa-film"></i>
       </button>
       <button type="button" class="composer-attach-btn" id="feedComposerImageBtn" aria-label="Vedhæft billede" title="Vedhæft billede">
         <i class="fa-regular fa-image"></i>
@@ -192,6 +236,24 @@
     <p>Skriv det første opslag herover.</p>
   </div>
 </div>
+
+@if ($user->isOwner())
+<div class="lib-backdrop" id="libBackdrop" role="dialog" aria-modal="true" aria-labelledby="libTitle">
+  <div class="lib-modal">
+    <div class="lib-head">
+      <div class="title" id="libTitle"><i class="fa-solid fa-photo-film"></i> Mediebibliotek</div>
+      <button type="button" class="lib-close" id="libClose" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="lib-search">
+      <i class="fa-solid fa-magnifying-glass"></i>
+      <input type="text" id="libSearch" placeholder="Søg…" autocomplete="off" aria-label="Søg i mediebiblioteket">
+    </div>
+    <div class="lib-body" id="libBody">
+      <div class="lib-empty">Indlæser…</div>
+    </div>
+  </div>
+</div>
+@endif
 
 <div class="resp-backdrop" id="respBackdrop" role="dialog" aria-modal="true" aria-labelledby="respTitle">
   <div class="resp-modal">
@@ -243,9 +305,11 @@
   var preview = document.getElementById('feedComposerPreview');
   var previewImg = document.getElementById('feedComposerPreviewImg');
   var previewVideo = document.getElementById('feedComposerPreviewVideo');
+  var previewChip = document.getElementById('feedComposerPreviewChip');
   var previewRemove = document.getElementById('feedComposerPreviewRemove');
   var pendingImagePath = null;
   var pendingVideoPath = null;
+  var pendingMediaItem = null;
   var uploading = false;
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, function (m) { return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; }); }
@@ -298,6 +362,20 @@
           '<video src="' + escapeHtml(it.video_url) + '" controls preload="metadata" playsinline></video>' +
           statusBadge +
         '</div>';
+      }
+      if (it.media_item && it.media_item.url) {
+        var mi = it.media_item;
+        var cap = '<div class="feed-media-caption"><i class="fa-solid fa-photo-film"></i> ' + escapeHtml(mi.title) + '</div>';
+        if (mi.type === 'image') {
+          body += '<div class="feed-image"><a href="' + escapeHtml(mi.url) + '" target="_blank" rel="noopener"><img src="' + escapeHtml(mi.url) + '" alt=""></a>' + cap + '</div>';
+        } else if (mi.type === 'video') {
+          body += '<div class="feed-video">' +
+            '<video src="' + escapeHtml(mi.url) + '"' + (mi.thumbnail_url ? ' poster="' + escapeHtml(mi.thumbnail_url) + '"' : '') + ' controls preload="metadata" playsinline></video>' +
+            (mi.processing ? '<div class="media-status"><i class="fa-solid fa-spinner fa-spin"></i> Behandler…</div>' : '') +
+            cap + '</div>';
+        } else if (mi.type === 'audio') {
+          body += '<div class="feed-audio">' + tpAudio.markup(mi.url) + cap + '</div>';
+        }
       }
     }
 
@@ -377,6 +455,7 @@
       : '';
 
     el.innerHTML = menu + head + body + footer + commentsWrap;
+    if (window.tpAudio) tpAudio.init(el);
     observeCardForViews(el);
     return el;
   }
@@ -661,7 +740,7 @@
 
   function refreshSubmitState() {
     var hasText = input.value.trim().length > 0;
-    submit.disabled = uploading || (!hasText && !pendingImagePath && !pendingVideoPath);
+    submit.disabled = uploading || (!hasText && !pendingImagePath && !pendingVideoPath && !pendingMediaItem);
   }
   function autosize() {
     input.style.height = 'auto';
@@ -673,12 +752,15 @@
   function clearAttachments() {
     pendingImagePath = null;
     pendingVideoPath = null;
+    pendingMediaItem = null;
     preview.style.display = 'none';
     previewImg.style.display = 'none';
     previewImg.src = '';
     previewVideo.style.display = 'none';
     previewVideo.removeAttribute('src');
     previewVideo.load();
+    previewChip.style.display = 'none';
+    previewChip.innerHTML = '';
     imageInput.value = '';
     videoInput.value = '';
     refreshSubmitState();
@@ -735,7 +817,7 @@
   imageInput.addEventListener('change', async function () {
     var file = imageInput.files && imageInput.files[0];
     if (!file) return;
-    if (pendingVideoPath) clearAttachments();
+    if (pendingVideoPath || pendingMediaItem) clearAttachments();
     errBox.style.display = 'none';
     setUploading(true, 'Overfører billede');
     try {
@@ -759,7 +841,7 @@
   videoInput.addEventListener('change', async function () {
     var file = videoInput.files && videoInput.files[0];
     if (!file) return;
-    if (pendingImagePath) clearAttachments();
+    if (pendingImagePath || pendingMediaItem) clearAttachments();
     errBox.style.display = 'none';
     setUploading(true, 'Overfører video');
     try {
@@ -779,6 +861,86 @@
       setUploading(false);
     }
   });
+  // ---------- Media library picker (owners) ----------
+  var libBtn = document.getElementById('feedComposerLibraryBtn');
+  var libBackdrop = document.getElementById('libBackdrop');
+  if (libBtn && libBackdrop) {
+    var LIB_URL = '{{ url('/api/media-library') }}';
+    var libBody = document.getElementById('libBody');
+    var libSearch = document.getElementById('libSearch');
+    var libCloseBtn = document.getElementById('libClose');
+    var libItems = [];
+
+    var libTypeLabel = { video: 'Video', audio: 'Lyd', image: 'Billede' };
+    function libRender() {
+      var q = (libSearch.value || '').toLowerCase().trim();
+      var rows = libItems.filter(function (it) {
+        return !q || ((it.title || '') + ' ' + (it.description || '')).toLowerCase().indexOf(q) !== -1;
+      });
+      if (!rows.length) {
+        libBody.innerHTML = '<div class="lib-empty">' + (libItems.length ? 'Ingen resultater.' : 'Mediebiblioteket er tomt.') + '</div>';
+        return;
+      }
+      libBody.innerHTML = rows.map(function (it) {
+        var thumb;
+        if (it.type === 'image' && it.url) thumb = '<img src="' + escapeHtml(it.url) + '" alt="">';
+        else if (it.type === 'video' && it.thumbnail_url) thumb = '<img src="' + escapeHtml(it.thumbnail_url) + '" alt="">';
+        else if (it.type === 'video') thumb = '<span class="ph"><i class="fa-solid fa-film"></i></span>';
+        else thumb = '<span class="ph audio"><i class="fa-solid fa-music"></i></span>';
+        return '<button type="button" class="lib-row" data-id="' + it.id + '">' +
+          '<span class="lib-thumb">' + thumb + '</span>' +
+          '<span class="lib-meta"><span class="ttl">' + escapeHtml(it.title) + '</span><span class="sub">' + (libTypeLabel[it.type] || '') + '</span></span>' +
+          '</button>';
+      }).join('');
+    }
+
+    async function libOpen() {
+      libBackdrop.classList.add('open');
+      libSearch.value = '';
+      libBody.innerHTML = '<div class="lib-empty">Indlæser…</div>';
+      try {
+        var res = await fetch(LIB_URL, { headers: { Accept: 'application/json' }});
+        if (!res.ok) throw new Error('fetch failed');
+        var data = await res.json();
+        libItems = data.items || [];
+        libRender();
+      } catch (err) {
+        libBody.innerHTML = '<div class="lib-empty">Kunne ikke hente mediebiblioteket.</div>';
+      }
+    }
+    function libClose() { libBackdrop.classList.remove('open'); }
+
+    libBtn.addEventListener('click', function () { if (!uploading) libOpen(); });
+    libCloseBtn.addEventListener('click', libClose);
+    libBackdrop.addEventListener('click', function (e) { if (e.target === libBackdrop) libClose(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && libBackdrop.classList.contains('open')) libClose();
+    });
+    libSearch.addEventListener('input', libRender);
+
+    libBody.addEventListener('click', function (e) {
+      var row = e.target.closest('.lib-row');
+      if (!row) return;
+      var it = libItems.find(function (x) { return String(x.id) === row.dataset.id; });
+      if (!it) return;
+      clearAttachments();
+      pendingMediaItem = it;
+      if (it.type === 'image' && it.url) {
+        previewImg.src = it.url;
+        previewImg.style.display = 'block';
+      } else if (it.type === 'video' && it.url) {
+        previewVideo.src = it.url;
+        previewVideo.style.display = 'block';
+      } else {
+        previewChip.innerHTML = '<i class="fa-solid fa-music"></i><span class="t">' + escapeHtml(it.title) + '</span>';
+        previewChip.style.display = 'inline-flex';
+      }
+      preview.style.display = 'inline-flex';
+      libClose();
+      refreshSubmitState();
+    });
+  }
+
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); composer.requestSubmit(); }
   });
@@ -786,7 +948,7 @@
   composer.addEventListener('submit', async function (e) {
     e.preventDefault();
     var body = input.value.trim();
-    if (!body && !pendingImagePath && !pendingVideoPath) return;
+    if (!body && !pendingImagePath && !pendingVideoPath && !pendingMediaItem) return;
     if (uploading) return;
     submit.disabled = true;
     errBox.style.display = 'none';
@@ -794,7 +956,7 @@
       var res = await fetch(SEND_URL, {
         method: 'POST',
         headers: { 'X-CSRF-TOKEN': CSRF, Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ body: body, image_path: pendingImagePath, video_path: pendingVideoPath }),
+        body: JSON.stringify({ body: body, image_path: pendingImagePath, video_path: pendingVideoPath, media_item_id: pendingMediaItem ? pendingMediaItem.id : null }),
       });
       if (!res.ok) throw new Error('Send failed');
       input.value = '';

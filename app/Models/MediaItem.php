@@ -50,6 +50,20 @@ class MediaItem extends Model
         return $this->type === 'video' && $this->video_processing_status === 'failed';
     }
 
+    /** JSON shape used by the feed and the media picker. */
+    public function toPayload(): array
+    {
+        return [
+            'id' => $this->id,
+            'type' => $this->type,
+            'title' => $this->title,
+            'description' => $this->description,
+            'url' => $this->url(),
+            'thumbnail_url' => $this->thumbnailUrl(),
+            'processing' => $this->isProcessing(),
+        ];
+    }
+
     /** Delete every stored file backing this item. */
     public function deleteFiles(): void
     {

@@ -31,13 +31,14 @@
   .media-card .body { padding: 10px 12px; display: flex; flex-direction: column; flex: 1; }
   .media-card .title { font-weight: 700; font-size: 13px; line-height: 1.3; display: flex; align-items: flex-start; gap: 6px; }
   .media-card .title .txt { flex: 1; }
-  .media-card .desc { color: var(--muted); font-size: 12px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .media-card .desc { color: var(--muted); font-size: 12px; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .media-card[data-id] .body { cursor: pointer; }
+  .media-card[data-id] .body:hover .title .txt { color: var(--accent); }
   .media-card .meta { color: var(--muted); font-size: 11px; margin-top: auto; padding-top: 6px; }
   .media-card video, .media-card img.thumb { display: block; width: 100%; height: 130px; background: #000; object-fit: contain; }
   .media-card img.thumb { background: #f0f2f5; object-fit: cover; cursor: zoom-in; }
   .media-card .audio-head { height: 130px; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); font-size: 32px; }
   .media-card .audio-wrap { padding: 10px 12px 0; }
-  .media-card audio { width: 100%; height: 36px; }
   .media-card .state { height: 130px; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--muted); font-size: 12px; background: #f0f2f5; padding: 0 12px; }
   .media-card .state.failed { color: var(--danger); }
   .media-card .del { background: none; border: none; cursor: pointer; color: var(--muted); padding: 2px 6px; border-radius: 6px; font-size: 13px; }
@@ -100,6 +101,8 @@
   @include('partials.header-actions')
 </div>
 
+@include('partials.audio-player')
+
 <div class="media-shell">
   <div class="media-search">
     <i class="fa-solid fa-magnifying-glass ico"></i>
@@ -144,7 +147,8 @@
         <h2>{{ $label }}</h2>
         <div class="media-grid">
           @foreach ($groups[$type] as $item)
-            <div class="media-card" data-search="{{ \Illuminate\Support\Str::lower(trim($item->title . ' ' . $item->description . ' ' . $item->created_at->format('d.m.Y'))) }}">
+            <div class="media-card" data-search="{{ \Illuminate\Support\Str::lower(trim($item->title . ' ' . $item->description . ' ' . $item->created_at->format('d.m.Y'))) }}"
+              @if ($isOwner) data-id="{{ $item->id }}" data-title="{{ $item->title }}" data-desc="{{ $item->description }}" @endif>
               @if ($item->type === 'video')
                 @if ($item->isProcessing())
                   <div class="state"><i class="fa-solid fa-spinner fa-spin"></i> Videoen behandles…</div>
@@ -158,7 +162,7 @@
               @elseif ($item->type === 'audio')
                 <div class="audio-head"><i class="fa-solid fa-music"></i></div>
                 <div class="audio-wrap">
-                  <audio controls preload="none" src="{{ $item->url() }}"></audio>
+                  <div class="tp-audio sm" data-src="{{ $item->url() }}"></div>
                 </div>
               @elseif ($item->type === 'image')
                 <img class="thumb" src="{{ $item->url() }}" alt="{{ $item->title }}" loading="lazy" data-full="{{ $item->url() }}">
@@ -219,6 +223,31 @@
       </form>
     </div>
   </div>
+
+  <div class="media-modal-backdrop" id="editBackdrop" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
+    <div class="media-modal">
+      <div class="head">
+        <div class="title" id="editModalTitle">Rediger medie</div>
+        <button type="button" class="close" id="editClose" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form method="POST" action="" id="editForm">
+        @csrf
+        <div class="mbody">
+          <div>
+            <label for="editTitleInput">Titel <span class="req">*</span></label>
+            <input type="text" name="title" id="editTitleInput" maxlength="255" required>
+          </div>
+          <div>
+            <label for="editDesc">Beskrivelse</label>
+            <textarea name="description" id="editDesc" maxlength="2000" placeholder="Valgfri"></textarea>
+          </div>
+        </div>
+        <div class="foot">
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Gem</button>
+        </div>
+      </form>
+    </div>
+  </div>
 @endif
 
 <div class="media-lightbox" id="mediaLightbox">
@@ -229,6 +258,9 @@
 @push('scripts')
 <script>
 (function () {
+  // ---- Styled audio players ----
+  if (window.tpAudio) tpAudio.init();
+
   // ---- Live search across all groups ----
   var search = document.getElementById('mediaSearch');
   var clearBtn = document.getElementById('mediaSearchClear');
@@ -317,6 +349,39 @@
     upForm.addEventListener('submit', function () {
       upSubmit.disabled = true;
       upSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploader…';
+    });
+  }
+
+  // ---- Edit modal (owners) ----
+  var editBackdrop = document.getElementById('editBackdrop');
+  if (editBackdrop) {
+    var editForm = document.getElementById('editForm');
+    var editTitleInput = document.getElementById('editTitleInput');
+    var editDescInput = document.getElementById('editDesc');
+    var EDIT_URL = '{{ route('media.update', ['mediaItem' => '__ID__']) }}';
+
+    function openEdit(card) {
+      editForm.action = EDIT_URL.replace('__ID__', card.dataset.id);
+      editTitleInput.value = card.dataset.title || '';
+      editDescInput.value = card.dataset.desc || '';
+      editBackdrop.classList.add('open');
+      setTimeout(function () { editTitleInput.focus(); }, 50);
+    }
+    function closeEdit() { editBackdrop.classList.remove('open'); }
+
+    document.getElementById('editClose').addEventListener('click', closeEdit);
+    editBackdrop.addEventListener('click', function (e) { if (e.target === editBackdrop) closeEdit(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && editBackdrop.classList.contains('open')) closeEdit();
+    });
+
+    // Clicking a card's text area opens edit. Media (video/audio/image) and the
+    // delete button keep their own click behavior.
+    document.querySelectorAll('.media-card[data-id] .body').forEach(function (body) {
+      body.addEventListener('click', function (e) {
+        if (e.target.closest('form')) return; // the delete form
+        openEdit(body.closest('.media-card'));
+      });
     });
   }
 

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\ProcessVideoJob;
 use App\Models\MediaItem;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -27,6 +28,13 @@ class MediaLibraryController extends Controller
             ],
             'isOwner' => $request->user()->isOwner(),
         ]);
+    }
+
+    /** JSON list for the feed-composer media picker. */
+    public function list(): JsonResponse
+    {
+        $items = MediaItem::orderByDesc('id')->get()->map->toPayload()->values();
+        return response()->json(['items' => $items]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -85,6 +93,20 @@ class MediaLibraryController extends Controller
         }
 
         return redirect()->route('media.index')->with('status', 'Medie uploadet.');
+    }
+
+    public function update(Request $request, MediaItem $mediaItem): RedirectResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'title.required' => 'Titel er påkrævet.',
+        ]);
+
+        $mediaItem->update($data);
+
+        return redirect()->route('media.index')->with('status', 'Medie opdateret.');
     }
 
     public function destroy(Request $request, MediaItem $mediaItem): RedirectResponse

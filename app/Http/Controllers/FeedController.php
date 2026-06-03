@@ -23,7 +23,7 @@ class FeedController extends Controller
         $items = collect();
 
         // Platform messages — visible to all authenticated users
-        Message::with('user')
+        Message::with(['user', 'mediaItem'])
             ->where('channel_type', 'platform')
             ->orderByDesc('id')
             ->limit(self::LIMIT)
@@ -39,6 +39,7 @@ class FeedController extends Controller
                     'image_url' => $m->imageUrl(),
                     'video_url' => $m->videoUrl(),
                     'video_processing_status' => $m->video_processing_status,
+                    'media_item' => $m->mediaItem?->toPayload(),
                     'mine' => $m->user_id === $user->id,
                     'user' => $this->serializeUser($m->user),
                     'course' => null,

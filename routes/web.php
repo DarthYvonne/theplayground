@@ -67,8 +67,10 @@ Route::middleware('auth')->group(function () {
 
     // Mediebibliotek — everyone can view/search; only owners upload & delete.
     Route::get('/mediebibliotek', [MediaLibraryController::class, 'index'])->name('media.index');
+    Route::get('/api/media-library', [MediaLibraryController::class, 'list']);
     Route::middleware('role:owner')->group(function () {
         Route::post('/mediebibliotek', [MediaLibraryController::class, 'store'])->name('media.store');
+        Route::post('/mediebibliotek/{mediaItem}', [MediaLibraryController::class, 'update'])->name('media.update');
         Route::post('/mediebibliotek/{mediaItem}/delete', [MediaLibraryController::class, 'destroy'])->name('media.destroy');
     });
 
