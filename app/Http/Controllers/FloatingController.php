@@ -22,8 +22,6 @@ class FloatingController extends Controller
         $user = $request->user();
         $isOwner = $user?->isOwner() ?? false;
 
-        $monday = CalendarWeek::resolveContext($request)['monday'];
-
         $myUpcoming = $user
             ? FloatingBooking::with('device')
                 ->where('user_id', $user->id)
@@ -33,12 +31,11 @@ class FloatingController extends Controller
                 ->get()
             : collect();
 
-        // Each tank card fetches its own week of availability from availability() below,
-        // so the page only needs the device list and the starting week.
+        // Each tank card fetches its own availability day-by-day from availability()
+        // below, so the page only needs the device list.
         return view('floating.index', [
             'settings' => $settings,
             'devices' => $devices,
-            'weekParam' => CalendarWeek::weekParam($monday),
             'myUpcoming' => $myUpcoming,
             'isOwner' => $isOwner,
             'title' => 'Floating',
