@@ -11,7 +11,9 @@
   .media-search input:focus { outline: none; border-color: var(--accent); }
   .media-search .clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; padding: 4px; cursor: pointer; display: none; background: none; border: none; }
 
-  .media-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; min-height: 34px; }
+  .media-upload-btn { display: flex; width: 100%; align-items: center; justify-content: center; gap: 8px; padding: 13px 16px; font-size: 15px; font-weight: 700; margin-bottom: 16px; }
+
+  .media-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; min-height: 22px; }
   .media-nav { display: flex; flex-wrap: wrap; align-items: center; font-size: 14px; flex: 1; min-width: 0; }
   .media-nav a { color: var(--muted); font-weight: 600; padding: 2px 0; }
   .media-nav a:hover { color: var(--accent); }
@@ -42,7 +44,9 @@
   .media-empty h3 { color: var(--text); margin-bottom: 6px; }
 
   /* Upload modal */
-  .media-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 20px; }
+  /* max-width:none beats the layout's `.main > * { max-width: 720px }`, which
+     would otherwise squeeze this fixed overlay to a 720px strip. */
+  .media-modal-backdrop { position: fixed; inset: 0; width: 100%; max-width: none; background: rgba(0,0,0,0.45); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 20px; }
   .media-modal-backdrop.open { display: flex; }
   .media-modal { background: #fff; border-radius: 12px; width: 100%; max-width: 480px; box-shadow: 0 10px 32px rgba(0,0,0,0.22); overflow: hidden; max-height: calc(100vh - 40px); display: flex; flex-direction: column; }
   .media-modal .head { padding: 16px 20px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
@@ -69,11 +73,10 @@
     /* 16px font prevents iOS from zooming the page when focusing inputs */
     .media-modal input[type=text], .media-modal textarea { font-size: 16px; }
     .media-modal .foot { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
-    .media-bar .media-upload-btn .lbl { display: none; }
   }
 
   /* Image lightbox */
-  .media-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 24px; }
+  .media-lightbox { position: fixed; inset: 0; width: 100%; max-width: none; background: rgba(0,0,0,0.85); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 24px; }
   .media-lightbox.open { display: flex; }
   .media-lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
   .media-lightbox .close { position: absolute; top: 18px; right: 22px; color: #fff; font-size: 26px; background: none; border: none; cursor: pointer; }
@@ -97,7 +100,13 @@
     <button type="button" class="clear" id="mediaSearchClear" aria-label="Ryd søgning"><i class="fa-solid fa-xmark"></i></button>
   </div>
 
-  @if ($isOwner || $hasAny)
+  @if ($isOwner)
+    <button type="button" class="btn btn-primary media-upload-btn" id="mediaUploadOpen">
+      <i class="fa-solid fa-plus"></i> Upload
+    </button>
+  @endif
+
+  @if ($hasAny)
     <div class="media-bar">
       <nav class="media-nav" id="mediaNav">
         @php $first = true; @endphp
@@ -108,11 +117,6 @@
           @endif
         @endforeach
       </nav>
-      @if ($isOwner)
-        <button type="button" class="btn btn-primary media-upload-btn" id="mediaUploadOpen">
-          <i class="fa-solid fa-plus"></i> <span class="lbl">Upload</span>
-        </button>
-      @endif
     </div>
   @endif
 
