@@ -22,6 +22,10 @@
   .media-nav a .cnt { color: var(--text); font-weight: 700; }
 
   .media-section { margin-bottom: 26px; scroll-margin-top: 16px; }
+  @media (max-width: 900px) {
+    /* Clear the fixed 56px mobile topbar when scrolling to a section */
+    .media-section { scroll-margin-top: 72px; }
+  }
   .media-section > h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); margin-bottom: 10px; }
 
   .media-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
@@ -229,6 +233,12 @@
   var navLinks = {};
   document.querySelectorAll('#mediaNav a[data-type]').forEach(function (a) {
     navLinks[a.dataset.type] = { el: a, cnt: a.querySelector('.cnt') };
+    // Scroll in-page instead of navigating — no reload, no URL hash, no jump.
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      var sec = document.getElementById('sec-' + a.dataset.type);
+      if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   });
 
   function apply() {
