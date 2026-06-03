@@ -8,6 +8,7 @@ use App\Http\Controllers\BeskederController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CommentController;
 use App\Http\Controllers\CourseController;
+use App\Http\Controllers\CourseMediaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\FeedController;
@@ -84,6 +85,11 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile/betaling/portal', [ProfileController::class, 'billingPortal'])->name('profile.billing.portal');
 
     Route::post('/preview-role', [PreviewRoleController::class, 'update'])->name('preview.role');
+
+    // Course media (Medier tab) — trainers/owners manage; members view when content exists
+    Route::get('/courses/{course}/medier', [CourseMediaController::class, 'index'])->name('courses.media');
+    Route::post('/courses/{course}/medier', [CourseMediaController::class, 'store'])->name('courses.media.store');
+    Route::post('/courses/{course}/medier/{courseMedia}/delete', [CourseMediaController::class, 'destroy'])->name('courses.media.destroy');
 
     Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll');
     Route::get('/courses/{course}/enroll/return', [EnrollmentController::class, 'returnFromCheckout'])->name('enroll.return');

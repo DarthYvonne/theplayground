@@ -49,7 +49,7 @@ class MediaLibraryController extends Controller
         ]);
 
         $file = $request->file('file');
-        $type = $this->detectType($file);
+        $type = MediaItem::detectUploadType($file);
 
         if ($type === null) {
             return back()->withInput()->withErrors([
@@ -59,11 +59,7 @@ class MediaLibraryController extends Controller
 
         // Type-specific limits, now that we know what kind of file it is.
         $request->validate([
-            'file' => match ($type) {
-                'video' => ['file', 'mimes:mp4,mov,avi,webm,m4v,mkv', 'max:512000'],
-                'audio' => ['file', 'mimes:mp3,wav,m4a,ogg,aac,flac', 'max:51200'],
-                'image' => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:8192'],
-            },
+            'file' => MediaItem::uploadRules($type),
         ], [
             'file.mimes' => 'Filtypen understøttes ikke.',
             'file.image' => 'Filen er ikke et billede.',
@@ -115,21 +111,5 @@ class MediaLibraryController extends Controller
         $mediaItem->delete();
 
         return redirect()->route('media.index')->with('status', 'Medie slettet.');
-    }
-
-    /** Decide the media type from the uploaded file's content, falling back to extension. */
-    private function detectType(\Illuminate\Http\UploadedFile $file): ?string
-    {
-        $mime = strtolower((string) $file->getMimeType());
-        if (str_starts_with($mime, 'video/')) return 'video';
-        if (str_starts_with($mime, 'audio/')) return 'audio';
-        if (str_starts_with($mime, 'image/')) return 'image';
-
-        $ext = strtolower($file->getClientOriginalExtension());
-        if (in_array($ext, ['mp4', 'mov', 'avi', 'webm', 'm4v', 'mkv'], true)) return 'video';
-        if (in_array($ext, ['mp3', 'wav', 'm4a', 'ogg', 'aac', 'flac'], true)) return 'audio';
-        if (in_array($ext, ['jpeg', 'jpg', 'png', 'gif', 'webp'], true)) return 'image';
-
-        return null;
     }
 }

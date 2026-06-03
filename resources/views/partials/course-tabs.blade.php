@@ -1,13 +1,17 @@
 @php
   /** @var \App\Models\Course $course */
   $u = auth()->user();
-  $hasAccess = $u && ($u->isOwner() || $course->hasTrainer($u) || $u->enrolledIn($course));
+  $canManageCourse = $u && ($u->isOwner() || $course->hasTrainer($u));
+  $hasAccess = $canManageCourse || ($u && $u->enrolledIn($course));
   $unreadCount = 0;
+  $showMediaTab = false;
   if ($hasAccess) {
     $lastRead = \App\Models\MessageRead::where('user_id', $u->id)->where('course_id', $course->id)->value('last_read_at');
     $q = \App\Models\Message::where('channel_type', 'course')->where('course_id', $course->id)->where('user_id', '!=', $u->id);
     if ($lastRead) $q->where('created_at', '>', $lastRead);
     $unreadCount = $q->count();
+    // Trainers/owners always see Medier (so they can add); members only when there's content.
+    $showMediaTab = $canManageCourse || \App\Models\CourseMedia::where('course_id', $course->id)->exists();
   }
 @endphp
 
@@ -68,6 +72,11 @@
       <span class="tab-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
     @endif
   </a>
+  @if ($showMediaTab)
+    <a href="{{ route('courses.media', $course) }}" class="{{ request()->routeIs('courses.media') ? 'active' : '' }}" aria-label="Medier">
+      <i class="fa-solid fa-photo-film"></i><span>Medier</span>
+    </a>
+  @endif
   <a href="{{ route('courses.members', $course) }}" class="{{ request()->routeIs('courses.members') ? 'active' : '' }}" aria-label="Medlemmer">
     <i class="fa-solid fa-users"></i><span>Medlemmer</span>
   </a>

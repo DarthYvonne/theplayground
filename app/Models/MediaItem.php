@@ -50,6 +50,32 @@ class MediaItem extends Model
         return $this->type === 'video' && $this->video_processing_status === 'failed';
     }
 
+    /** Decide the media type from an upload's content, falling back to extension. */
+    public static function detectUploadType(\Illuminate\Http\UploadedFile $file): ?string
+    {
+        $mime = strtolower((string) $file->getMimeType());
+        if (str_starts_with($mime, 'video/')) return 'video';
+        if (str_starts_with($mime, 'audio/')) return 'audio';
+        if (str_starts_with($mime, 'image/')) return 'image';
+
+        $ext = strtolower($file->getClientOriginalExtension());
+        if (in_array($ext, ['mp4', 'mov', 'avi', 'webm', 'm4v', 'mkv'], true)) return 'video';
+        if (in_array($ext, ['mp3', 'wav', 'm4a', 'ogg', 'aac', 'flac'], true)) return 'audio';
+        if (in_array($ext, ['jpeg', 'jpg', 'png', 'gif', 'webp'], true)) return 'image';
+
+        return null;
+    }
+
+    /** Validation rules for an upload of the given (already detected) type. */
+    public static function uploadRules(string $type): array
+    {
+        return match ($type) {
+            'video' => ['file', 'mimes:mp4,mov,avi,webm,m4v,mkv', 'max:512000'],
+            'audio' => ['file', 'mimes:mp3,wav,m4a,ogg,aac,flac', 'max:51200'],
+            'image' => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:8192'],
+        };
+    }
+
     /** JSON shape used by the feed and the media picker. */
     public function toPayload(): array
     {
