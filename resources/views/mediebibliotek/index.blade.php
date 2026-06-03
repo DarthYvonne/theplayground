@@ -5,30 +5,19 @@
 <style>
   .media-shell { max-width: 720px; }
 
-  .media-search { position: relative; margin-bottom: 14px; }
+  .media-search { position: relative; margin-bottom: 16px; }
   .media-search i.ico { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; }
   .media-search input { width: 100%; padding: 9px 12px 9px 32px; border: 1px solid var(--border); border-radius: 999px; font: inherit; background: #fff; }
   .media-search input:focus { outline: none; border-color: var(--accent); }
   .media-search .clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); font-size: 13px; padding: 4px; cursor: pointer; display: none; background: none; border: none; }
 
-  .media-nav { display: flex; flex-wrap: wrap; align-items: center; margin-bottom: 16px; font-size: 14px; }
+  .media-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; min-height: 34px; }
+  .media-nav { display: flex; flex-wrap: wrap; align-items: center; font-size: 14px; flex: 1; min-width: 0; }
   .media-nav a { color: var(--muted); font-weight: 600; padding: 2px 0; }
   .media-nav a:hover { color: var(--accent); }
   .media-nav a::before { content: "|"; color: var(--border); margin: 0 10px; font-weight: 400; }
   .media-nav a.lead::before { content: none; }
   .media-nav a .cnt { color: var(--text); font-weight: 700; }
-
-  .media-upload { background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
-  .media-upload summary { cursor: pointer; font-weight: 700; list-style: none; display: flex; align-items: center; gap: 8px; color: var(--text); }
-  .media-upload summary::-webkit-details-marker { display: none; }
-  .media-upload summary i.chev { margin-left: auto; transition: transform 0.15s; color: var(--muted); }
-  .media-upload[open] summary i.chev { transform: rotate(180deg); }
-  .media-upload .fields { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
-  .media-upload label { font-size: 12px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
-  .media-upload input[type=text], .media-upload textarea, .media-upload input[type=file] { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font: inherit; background: #fff; }
-  .media-upload textarea { resize: vertical; min-height: 60px; }
-  .media-upload .req { color: var(--danger); }
-  .media-upload .hint { font-size: 12px; color: var(--muted); }
 
   .media-section { margin-bottom: 26px; scroll-margin-top: 16px; }
   .media-section > h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); margin-bottom: 10px; }
@@ -51,6 +40,36 @@
 
   .media-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
   .media-empty h3 { color: var(--text); margin-bottom: 6px; }
+
+  /* Upload modal */
+  .media-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 20px; }
+  .media-modal-backdrop.open { display: flex; }
+  .media-modal { background: #fff; border-radius: 12px; width: 100%; max-width: 480px; box-shadow: 0 10px 32px rgba(0,0,0,0.22); overflow: hidden; max-height: calc(100vh - 40px); display: flex; flex-direction: column; }
+  .media-modal .head { padding: 16px 20px; border-bottom: 1px solid #f0f2f5; display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+  .media-modal .head .title { font-weight: 700; flex: 1; font-size: 16px; }
+  .media-modal .head .close { background: none; border: none; cursor: pointer; padding: 6px 10px; border-radius: 6px; color: var(--muted); font-size: 16px; }
+  .media-modal .head .close:hover { background: var(--hover); color: var(--text); }
+  .media-modal form { display: flex; flex-direction: column; min-height: 0; }
+  .media-modal .mbody { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
+  .media-modal label { font-size: 12px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
+  .media-modal input[type=text], .media-modal textarea, .media-modal input[type=file] { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font: inherit; background: #fff; }
+  .media-modal input[type=text]:focus, .media-modal textarea:focus { outline: none; border-color: var(--accent); }
+  .media-modal textarea { resize: vertical; min-height: 64px; }
+  .media-modal .req { color: var(--danger); }
+  .media-modal .foot { padding: 12px 20px; border-top: 1px solid #f0f2f5; display: flex; gap: 10px; align-items: center; flex: 0 0 auto; }
+  .media-modal .foot .hint { color: var(--muted); font-size: 12px; flex: 1; }
+
+  /* Mobile: bottom sheet */
+  @media (max-width: 600px) {
+    .media-modal-backdrop { padding: 0; align-items: flex-end; }
+    .media-modal { max-width: none; border-radius: 16px 16px 0 0; max-height: 92dvh; }
+    .media-modal .mbody { padding: 14px 16px; }
+    .media-modal .head, .media-modal .foot { padding-left: 16px; padding-right: 16px; }
+    /* 16px font prevents iOS from zooming the page when focusing inputs */
+    .media-modal input[type=text], .media-modal textarea { font-size: 16px; }
+    .media-modal .foot { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+    .media-bar .media-upload-btn .lbl { display: none; }
+  }
 
   /* Image lightbox */
   .media-lightbox { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 24px; }
@@ -77,45 +96,23 @@
     <button type="button" class="clear" id="mediaSearchClear" aria-label="Ryd søgning"><i class="fa-solid fa-xmark"></i></button>
   </div>
 
-  <nav class="media-nav" id="mediaNav">
-    @php $first = true; @endphp
-    @foreach ($labels as $type => $label)
-      @if ($groups[$type]->isNotEmpty())
-        <a href="#sec-{{ $type }}" data-type="{{ $type }}" class="{{ $first ? 'lead' : '' }}">{{ $label }} (<span class="cnt">{{ $groups[$type]->count() }}</span>)</a>
-        @php $first = false; @endphp
+  @if ($isOwner || $hasAny)
+    <div class="media-bar">
+      <nav class="media-nav" id="mediaNav">
+        @php $first = true; @endphp
+        @foreach ($labels as $type => $label)
+          @if ($groups[$type]->isNotEmpty())
+            <a href="#sec-{{ $type }}" data-type="{{ $type }}" class="{{ $first ? 'lead' : '' }}">{{ $label }} (<span class="cnt">{{ $groups[$type]->count() }}</span>)</a>
+            @php $first = false; @endphp
+          @endif
+        @endforeach
+      </nav>
+      @if ($isOwner)
+        <button type="button" class="btn btn-primary media-upload-btn" id="mediaUploadOpen">
+          <i class="fa-solid fa-plus"></i> <span class="lbl">Upload</span>
+        </button>
       @endif
-    @endforeach
-  </nav>
-
-  @if ($isOwner)
-    <details class="media-upload" @if ($errors->any()) open @endif>
-      <summary>
-        <i class="fa-solid fa-plus" style="color:var(--accent);"></i>
-        Upload
-        <i class="fa-solid fa-chevron-down chev"></i>
-      </summary>
-      <form method="POST" action="{{ route('media.store') }}" enctype="multipart/form-data" class="fields">
-        @csrf
-        <div>
-          <label>Titel <span class="req">*</span></label>
-          <input type="text" name="title" value="{{ old('title') }}" maxlength="255" required>
-        </div>
-        <div>
-          <label>Beskrivelse</label>
-          <textarea name="description" maxlength="2000" placeholder="Valgfri">{{ old('description') }}</textarea>
-        </div>
-        <div>
-          <label>Fil <span class="req">*</span></label>
-          <input type="file" name="file" accept="video/*,audio/*,image/*" required>
-          <div class="hint">Video, lyd eller billede — typen registreres automatisk.</div>
-        </div>
-        <div>
-          <button type="submit" class="btn btn-primary">
-            <i class="fa-solid fa-upload"></i> Upload
-          </button>
-        </div>
-      </form>
-    </details>
+    </div>
   @endif
 
   <div id="mediaNoResults" class="media-empty" style="display:none;">
@@ -126,7 +123,7 @@
   @if (!$hasAny)
     <div class="media-empty">
       <h3>Mediebiblioteket er tomt</h3>
-      <p>{{ $isOwner ? 'Upload det første medie ovenfor.' : 'Der er ikke uploadet noget endnu.' }}</p>
+      <p>{{ $isOwner ? 'Upload det første medie med knappen ovenfor.' : 'Der er ikke uploadet noget endnu.' }}</p>
     </div>
   @else
     @foreach ($labels as $type => $label)
@@ -176,6 +173,40 @@
     @endforeach
   @endif
 </div>
+
+@if ($isOwner)
+  <div class="media-modal-backdrop {{ $errors->any() ? 'open' : '' }}" id="uploadBackdrop" role="dialog" aria-modal="true" aria-labelledby="uploadTitle">
+    <div class="media-modal">
+      <div class="head">
+        <div class="title" id="uploadTitle">Upload medie</div>
+        <button type="button" class="close" id="uploadClose" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form method="POST" action="{{ route('media.store') }}" enctype="multipart/form-data" id="uploadForm">
+        @csrf
+        <div class="mbody">
+          <div>
+            <label for="uploadTitleInput">Titel <span class="req">*</span></label>
+            <input type="text" name="title" id="uploadTitleInput" value="{{ old('title') }}" maxlength="255" required>
+          </div>
+          <div>
+            <label for="uploadDesc">Beskrivelse</label>
+            <textarea name="description" id="uploadDesc" maxlength="2000" placeholder="Valgfri">{{ old('description') }}</textarea>
+          </div>
+          <div>
+            <label for="uploadFile">Fil <span class="req">*</span></label>
+            <input type="file" name="file" id="uploadFile" accept="video/*,audio/*,image/*" required>
+          </div>
+        </div>
+        <div class="foot">
+          <span class="hint">Video, lyd eller billede — typen registreres automatisk.</span>
+          <button type="submit" class="btn btn-primary" id="uploadSubmit">
+            <i class="fa-solid fa-upload"></i> Upload
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+@endif
 
 <div class="media-lightbox" id="mediaLightbox">
   <button type="button" class="close" id="mediaLightboxClose" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
@@ -229,6 +260,34 @@
     search.addEventListener('input', apply);
     clearBtn.addEventListener('click', function () { search.value = ''; apply(); search.focus(); });
     apply();
+  }
+
+  // ---- Upload modal ----
+  var upBackdrop = document.getElementById('uploadBackdrop');
+  if (upBackdrop) {
+    var upOpen = document.getElementById('mediaUploadOpen');
+    var upClose = document.getElementById('uploadClose');
+    var upForm = document.getElementById('uploadForm');
+    var upSubmit = document.getElementById('uploadSubmit');
+
+    function openUpload() {
+      upBackdrop.classList.add('open');
+      var t = document.getElementById('uploadTitleInput');
+      if (t) setTimeout(function () { t.focus(); }, 50);
+    }
+    function closeUpload() { upBackdrop.classList.remove('open'); }
+
+    if (upOpen) upOpen.addEventListener('click', openUpload);
+    upClose.addEventListener('click', closeUpload);
+    upBackdrop.addEventListener('click', function (e) { if (e.target === upBackdrop) closeUpload(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && upBackdrop.classList.contains('open')) closeUpload();
+    });
+    // Large videos take a while — show progress state and prevent double submits.
+    upForm.addEventListener('submit', function () {
+      upSubmit.disabled = true;
+      upSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploader…';
+    });
   }
 
   // ---- Image lightbox ----
