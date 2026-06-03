@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\ProcessVideoJob;
 use App\Models\MediaItem;
+use App\Models\Playlist;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class MediaLibraryController extends Controller
     {
         // Everything is shown at once, grouped by type. Search is done live in
         // the browser across all groups, so we don't filter server-side.
-        $byType = MediaItem::orderByDesc('id')->get()->groupBy('type');
+        $byType = MediaItem::with('playlists')->orderByDesc('id')->get()->groupBy('type');
 
         return view('mediebibliotek.index', [
             'groups' => [
@@ -26,6 +27,7 @@ class MediaLibraryController extends Controller
                 'audio' => $byType->get('audio', collect()),
                 'image' => $byType->get('image', collect()),
             ],
+            'playlists' => Playlist::withCount('mediaItems')->orderBy('name')->get(),
             'isOwner' => $request->user()->isOwner(),
         ]);
     }
@@ -43,10 +45,21 @@ class MediaLibraryController extends Controller
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
             'file' => ['required', 'file'],
+            'playlist_id' => ['nullable'],
+            'new_playlist' => ['nullable', 'string', 'max:100'],
         ], [
             'title.required' => 'Titel er påkrævet.',
             'file.required' => 'Vælg en fil.',
         ]);
+
+        // "Opret ny" needs a name — fail before any file lands on disk.
+        if ($request->input('playlist_id') === 'new') {
+            $request->validate([
+                'new_playlist' => ['required', 'string', 'max:100'],
+            ], [
+                'new_playlist.required' => 'Skriv et navn til den nye playliste.',
+            ]);
+        }
 
         $file = $request->file('file');
         $type = MediaItem::detectUploadType($file);
@@ -86,6 +99,16 @@ class MediaLibraryController extends Controller
 
         if ($type === 'video') {
             ProcessVideoJob::dispatch(MediaItem::class, $item->id, $path, self::DISK, true);
+        }
+
+        $playlist = null;
+        if ($request->input('playlist_id') === 'new') {
+            $playlist = Playlist::firstOrCreate(['name' => trim($request->input('new_playlist'))]);
+        } elseif ($request->filled('playlist_id')) {
+            $playlist = Playlist::find($request->input('playlist_id'));
+        }
+        if ($playlist) {
+            $item->playlists()->attach($playlist->id);
         }
 
         return redirect()->route('media.index')->with('status', 'Medie uploadet.');

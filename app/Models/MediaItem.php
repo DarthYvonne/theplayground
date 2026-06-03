@@ -23,6 +23,7 @@ class MediaItem extends Model
     ];
 
     public function user(): BelongsTo { return $this->belongsTo(User::class); }
+    public function playlists(): \Illuminate\Database\Eloquent\Relations\BelongsToMany { return $this->belongsToMany(Playlist::class); }
 
     /** URL of the playable/displayable file. */
     public function url(): ?string

@@ -22,6 +22,7 @@
   .media-nav a::before { content: "|"; color: var(--border); margin: 0 10px; font-weight: 400; }
   .media-nav a.lead::before { content: none; }
   .media-nav a .cnt { color: var(--text); font-weight: 700; }
+  .media-nav a .pl-ico { font-size: 11px; margin-right: 5px; opacity: 0.7; }
 
   .media-section { margin-bottom: 26px; }
   .media-section > h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); margin-bottom: 10px; }
@@ -64,8 +65,8 @@
   .media-modal form { display: flex; flex-direction: column; min-height: 0; }
   .media-modal .mbody { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
   .media-modal label { font-size: 12px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
-  .media-modal input[type=text], .media-modal textarea, .media-modal input[type=file] { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font: inherit; background: #fff; }
-  .media-modal input[type=text]:focus, .media-modal textarea:focus { outline: none; border-color: var(--accent); }
+  .media-modal input[type=text], .media-modal textarea, .media-modal input[type=file], .media-modal select { width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 8px; font: inherit; background: #fff; }
+  .media-modal input[type=text]:focus, .media-modal textarea:focus, .media-modal select:focus { outline: none; border-color: var(--accent); }
   .media-modal textarea { resize: vertical; min-height: 64px; }
   .media-modal .req { color: var(--danger); }
   .media-modal .foot { padding: 12px 20px 16px; border-top: 1px solid #f0f2f5; display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
@@ -79,7 +80,7 @@
     .media-modal .mbody { padding: 14px 16px; }
     .media-modal .head, .media-modal .foot { padding-left: 16px; padding-right: 16px; }
     /* 16px font prevents iOS from zooming the page when focusing inputs */
-    .media-modal input[type=text], .media-modal textarea { font-size: 16px; }
+    .media-modal input[type=text], .media-modal textarea, .media-modal select { font-size: 16px; }
     .media-modal .foot { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
   }
 
@@ -126,6 +127,11 @@
             @php $first = false; @endphp
           @endif
         @endforeach
+        @foreach ($playlists as $pl)
+          @continue($pl->media_items_count === 0)
+          <a href="#" data-playlist="{{ $pl->id }}" class="{{ $first ? 'lead' : '' }}"><i class="fa-solid fa-list-ul pl-ico"></i>{{ $pl->name }} (<span class="cnt">{{ $pl->media_items_count }}</span>)</a>
+          @php $first = false; @endphp
+        @endforeach
       </nav>
     </div>
   @endif
@@ -148,6 +154,7 @@
         <div class="media-grid">
           @foreach ($groups[$type] as $item)
             <div class="media-card" data-search="{{ \Illuminate\Support\Str::lower(trim($item->title . ' ' . $item->description . ' ' . $item->created_at->format('d.m.Y'))) }}"
+              data-playlists="{{ $item->playlists->pluck('id')->implode(',') }}"
               @if ($isOwner) data-id="{{ $item->id }}" data-title="{{ $item->title }}" data-desc="{{ $item->description }}" @endif>
               @if ($item->type === 'video')
                 @if ($item->isProcessing())
@@ -213,6 +220,18 @@
             <label for="uploadFile">Fil <span class="req">*</span></label>
             <input type="file" name="file" id="uploadFile" accept="video/*,audio/*,image/*" required>
           </div>
+          <div>
+            <label for="uploadPlaylist">Tilføj til playliste?</label>
+            <select name="playlist_id" id="uploadPlaylist">
+              <option value="">Ingen</option>
+              @foreach ($playlists as $pl)
+                <option value="{{ $pl->id }}" @selected(old('playlist_id') == $pl->id)>{{ $pl->name }}</option>
+              @endforeach
+              <option value="new" @selected(old('playlist_id') === 'new')>+ Opret ny…</option>
+            </select>
+            <input type="text" name="new_playlist" id="uploadNewPlaylist" value="{{ old('new_playlist') }}" maxlength="100"
+              placeholder="Navn på den nye playliste" style="margin-top:8px; {{ old('playlist_id') === 'new' ? '' : 'display:none;' }}">
+          </div>
         </div>
         <div class="foot">
           <span class="hint">Video, lyd eller billede — typen registreres automatisk.</span>
@@ -267,7 +286,8 @@
   var noResults = document.getElementById('mediaNoResults');
   var sections = Array.prototype.slice.call(document.querySelectorAll('.media-section'));
   var navLinks = {};
-  var activeType = null; // category filter — null shows everything
+  var activeType = null;     // category filter — null shows everything
+  var activePlaylist = null; // playlist filter — mutually exclusive with activeType
 
   document.querySelectorAll('#mediaNav a[data-type]').forEach(function (a) {
     navLinks[a.dataset.type] = { el: a, cnt: a.querySelector('.cnt') };
@@ -275,22 +295,37 @@
     // category again shows everything.
     a.addEventListener('click', function (e) {
       e.preventDefault();
+      activePlaylist = null;
       activeType = (activeType === a.dataset.type) ? null : a.dataset.type;
       apply();
     });
   });
+  var playlistLinks = Array.prototype.slice.call(document.querySelectorAll('#mediaNav a[data-playlist]'));
+  playlistLinks.forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      e.preventDefault();
+      activeType = null;
+      activePlaylist = (activePlaylist === a.dataset.playlist) ? null : a.dataset.playlist;
+      apply();
+    });
+  });
+
+  function inPlaylist(card, id) {
+    return (card.getAttribute('data-playlists') || '').split(',').indexOf(id) !== -1;
+  }
 
   function apply() {
     var q = (search.value || '').toLowerCase().trim();
     clearBtn.style.display = q ? 'block' : 'none';
 
     var totalVisible = 0;
-    var firstVisibleLink = null;
 
     sections.forEach(function (sec) {
       var matches = 0;
       sec.querySelectorAll('.media-card').forEach(function (card) {
         var match = q === '' || (card.getAttribute('data-search') || '').indexOf(q) !== -1;
+        // The playlist filter narrows cards inside their type sections.
+        if (match && q === '' && activePlaylist) match = inPlaylist(card, activePlaylist);
         card.style.display = match ? '' : 'none';
         if (match) matches++;
       });
@@ -305,23 +340,43 @@
         if (link.cnt) link.cnt.textContent = matches;
         link.el.style.display = matches ? '' : 'none';
         link.el.classList.toggle('active', q === '' && activeType === sec.dataset.type);
-        link.el.classList.remove('lead');
-        if (matches && !firstVisibleLink) firstVisibleLink = link.el;
       }
     });
 
-    if (firstVisibleLink) firstVisibleLink.classList.add('lead');
+    playlistLinks.forEach(function (a) {
+      a.classList.toggle('active', q === '' && activePlaylist === a.dataset.playlist);
+    });
+
+    // First *visible* nav link loses its "|" separator.
+    var firstSeen = false;
+    document.querySelectorAll('#mediaNav a').forEach(function (a) {
+      var visible = a.style.display !== 'none';
+      a.classList.toggle('lead', visible && !firstSeen);
+      if (visible) firstSeen = true;
+    });
+
     if (noResults) noResults.style.display = (q !== '' && totalVisible === 0) ? '' : 'none';
   }
 
   if (search) {
     search.addEventListener('input', function () {
-      // Typing a search resets the category filter — søg searches everything.
-      if (search.value.trim() !== '') activeType = null;
+      // Typing a search resets the filters — søg searches everything.
+      if (search.value.trim() !== '') { activeType = null; activePlaylist = null; }
       apply();
     });
     clearBtn.addEventListener('click', function () { search.value = ''; apply(); search.focus(); });
     apply();
+  }
+
+  // ---- "Tilføj til playliste?" — reveal the name input on "Opret ny…" ----
+  var plSelect = document.getElementById('uploadPlaylist');
+  var plNewInput = document.getElementById('uploadNewPlaylist');
+  if (plSelect && plNewInput) {
+    plSelect.addEventListener('change', function () {
+      var isNew = plSelect.value === 'new';
+      plNewInput.style.display = isNew ? '' : 'none';
+      if (isNew) plNewInput.focus();
+    });
   }
 
   // ---- Upload modal ----
