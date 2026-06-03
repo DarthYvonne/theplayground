@@ -15,56 +15,54 @@ class MediaLibraryController extends Controller
 
     public function index(Request $request)
     {
-        $tab = in_array($request->query('tab'), MediaItem::TYPES, true)
-            ? $request->query('tab')
-            : 'video';
-        $q = trim((string) $request->query('q', ''));
-
-        $items = MediaItem::where('type', $tab)
-            ->when($q !== '', function ($query) use ($q) {
-                $query->where(function ($w) use ($q) {
-                    $w->where('title', 'like', "%{$q}%")
-                      ->orWhere('description', 'like', "%{$q}%");
-                });
-            })
-            ->orderByDesc('id')
-            ->get();
+        // Everything is shown at once, grouped by type. Search is done live in
+        // the browser across all groups, so we don't filter server-side.
+        $byType = MediaItem::orderByDesc('id')->get()->groupBy('type');
 
         return view('mediebibliotek.index', [
-            'tab' => $tab,
-            'q' => $q,
-            'items' => $items,
+            'groups' => [
+                'video' => $byType->get('video', collect()),
+                'audio' => $byType->get('audio', collect()),
+                'image' => $byType->get('image', collect()),
+            ],
             'isOwner' => $request->user()->isOwner(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $type = $request->input('type');
-        abort_unless(in_array($type, MediaItem::TYPES, true), 422);
-
-        $rules = [
+        $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
-        ];
-        $rules['file'] = match ($type) {
-            'video' => ['required', 'file', 'mimes:mp4,mov,avi,webm,m4v,mkv', 'max:512000'],
-            'audio' => ['required', 'file', 'mimes:mp3,wav,m4a,ogg,aac,flac', 'max:51200'],
-            'image' => ['required', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:8192'],
-        };
-
-        $messages = [
+            'file' => ['required', 'file'],
+        ], [
             'title.required' => 'Titel er påkrævet.',
             'file.required' => 'Vælg en fil.',
-            'file.mimes' => 'Filtypen understøttes ikke.',
-            'file.max' => 'Filen er for stor.',
-            'file.image' => 'Filen er ikke et billede.',
-        ];
-
-        $data = $request->validate($rules, $messages);
+        ]);
 
         $file = $request->file('file');
-        $subdir = $type . 's/' . now()->format('Y/m'); // videos|audios|images — kept simple
+        $type = $this->detectType($file);
+
+        if ($type === null) {
+            return back()->withInput()->withErrors([
+                'file' => 'Filtypen understøttes ikke. Du kan uploade video, lyd eller billeder.',
+            ]);
+        }
+
+        // Type-specific limits, now that we know what kind of file it is.
+        $request->validate([
+            'file' => match ($type) {
+                'video' => ['file', 'mimes:mp4,mov,avi,webm,m4v,mkv', 'max:512000'],
+                'audio' => ['file', 'mimes:mp3,wav,m4a,ogg,aac,flac', 'max:51200'],
+                'image' => ['file', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:8192'],
+            },
+        ], [
+            'file.mimes' => 'Filtypen understøttes ikke.',
+            'file.image' => 'Filen er ikke et billede.',
+            'file.max' => 'Filen er for stor.',
+        ]);
+
+        $subdir = $type . 's/' . now()->format('Y/m'); // videos|audios|images
         $name = Str::ulid() . '.' . strtolower($file->getClientOriginalExtension() ?: $file->extension());
         $path = $file->storeAs($subdir, $name, self::DISK);
 
@@ -74,8 +72,8 @@ class MediaLibraryController extends Controller
 
         $item = MediaItem::create([
             'type' => $type,
-            'title' => $data['title'],
-            'description' => $data['description'] ?? null,
+            'title' => $request->input('title'),
+            'description' => $request->input('description'),
             'file_path' => $type === 'video' ? null : $path,
             'video_path' => $type === 'video' ? $path : null,
             'video_processing_status' => $type === 'video' ? 'pending' : null,
@@ -86,19 +84,30 @@ class MediaLibraryController extends Controller
             ProcessVideoJob::dispatch(MediaItem::class, $item->id, $path, self::DISK, true);
         }
 
-        return redirect()
-            ->route('media.index', ['tab' => $type])
-            ->with('status', 'Medie uploadet.');
+        return redirect()->route('media.index')->with('status', 'Medie uploadet.');
     }
 
     public function destroy(Request $request, MediaItem $mediaItem): RedirectResponse
     {
-        $type = $mediaItem->type;
         $mediaItem->deleteFiles();
         $mediaItem->delete();
 
-        return redirect()
-            ->route('media.index', ['tab' => $type])
-            ->with('status', 'Medie slettet.');
+        return redirect()->route('media.index')->with('status', 'Medie slettet.');
+    }
+
+    /** Decide the media type from the uploaded file's content, falling back to extension. */
+    private function detectType(\Illuminate\Http\UploadedFile $file): ?string
+    {
+        $mime = strtolower((string) $file->getMimeType());
+        if (str_starts_with($mime, 'video/')) return 'video';
+        if (str_starts_with($mime, 'audio/')) return 'audio';
+        if (str_starts_with($mime, 'image/')) return 'image';
+
+        $ext = strtolower($file->getClientOriginalExtension());
+        if (in_array($ext, ['mp4', 'mov', 'avi', 'webm', 'm4v', 'mkv'], true)) return 'video';
+        if (in_array($ext, ['mp3', 'wav', 'm4a', 'ogg', 'aac', 'flac'], true)) return 'audio';
+        if (in_array($ext, ['jpeg', 'jpg', 'png', 'gif', 'webp'], true)) return 'image';
+
+        return null;
     }
 }
