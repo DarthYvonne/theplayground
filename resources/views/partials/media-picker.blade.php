@@ -148,6 +148,9 @@ window.mediaPicker = (function () {
       var data = await res.json();
       items = data.items || [];
       playlists = data.playlists || [];
+      // Open sorted on Video by default (first non-empty group if no videos).
+      var byGroup = filtered('');
+      filter = GROUPS.map(function (g) { return g.key; }).find(function (k) { return byGroup[k].length; }) || null;
       render();
     } catch (err) {
       body.innerHTML = '<div class="mp-empty">Kunne ikke hente mediebiblioteket.</div>';
