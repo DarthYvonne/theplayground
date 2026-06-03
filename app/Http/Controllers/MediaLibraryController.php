@@ -101,13 +101,7 @@ class MediaLibraryController extends Controller
             ProcessVideoJob::dispatch(MediaItem::class, $item->id, $path, self::DISK, true);
         }
 
-        $playlist = null;
-        if ($request->input('playlist_id') === 'new') {
-            $playlist = Playlist::firstOrCreate(['name' => trim($request->input('new_playlist'))]);
-        } elseif ($request->filled('playlist_id')) {
-            $playlist = Playlist::find($request->input('playlist_id'));
-        }
-        if ($playlist) {
+        if ($playlist = $this->resolvePlaylist($request)) {
             $item->playlists()->attach($playlist->id);
         }
 
@@ -119,13 +113,41 @@ class MediaLibraryController extends Controller
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:2000'],
+            'playlist_id' => ['nullable'],
+            'new_playlist' => ['nullable', 'string', 'max:100'],
         ], [
             'title.required' => 'Titel er påkrævet.',
         ]);
 
-        $mediaItem->update($data);
+        if ($request->input('playlist_id') === 'new') {
+            $request->validate([
+                'new_playlist' => ['required', 'string', 'max:100'],
+            ], [
+                'new_playlist.required' => 'Skriv et navn til den nye playliste.',
+            ]);
+        }
+
+        $mediaItem->update([
+            'title' => $data['title'],
+            'description' => $data['description'] ?? null,
+        ]);
+
+        $playlist = $this->resolvePlaylist($request);
+        $mediaItem->playlists()->sync($playlist ? [$playlist->id] : []);
 
         return redirect()->route('media.index')->with('status', 'Medie opdateret.');
+    }
+
+    /** The chosen playlist from a form's "Tilføj til playliste?" controls, if any. */
+    private function resolvePlaylist(Request $request): ?Playlist
+    {
+        if ($request->input('playlist_id') === 'new') {
+            return Playlist::firstOrCreate(['name' => trim($request->input('new_playlist'))]);
+        }
+        if ($request->filled('playlist_id')) {
+            return Playlist::find($request->input('playlist_id'));
+        }
+        return null;
     }
 
     public function destroy(Request $request, MediaItem $mediaItem): RedirectResponse

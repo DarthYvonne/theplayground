@@ -38,7 +38,6 @@
   .media-card .meta { color: var(--muted); font-size: 11px; margin-top: auto; padding-top: 6px; }
   .media-card video, .media-card img.thumb { display: block; width: 100%; height: 130px; background: #000; object-fit: contain; }
   .media-card img.thumb { background: #f0f2f5; object-fit: cover; cursor: zoom-in; }
-  .media-card .audio-head { height: 130px; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); font-size: 32px; }
   .media-card .audio-wrap { padding: 10px 12px 0; }
   .media-card .state { height: 130px; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--muted); font-size: 12px; background: #f0f2f5; padding: 0 12px; }
   .media-card .state.failed { color: var(--danger); }
@@ -46,7 +45,7 @@
   .media-card .del:hover { background: #fdeaea; color: var(--danger); }
   @media (max-width: 480px) {
     .media-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .media-card video, .media-card img.thumb, .media-card .audio-head, .media-card .state { height: 110px; }
+    .media-card video, .media-card img.thumb, .media-card .state { height: 110px; }
   }
 
   .media-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
@@ -167,7 +166,6 @@
                   </video>
                 @endif
               @elseif ($item->type === 'audio')
-                <div class="audio-head"><i class="fa-solid fa-music"></i></div>
                 <div class="audio-wrap">
                   <div class="tp-audio sm" data-src="{{ $item->url() }}"></div>
                 </div>
@@ -259,6 +257,18 @@
           <div>
             <label for="editDesc">Beskrivelse</label>
             <textarea name="description" id="editDesc" maxlength="2000" placeholder="Valgfri"></textarea>
+          </div>
+          <div>
+            <label for="editPlaylist">Playliste</label>
+            <select name="playlist_id" id="editPlaylist">
+              <option value="">Ingen</option>
+              @foreach ($playlists as $pl)
+                <option value="{{ $pl->id }}">{{ $pl->name }}</option>
+              @endforeach
+              <option value="new">+ Opret ny…</option>
+            </select>
+            <input type="text" name="new_playlist" id="editNewPlaylist" maxlength="100"
+              placeholder="Navn på den nye playliste" style="margin-top:8px; display:none;">
           </div>
         </div>
         <div class="foot">
@@ -369,15 +379,19 @@
   }
 
   // ---- "Tilføj til playliste?" — reveal the name input on "Opret ny…" ----
-  var plSelect = document.getElementById('uploadPlaylist');
-  var plNewInput = document.getElementById('uploadNewPlaylist');
-  if (plSelect && plNewInput) {
-    plSelect.addEventListener('change', function () {
-      var isNew = plSelect.value === 'new';
-      plNewInput.style.display = isNew ? '' : 'none';
-      if (isNew) plNewInput.focus();
-    });
+  function wirePlaylistSelect(select, input) {
+    if (!select || !input) return;
+    function sync(focus) {
+      var isNew = select.value === 'new';
+      input.style.display = isNew ? '' : 'none';
+      input.required = isNew; // keep validation client-side so modals don't mis-reopen
+      if (isNew && focus) input.focus();
+    }
+    select.addEventListener('change', function () { sync(true); });
+    sync(false);
   }
+  wirePlaylistSelect(document.getElementById('uploadPlaylist'), document.getElementById('uploadNewPlaylist'));
+  wirePlaylistSelect(document.getElementById('editPlaylist'), document.getElementById('editNewPlaylist'));
 
   // ---- Upload modal ----
   var upBackdrop = document.getElementById('uploadBackdrop');
@@ -419,6 +433,17 @@
       editForm.action = EDIT_URL.replace('__ID__', card.dataset.id);
       editTitleInput.value = card.dataset.title || '';
       editDescInput.value = card.dataset.desc || '';
+      // Preselect the item's playlist (the UI assigns at most one).
+      var plSelect = document.getElementById('editPlaylist');
+      var plNew = document.getElementById('editNewPlaylist');
+      if (plSelect) {
+        var current = (card.dataset.playlists || '').split(',').filter(Boolean)[0] || '';
+        plSelect.value = current;
+        if (plSelect.value !== current) plSelect.value = '';
+        plNew.value = '';
+        plNew.style.display = 'none';
+        plNew.required = false;
+      }
       editBackdrop.classList.add('open');
       setTimeout(function () { editTitleInput.focus(); }, 50);
     }

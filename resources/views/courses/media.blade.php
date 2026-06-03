@@ -13,7 +13,6 @@
   .cmedia-card { background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.06); display: flex; flex-direction: column; }
   .cmedia-card video { display: block; width: 100%; height: 130px; background: #000; object-fit: contain; }
   .cmedia-card img.cm-img { display: block; width: 100%; height: 130px; object-fit: cover; background: #f0f2f5; cursor: zoom-in; }
-  .cmedia-card .cm-audio-head { height: 130px; display: flex; align-items: center; justify-content: center; background: var(--accent-soft); color: var(--accent); font-size: 32px; }
   .cmedia-card .cm-audio { padding: 10px 12px 0; }
   .cmedia-card .cm-state { height: 130px; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--muted); font-size: 12px; background: #f0f2f5; padding: 0 12px; }
   .cmedia-card .cm-state.failed { color: var(--danger); }
@@ -24,7 +23,7 @@
   .cmedia-card .cm-meta .del:hover { background: #fdeaea; color: var(--danger); }
   @media (max-width: 480px) {
     .cmedia-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-    .cmedia-card video, .cmedia-card img.cm-img, .cmedia-card .cm-audio-head, .cmedia-card .cm-state { height: 110px; }
+    .cmedia-card video, .cmedia-card img.cm-img, .cmedia-card .cm-state { height: 110px; }
   }
 
   .cmedia-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
@@ -122,7 +121,6 @@
           @elseif ($item->type === 'image')
             <img class="cm-img" src="{{ $item->url() }}" alt="" loading="lazy" data-full="{{ $item->url() }}">
           @elseif ($item->type === 'audio')
-            <div class="cm-audio-head"><i class="fa-solid fa-music"></i></div>
             <div class="cm-audio">
               <div class="tp-audio sm" data-src="{{ $item->url() }}"></div>
             </div>
