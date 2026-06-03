@@ -56,8 +56,9 @@
   .media-modal input[type=text]:focus, .media-modal textarea:focus { outline: none; border-color: var(--accent); }
   .media-modal textarea { resize: vertical; min-height: 64px; }
   .media-modal .req { color: var(--danger); }
-  .media-modal .foot { padding: 12px 20px; border-top: 1px solid #f0f2f5; display: flex; gap: 10px; align-items: center; flex: 0 0 auto; }
-  .media-modal .foot .hint { color: var(--muted); font-size: 12px; flex: 1; }
+  .media-modal .foot { padding: 12px 20px 16px; border-top: 1px solid #f0f2f5; display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto; }
+  .media-modal .foot .hint { color: var(--muted); font-size: 12px; text-align: center; }
+  .media-modal .foot .btn { width: 100%; justify-content: center; padding: 13px 16px; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; }
 
   /* Mobile: bottom sheet */
   @media (max-width: 600px) {
@@ -67,7 +68,7 @@
     .media-modal .head, .media-modal .foot { padding-left: 16px; padding-right: 16px; }
     /* 16px font prevents iOS from zooming the page when focusing inputs */
     .media-modal input[type=text], .media-modal textarea { font-size: 16px; }
-    .media-modal .foot { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+    .media-modal .foot { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
     .media-bar .media-upload-btn .lbl { display: none; }
   }
 
