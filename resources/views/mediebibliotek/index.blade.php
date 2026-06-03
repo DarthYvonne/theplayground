@@ -144,7 +144,7 @@
         <h2>{{ $label }}</h2>
         <div class="media-grid">
           @foreach ($groups[$type] as $item)
-            <div class="media-card" data-search="{{ \Illuminate\Support\Str::lower(trim($item->title . ' ' . $item->description)) }}">
+            <div class="media-card" data-search="{{ \Illuminate\Support\Str::lower(trim($item->title . ' ' . $item->description . ' ' . $item->created_at->format('d.m.Y'))) }}">
               @if ($item->type === 'video')
                 @if ($item->isProcessing())
                   <div class="state"><i class="fa-solid fa-spinner fa-spin"></i> Videoen behandles…</div>
