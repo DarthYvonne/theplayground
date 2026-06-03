@@ -74,6 +74,17 @@ return [
             'report' => false,
         ],
 
+        // Mediebibliotek — videos, audio and images live here under
+        // videos/ audio/ images/ subfolders (one disk, one symlink).
+        'media' => [
+            'driver' => 'local',
+            'root' => env('MEDIA_LIBRARY_PATH', storage_path('app/public/media')),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/media',
+            'visibility' => 'public',
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
@@ -105,6 +116,7 @@ return [
         public_path('feed-images') => env('FEED_IMAGES_PATH', storage_path('app/public/feed-images')),
         public_path('feed-videos') => env('FEED_VIDEOS_PATH', storage_path('app/public/feed-videos')),
         public_path('course-videos') => env('COURSE_VIDEOS_PATH', storage_path('app/public/course-videos')),
+        public_path('media') => env('MEDIA_LIBRARY_PATH', storage_path('app/public/media')),
     ],
 
 ];

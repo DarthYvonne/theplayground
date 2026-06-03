@@ -13,6 +13,7 @@ use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\FloatingController;
 use App\Http\Controllers\Admin\FloatingAdminController;
+use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\MembersController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PreviewRoleController;
@@ -63,6 +64,13 @@ Route::middleware('auth')->group(function () {
     Route::post('/beskeder', [BeskederController::class, 'store'])->name('beskeder.store');
     Route::post('/beskeder/settings', [BeskederController::class, 'updateSettings'])->name('beskeder.settings');
     Route::get('/api/messages/recipients', [BeskederController::class, 'recipients'])->name('beskeder.recipients');
+
+    // Mediebibliotek — everyone can view/search; only owners upload & delete.
+    Route::get('/mediebibliotek', [MediaLibraryController::class, 'index'])->name('media.index');
+    Route::middleware('role:owner')->group(function () {
+        Route::post('/mediebibliotek', [MediaLibraryController::class, 'store'])->name('media.store');
+        Route::post('/mediebibliotek/{mediaItem}/delete', [MediaLibraryController::class, 'destroy'])->name('media.destroy');
+    });
 
     Route::get('/medlemmer', [MembersController::class, 'index'])->name('members.index');
     Route::get('/medlemmer/{user}', [MembersController::class, 'show'])->name('members.show');
