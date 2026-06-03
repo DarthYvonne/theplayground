@@ -26,10 +26,16 @@
   /* Playlist cards — each playlist is a card; play all or one at a time */
   .pl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
   @media (max-width: 600px) { .pl-grid { grid-template-columns: 1fr; } }
+  .pl-cover { display: block; width: 100%; height: 120px; object-fit: cover; background: #f0f2f5; }
   .pl-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #f0f2f5; }
-  .pl-name { font-weight: 700; font-size: 14px; flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; }
-  .pl-name i { color: var(--accent); font-size: 12px; }
+  .pl-name { font-weight: 700; font-size: 14px; flex: 1; min-width: 0; display: flex; gap: 6px; align-items: center; }
+  .pl-name .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pl-name .pl-count { color: var(--muted); font-weight: 600; }
+  .pl-desc { padding: 10px 14px; border-bottom: 1px solid #f0f2f5; color: var(--muted); font-size: 12px; line-height: 1.45; white-space: pre-wrap; }
+  .pl-foot { display: flex; justify-content: flex-end; gap: 2px; padding: 6px 8px; border-top: 1px solid #f0f2f5; }
+  .pl-foot .ibtn { background: none; border: none; cursor: pointer; color: var(--muted); padding: 6px 9px; border-radius: 6px; font-size: 13px; }
+  .pl-foot .ibtn:hover { background: var(--hover); color: var(--accent); }
+  .pl-foot .ibtn.danger:hover { background: #fdeaea; color: var(--danger); }
   .pl-playall { border: none; background: var(--accent); color: #fff; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; flex: 0 0 auto; }
   .pl-playall:hover { background: var(--accent-hover); }
   .pl-tracks { display: flex; flex-direction: column; padding: 6px; flex: 1; }
@@ -112,7 +118,7 @@
   /* Image lightbox */
   .media-lightbox { position: fixed; inset: 0; width: 100%; max-width: none; background: rgba(0,0,0,0.85); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 24px; }
   .media-lightbox.open { display: flex; }
-  .media-lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+  .media-lightbox img, .media-lightbox video { max-width: 100%; max-height: 100%; border-radius: 6px; }
   .media-lightbox .close { position: absolute; top: 18px; right: 22px; color: #fff; font-size: 26px; background: none; border: none; cursor: pointer; }
 </style>
 @endpush
@@ -225,28 +231,41 @@
         <h2>Playlister</h2>
         <div class="pl-grid">
           @foreach ($playlistsWithItems as $pl)
-            <div class="media-card pl-card" data-search="{{ \Illuminate\Support\Str::lower(trim($pl->name . ' ' . $pl->mediaItems->pluck('title')->implode(' '))) }}">
+            <div class="media-card pl-card" data-search="{{ \Illuminate\Support\Str::lower(trim($pl->name . ' ' . $pl->description . ' ' . $pl->mediaItems->pluck('title')->implode(' '))) }}"
+              @if ($isOwner) data-pl-id="{{ $pl->id }}" data-pl-name="{{ $pl->name }}" data-pl-desc="{{ $pl->description }}" @endif>
+              @if ($pl->imageUrl())
+                <img class="pl-cover" src="{{ $pl->imageUrl() }}" alt="" loading="lazy">
+              @endif
               <div class="pl-head">
-                <div class="pl-name"><i class="fa-solid fa-list-ul"></i> <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $pl->name }}</span> <span class="pl-count">({{ $pl->mediaItems->count() }})</span></div>
+                <div class="pl-name"><span class="nm">{{ $pl->name }}</span> <span class="pl-count">({{ $pl->mediaItems->count() }})</span></div>
                 @if ($pl->mediaItems->contains(fn ($mi) => $mi->type === 'audio' && $mi->url()))
                   <button type="button" class="pl-playall"><i class="fa-solid fa-play"></i> Afspil alle</button>
                 @endif
               </div>
+              @if (trim((string) $pl->description) !== '')
+                <div class="pl-desc">{{ $pl->description }}</div>
+              @endif
               <div class="pl-tracks">
                 @foreach ($pl->mediaItems as $mi)
+                  @php $tinyThumb = $mi->type === 'video' ? $mi->thumbnailUrl() : ($mi->type === 'image' ? $mi->url() : null); @endphp
                   @if ($mi->type === 'audio' && $mi->url())
                     <button type="button" class="pl-track" data-src="{{ $mi->url() }}">
                       <span class="ticon"><i class="fa-solid fa-play"></i></span>
                       <span class="t">{{ $mi->title }}</span>
                     </button>
+                  @elseif ($mi->type === 'video' && $mi->url())
+                    <button type="button" class="pl-track" data-video="{{ $mi->url() }}">
+                      @if ($tinyThumb)<img class="tthumb" src="{{ $tinyThumb }}" alt="" loading="lazy">@else<span class="ticon"><i class="fa-solid fa-film"></i></span>@endif
+                      <span class="t">{{ $mi->title }}</span>
+                    </button>
+                  @elseif ($mi->type === 'image' && $mi->url())
+                    <button type="button" class="pl-track" data-image="{{ $mi->url() }}">
+                      <img class="tthumb" src="{{ $mi->url() }}" alt="" loading="lazy">
+                      <span class="t">{{ $mi->title }}</span>
+                    </button>
                   @else
                     <div class="pl-track na">
-                      @php $tinyThumb = $mi->type === 'video' ? $mi->thumbnailUrl() : ($mi->type === 'image' ? $mi->url() : null); @endphp
-                      @if ($tinyThumb)
-                        <img class="tthumb" src="{{ $tinyThumb }}" alt="" loading="lazy">
-                      @else
-                        <span class="ticon"><i class="fa-solid {{ $mi->type === 'video' ? 'fa-film' : 'fa-image' }}"></i></span>
-                      @endif
+                      <span class="ticon"><i class="fa-solid {{ $mi->type === 'video' ? 'fa-film' : ($mi->type === 'image' ? 'fa-image' : 'fa-music') }}"></i></span>
                       <span class="t">{{ $mi->title }}</span>
                     </div>
                   @endif
@@ -256,6 +275,15 @@
                 <div class="pl-bar"><div class="pl-prog"></div></div>
                 <span class="pl-time">0:00</span>
               </div>
+              @if ($isOwner)
+                <div class="pl-foot">
+                  <button type="button" class="ibtn pl-edit" title="Rediger playliste" aria-label="Rediger playliste"><i class="fa-solid fa-pen"></i></button>
+                  <form method="POST" action="{{ route('media.playlists.destroy', $pl) }}" onsubmit="return confirm('Slet playlisten “{{ $pl->name }}”? Medierne i den slettes ikke.');">
+                    @csrf
+                    <button type="submit" class="ibtn danger" title="Slet playliste" aria-label="Slet playliste"><i class="fa-solid fa-trash"></i></button>
+                  </form>
+                </div>
+              @endif
             </div>
           @endforeach
         </div>
@@ -345,11 +373,41 @@
       </form>
     </div>
   </div>
+
+  <div class="media-modal-backdrop" id="plEditBackdrop" role="dialog" aria-modal="true" aria-labelledby="plEditTitle">
+    <div class="media-modal">
+      <div class="head">
+        <div class="title" id="plEditTitle">Rediger playliste</div>
+        <button type="button" class="close" id="plEditClose" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form method="POST" action="" enctype="multipart/form-data" id="plEditForm">
+        @csrf
+        <div class="mbody">
+          <div>
+            <label for="plEditName">Navn <span class="req">*</span></label>
+            <input type="text" name="name" id="plEditName" maxlength="100" required>
+          </div>
+          <div>
+            <label for="plEditDesc">Beskrivelse</label>
+            <textarea name="description" id="plEditDesc" maxlength="2000" placeholder="Valgfri"></textarea>
+          </div>
+          <div>
+            <label for="plEditImage">Billede</label>
+            <input type="file" name="image" id="plEditImage" accept="image/*">
+          </div>
+        </div>
+        <div class="foot">
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Gem</button>
+        </div>
+      </form>
+    </div>
+  </div>
 @endif
 
 <div class="media-lightbox" id="mediaLightbox">
   <button type="button" class="close" id="mediaLightboxClose" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
-  <img src="" alt="" id="mediaLightboxImg">
+  <img src="" alt="" id="mediaLightboxImg" style="display:none;">
+  <video id="mediaLightboxVideo" controls playsinline style="display:none;"></video>
 </div>
 
 @push('scripts')
@@ -468,7 +526,8 @@
     tracks.forEach(function (t, i) {
       t.addEventListener('click', function () {
         if (current === i) { audio.paused ? audio.play() : audio.pause(); }
-        else { queue = false; playIndex(i); }
+        // Jump freely — if "Afspil alle" is running, the queue continues from here.
+        else { playIndex(i); }
       });
     });
     if (playAll) {
@@ -586,17 +645,76 @@
     });
   }
 
-  // ---- Image lightbox ----
+  // ---- Lightbox (images + videos) ----
   var box = document.getElementById('mediaLightbox');
   var img = document.getElementById('mediaLightboxImg');
+  var lbVideo = document.getElementById('mediaLightboxVideo');
   var closeBtn = document.getElementById('mediaLightboxClose');
-  function closeBox() { box.classList.remove('open'); img.src = ''; }
+  function closeBox() {
+    box.classList.remove('open');
+    img.style.display = 'none';
+    img.src = '';
+    lbVideo.pause();
+    lbVideo.removeAttribute('src');
+    lbVideo.load();
+    lbVideo.style.display = 'none';
+  }
+  function openImage(src) {
+    img.src = src;
+    img.style.display = 'block';
+    lbVideo.style.display = 'none';
+    box.classList.add('open');
+  }
+  function openVideo(src) {
+    if (window.tpAudio && tpAudio.pauseOthers) tpAudio.pauseOthers(lbVideo); // stop any audio
+    lbVideo.src = src;
+    lbVideo.style.display = 'block';
+    img.style.display = 'none';
+    box.classList.add('open');
+    lbVideo.play();
+  }
   document.querySelectorAll('.media-card img.thumb[data-full]').forEach(function (el) {
-    el.addEventListener('click', function () { img.src = el.dataset.full; box.classList.add('open'); });
+    el.addEventListener('click', function () { openImage(el.dataset.full); });
+  });
+  // Playlist rows: any entry can be selected — video/image open in the lightbox.
+  document.querySelectorAll('.pl-track[data-video]').forEach(function (el) {
+    el.addEventListener('click', function () { openVideo(el.dataset.video); });
+  });
+  document.querySelectorAll('.pl-track[data-image]').forEach(function (el) {
+    el.addEventListener('click', function () { openImage(el.dataset.image); });
   });
   closeBtn.addEventListener('click', closeBox);
   box.addEventListener('click', function (e) { if (e.target === box) closeBox(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && box.classList.contains('open')) closeBox(); });
+
+  // ---- Playlist edit modal (owners) ----
+  var plEditBackdrop = document.getElementById('plEditBackdrop');
+  if (plEditBackdrop) {
+    var plEditForm = document.getElementById('plEditForm');
+    var plEditName = document.getElementById('plEditName');
+    var plEditDesc = document.getElementById('plEditDesc');
+    var plEditImage = document.getElementById('plEditImage');
+    var PL_EDIT_URL = '{{ route('media.playlists.update', ['playlist' => '__ID__']) }}';
+
+    function closePlEdit() { plEditBackdrop.classList.remove('open'); }
+    document.getElementById('plEditClose').addEventListener('click', closePlEdit);
+    plEditBackdrop.addEventListener('click', function (e) { if (e.target === plEditBackdrop) closePlEdit(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && plEditBackdrop.classList.contains('open')) closePlEdit();
+    });
+
+    document.querySelectorAll('.pl-card .pl-edit').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var card = btn.closest('.pl-card');
+        plEditForm.action = PL_EDIT_URL.replace('__ID__', card.dataset.plId);
+        plEditName.value = card.dataset.plName || '';
+        plEditDesc.value = card.dataset.plDesc || '';
+        plEditImage.value = '';
+        plEditBackdrop.classList.add('open');
+        setTimeout(function () { plEditName.focus(); }, 50);
+      });
+    });
+  }
 })();
 </script>
 @endpush

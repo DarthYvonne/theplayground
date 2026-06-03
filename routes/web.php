@@ -71,6 +71,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/api/media-library', [MediaLibraryController::class, 'list']);
     Route::middleware('role:owner')->group(function () {
         Route::post('/mediebibliotek', [MediaLibraryController::class, 'store'])->name('media.store');
+        Route::post('/mediebibliotek/playlists/{playlist}', [MediaLibraryController::class, 'updatePlaylist'])->name('media.playlists.update');
+        Route::post('/mediebibliotek/playlists/{playlist}/delete', [MediaLibraryController::class, 'destroyPlaylist'])->name('media.playlists.destroy');
         Route::post('/mediebibliotek/{mediaItem}', [MediaLibraryController::class, 'update'])->name('media.update');
         Route::post('/mediebibliotek/{mediaItem}/delete', [MediaLibraryController::class, 'destroy'])->name('media.destroy');
     });

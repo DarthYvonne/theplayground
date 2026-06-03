@@ -138,6 +138,40 @@ class MediaLibraryController extends Controller
         return redirect()->route('media.index')->with('status', 'Medie opdateret.');
     }
 
+    public function updatePlaylist(Request $request, Playlist $playlist): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:100', \Illuminate\Validation\Rule::unique('playlists', 'name')->ignore($playlist->id)],
+            'description' => ['nullable', 'string', 'max:2000'],
+            'image' => ['nullable', 'image', 'mimes:jpeg,jpg,png,gif,webp', 'max:8192'],
+        ], [
+            'name.required' => 'Navn er påkrævet.',
+            'name.unique' => 'Der findes allerede en playliste med det navn.',
+            'image.image' => 'Filen er ikke et billede.',
+            'image.max' => 'Billedet må højst være 8 MB.',
+        ]);
+
+        if ($request->hasFile('image')) {
+            if ($playlist->image_path) Storage::disk(self::DISK)->delete($playlist->image_path);
+            $file = $request->file('image');
+            $name = Str::ulid() . '.' . strtolower($file->getClientOriginalExtension() ?: $file->extension());
+            $data['image_path'] = $file->storeAs('playlists/' . now()->format('Y/m'), $name, self::DISK);
+        }
+        unset($data['image']);
+
+        $playlist->update($data);
+
+        return redirect()->route('media.index')->with('status', 'Playliste opdateret.');
+    }
+
+    public function destroyPlaylist(Playlist $playlist): RedirectResponse
+    {
+        if ($playlist->image_path) Storage::disk(self::DISK)->delete($playlist->image_path);
+        $playlist->delete(); // pivot rows cascade; media items themselves are untouched
+
+        return redirect()->route('media.index')->with('status', 'Playliste slettet.');
+    }
+
     /** The chosen playlist from a form's "Tilføj til playliste?" controls, if any. */
     private function resolvePlaylist(Request $request): ?Playlist
     {
