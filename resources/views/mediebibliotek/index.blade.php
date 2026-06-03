@@ -41,6 +41,9 @@
   .pl-tracks { display: flex; flex-direction: column; padding: 6px; flex: 1; }
   .pl-track { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: none; background: none; border-radius: 8px; font: inherit; text-align: left; cursor: pointer; color: var(--text); width: 100%; }
   .pl-track:hover { background: var(--hover); }
+  .pl-track + .pl-track { border-top: 1px solid #f0f2f5; border-radius: 0 0 8px 8px; }
+  .pl-track + .pl-track:not(:last-child) { border-radius: 0; }
+  .pl-track:first-child:not(:last-child) { border-radius: 8px 8px 0 0; }
   .pl-track .ticon { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex: 0 0 auto; }
   .pl-track .tthumb { width: 42px; height: 26px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; background: #f0f2f5; display: block; }
   .pl-track .t { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
