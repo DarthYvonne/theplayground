@@ -22,72 +22,7 @@ class FloatingController extends Controller
         $user = $request->user();
         $isOwner = $user?->isOwner() ?? false;
 
-        $ctx = CalendarWeek::resolveContext($request);
-        $monday = $ctx['monday'];
-        $weekStart = $monday->copy()->startOfDay();
-        $weekEnd = $monday->copy()->addDays(7)->startOfDay();
-
-        // Slots per day (HH:MM strings) — drawn from settings.
-        $slots = $this->buildDailySlots($settings);
-        $days = [];
-        for ($i = 0; $i < 7; $i++) {
-            $d = $monday->copy()->addDays($i);
-            $days[] = [
-                'date' => $d->toDateString(),
-                'label' => $this->dayLabel($d),
-                'short' => $d->format('d/m'),
-                'is_open' => $settings->isOpenOn($d),
-                'is_past' => $d->isBefore(Carbon::today()),
-            ];
-        }
-
-        // Pull bookings overlapping the visible week.
-        $bookings = FloatingBooking::where('status', 'active')
-            ->whereBetween('slot_start', [$weekStart, $weekEnd])
-            ->get()
-            ->groupBy(function ($b) {
-                return $b->slot_start->toDateString() . ' ' . $b->slot_start->format('H:i');
-            });
-
-        $devicesByType = $devices->groupBy('type');
-        $totalByType = [
-            'single' => $devicesByType->get('single', collect())->count(),
-            'double' => $devicesByType->get('double', collect())->count(),
-        ];
-        $deviceTypeById = $devices->pluck('type', 'id')->all();
-
-        // For each (day, slot) compute: device statuses + my booking (if any).
-        $grid = [];
-        foreach ($days as $day) {
-            $row = [];
-            foreach ($slots as $hhmm) {
-                $key = $day['date'] . ' ' . $hhmm;
-                $taken = $bookings->get($key, collect());
-                $takenDeviceIds = $taken->pluck('device_id')->all();
-                $myBookings = $user ? $taken->where('user_id', $user->id)->values() : collect();
-                $myBooking = $myBookings->first();
-                $mineDeviceIds = $myBookings->pluck('device_id')->all();
-
-                $takenByType = ['single' => 0, 'double' => 0];
-                foreach ($takenDeviceIds as $id) {
-                    $t = $deviceTypeById[$id] ?? null;
-                    if (isset($takenByType[$t])) $takenByType[$t]++;
-                }
-                $freeByType = [
-                    'single' => max(0, $totalByType['single'] - $takenByType['single']),
-                    'double' => max(0, $totalByType['double'] - $takenByType['double']),
-                ];
-
-                $row[$hhmm] = [
-                    'taken_device_ids' => $takenDeviceIds,
-                    'mine_device_ids' => $mineDeviceIds,
-                    'free_count' => max(0, $devices->count() - count($takenDeviceIds)),
-                    'free_by_type' => $freeByType,
-                    'mine' => $myBooking,
-                ];
-            }
-            $grid[$day['date']] = $row;
-        }
+        $monday = CalendarWeek::resolveContext($request)['monday'];
 
         $myUpcoming = $user
             ? FloatingBooking::with('device')
@@ -98,16 +33,84 @@ class FloatingController extends Controller
                 ->get()
             : collect();
 
+        // Each tank card fetches its own week of availability from availability() below,
+        // so the page only needs the device list and the starting week.
         return view('floating.index', [
             'settings' => $settings,
             'devices' => $devices,
-            'days' => $days,
-            'slots' => $slots,
-            'grid' => $grid,
-            'monday' => $monday,
+            'weekParam' => CalendarWeek::weekParam($monday),
             'myUpcoming' => $myUpcoming,
             'isOwner' => $isOwner,
             'title' => 'Floating',
+        ]);
+    }
+
+    /**
+     * JSON availability for a single tank in a single week. Drives the per-card
+     * week plan + arrows on the floating page (one request per card per week).
+     */
+    public function availability(Request $request)
+    {
+        $settings = FloatingSetting::current();
+        $device = FloatingDevice::where('is_active', true)->findOrFail($request->integer('device_id'));
+        $user = $request->user();
+
+        $monday = CalendarWeek::resolveContext($request)['monday'];
+        $weekStart = $monday->copy()->startOfDay();
+        $weekEnd = $monday->copy()->addDays(7)->startOfDay();
+
+        $slots = $this->buildDailySlots($settings);
+
+        $bookings = FloatingBooking::where('status', 'active')
+            ->where('device_id', $device->id)
+            ->whereBetween('slot_start', [$weekStart, $weekEnd])
+            ->get()
+            ->keyBy(fn ($b) => $b->slot_start->toDateString() . ' ' . $b->slot_start->format('H:i'));
+
+        $days = [];
+        for ($i = 0; $i < 7; $i++) {
+            $d = $monday->copy()->addDays($i);
+            $isOpen = $settings->isOpenOn($d);
+            $daySlots = [];
+            if ($isOpen) {
+                foreach ($slots as $hhmm) {
+                    $start = Carbon::parse($d->toDateString() . ' ' . $hhmm);
+                    $end = $start->copy()->addMinutes($settings->slot_duration_minutes);
+                    $booking = $bookings->get($d->toDateString() . ' ' . $hhmm);
+                    $status = match (true) {
+                        $start->isPast() => 'past',
+                        $booking && $user && $booking->user_id === $user->id => 'mine',
+                        (bool) $booking => 'full',
+                        default => 'free',
+                    };
+                    $daySlots[] = [
+                        'start' => $hhmm,
+                        'end' => $end->format('H:i'),
+                        'slot_start' => $d->toDateString() . ' ' . $hhmm,
+                        'status' => $status,
+                    ];
+                }
+            }
+            $days[] = [
+                'date' => $d->toDateString(),
+                'label' => $this->dayLabel($d),
+                'short' => $d->format('d/m'),
+                'is_open' => $isOpen,
+                'is_today' => $d->isToday(),
+                'slots' => $daySlots,
+            ];
+        }
+
+        $weekEndDay = $monday->copy()->addDays(6);
+
+        return response()->json([
+            'device_id' => $device->id,
+            'week_param' => CalendarWeek::weekParam($monday),
+            'week_label' => 'Uge ' . $monday->isoWeek . ' · ' . $monday->format('d.m') . '–' . $weekEndDay->format('d.m'),
+            'prev' => CalendarWeek::weekParam($monday->copy()->subDays(7)),
+            'next' => CalendarWeek::weekParam($monday->copy()->addDays(7)),
+            'price_label' => $settings->priceLabelFor($device->type),
+            'days' => $days,
         ]);
     }
 

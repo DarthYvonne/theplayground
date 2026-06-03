@@ -108,6 +108,7 @@ Route::middleware('auth')->group(function () {
 
     // Floating
     Route::get('/floating', [FloatingController::class, 'index'])->name('floating.index');
+    Route::get('/floating/availability', [FloatingController::class, 'availability'])->name('floating.availability');
     Route::post('/floating/book', [FloatingController::class, 'book'])->name('floating.book');
     Route::get('/floating/return', [FloatingController::class, 'returnFromCheckout'])->name('floating.return');
     Route::post('/floating/{booking}/cancel', [FloatingController::class, 'cancel'])->name('floating.cancel');
