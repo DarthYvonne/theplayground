@@ -78,7 +78,7 @@
     </a>
   @endif
   <a href="{{ route('courses.members', $course) }}" class="{{ request()->routeIs('courses.members') ? 'active' : '' }}" aria-label="Medlemmer">
-    <i class="fa-solid fa-users"></i><span>Medlemmer</span>
+    <i class="fa-regular fa-user"></i><span>Medlemmer</span>
   </a>
 </nav>
 @endif
