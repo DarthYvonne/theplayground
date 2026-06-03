@@ -12,8 +12,7 @@
   .members-head h2 { font-size: 18px; font-weight: 700; line-height: 1.2; }
   .members-head .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
 
-  .members-sec { padding: 12px 6px 6px; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; margin: 4px 16px 0; }
-  .broadcast-divider { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px 16px; margin-top: 8px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 14px; border-top: 1px solid #e3edfc; border-bottom: 1px solid #e3edfc; }
+  .broadcast-divider { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px 16px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 14px; border-top: 1px solid #e3edfc; border-bottom: 1px solid #e3edfc; }
   .broadcast-divider:hover { background: #dbe6fb; }
 
   .member-row { display: flex; gap: 12px; align-items: center; padding: 12px 18px; color: inherit; text-decoration: none; border-top: 1px solid #f0f2f5; transition: background 0.1s; }
@@ -46,9 +45,6 @@
       $u = auth()->user();
       $canBroadcastHere = $u && ($course->hasTrainer($u) || $u->isOwner());
     @endphp
-    <div class="members-sec">
-      <span>{{ count($course->trainers) === 1 ? 'Træner' : 'Trænere' }}</span>
-    </div>
     @foreach ($course->trainers as $trainer)
       <a href="{{ route('members.show', $trainer) }}" class="member-row">
         @include('partials.avatar', ['u' => $trainer])
@@ -71,7 +67,6 @@
       </a>
     @endif
 
-    <div class="members-sec">Deltagere ({{ $members->count() }})</div>
     @if ($members->isEmpty())
       <div class="empty">Ingen tilmeldte endnu.</div>
     @else

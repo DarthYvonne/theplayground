@@ -5,7 +5,9 @@
   $hasAccess = $canManageCourse || ($u && $u->enrolledIn($course));
   $unreadCount = 0;
   $showMediaTab = false;
+  $memberCount = 0;
   if ($hasAccess) {
+    $memberCount = \App\Models\Enrollment::where('course_id', $course->id)->where('status', 'active')->count();
     $lastRead = \App\Models\MessageRead::where('user_id', $u->id)->where('course_id', $course->id)->value('last_read_at');
     $q = \App\Models\Message::where('channel_type', 'course')->where('course_id', $course->id)->where('user_id', '!=', $u->id);
     if ($lastRead) $q->where('created_at', '>', $lastRead);
@@ -78,7 +80,7 @@
     </a>
   @endif
   <a href="{{ route('courses.members', $course) }}" class="{{ request()->routeIs('courses.members') ? 'active' : '' }}" aria-label="Medlemmer">
-    <i class="fa-regular fa-user"></i><span>Medlemmer</span>
+    <i class="fa-regular fa-user"></i><span>Medlemmer ({{ $memberCount }})</span>
   </a>
 </nav>
 @endif
