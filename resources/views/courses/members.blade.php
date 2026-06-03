@@ -44,8 +44,7 @@
   <div class="card">
     @php
       $u = auth()->user();
-      // Only the hold's trainer can message everyone — not owners in general.
-      $canBroadcastHere = $u && $course->hasTrainer($u);
+      $canBroadcastHere = $u && ($course->hasTrainer($u) || $u->isOwner());
     @endphp
     <div class="members-sec">
       <span>{{ count($course->trainers) === 1 ? 'Træner' : 'Trænere' }}</span>
