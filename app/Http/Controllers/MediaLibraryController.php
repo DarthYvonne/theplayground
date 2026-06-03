@@ -27,7 +27,7 @@ class MediaLibraryController extends Controller
                 'audio' => $byType->get('audio', collect()),
                 'image' => $byType->get('image', collect()),
             ],
-            'playlists' => Playlist::withCount('mediaItems')->orderBy('name')->get(),
+            'playlists' => Playlist::with('mediaItems')->orderBy('name')->get(),
             'isOwner' => $request->user()->isOwner(),
         ]);
     }

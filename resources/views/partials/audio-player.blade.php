@@ -33,6 +33,12 @@
 @push('scripts')
 <script>
 window.tpAudio = (function () {
+  // Every playing audio on the page — tp-audio players and playlist cards —
+  // registers here so starting one pauses the rest.
+  var registry = [];
+  function register(a) { if (registry.indexOf(a) === -1) registry.push(a); return a; }
+  function pauseOthers(a) { registry.forEach(function (x) { if (x !== a && !x.paused) x.pause(); }); }
+
   function fmt(s) {
     if (!isFinite(s) || s < 0) return '0:00';
     s = Math.floor(s);
@@ -47,7 +53,7 @@ window.tpAudio = (function () {
       '<span class="pa-eq"><span></span><span></span><span></span></span>' +
       '<div class="pa-track"><div class="pa-progress"></div></div>' +
       '<span class="pa-time">0:00</span>';
-    var audio = new Audio();
+    var audio = register(new Audio());
     audio.preload = 'metadata';
     audio.src = el.dataset.src;
     el._audio = audio;
@@ -63,10 +69,8 @@ window.tpAudio = (function () {
       time.textContent = fmt(audio.currentTime) + (isFinite(audio.duration) ? ' / ' + fmt(audio.duration) : '');
     });
     audio.addEventListener('play', function () {
-      // One at a time — pause every other player on the page.
-      document.querySelectorAll('.tp-audio').forEach(function (other) {
-        if (other !== el && other._audio && !other._audio.paused) other._audio.pause();
-      });
+      // One at a time — pause every other registered player on the page.
+      pauseOthers(audio);
       icon.className = 'fa-solid fa-pause';
       btn.setAttribute('aria-label', 'Pause');
       el.classList.add('playing');
@@ -91,7 +95,7 @@ window.tpAudio = (function () {
   function markup(src, extraClass) {
     return '<div class="tp-audio ' + (extraClass || '') + '" data-src="' + String(src).replace(/"/g, '&quot;') + '"></div>';
   }
-  return { init: init, markup: markup };
+  return { init: init, markup: markup, register: register, pauseOthers: pauseOthers };
 })();
 </script>
 @endpush

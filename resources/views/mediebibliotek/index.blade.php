@@ -22,7 +22,32 @@
   .media-nav a::before { content: "|"; color: var(--border); margin: 0 10px; font-weight: 400; }
   .media-nav a.lead::before { content: none; }
   .media-nav a .cnt { color: var(--text); font-weight: 700; }
-  .media-nav a .pl-ico { font-size: 11px; margin-right: 5px; opacity: 0.7; }
+
+  /* Playlist cards — each playlist is a card; play all or one at a time */
+  .pl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  @media (max-width: 600px) { .pl-grid { grid-template-columns: 1fr; } }
+  .pl-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #f0f2f5; }
+  .pl-name { font-weight: 700; font-size: 14px; flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; }
+  .pl-name i { color: var(--accent); font-size: 12px; }
+  .pl-name .pl-count { color: var(--muted); font-weight: 600; }
+  .pl-playall { border: none; background: var(--accent); color: #fff; border-radius: 999px; padding: 7px 14px; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; flex: 0 0 auto; }
+  .pl-playall:hover { background: var(--accent-hover); }
+  .pl-tracks { display: flex; flex-direction: column; padding: 6px; flex: 1; }
+  .pl-track { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: none; background: none; border-radius: 8px; font: inherit; text-align: left; cursor: pointer; color: var(--text); width: 100%; }
+  .pl-track:hover { background: var(--hover); }
+  .pl-track .ticon { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex: 0 0 auto; }
+  .pl-track .t { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pl-track.playing { background: var(--accent-soft); }
+  .pl-track.playing .ticon { background: var(--accent); color: #fff; }
+  .pl-track.na { cursor: default; color: var(--muted); }
+  .pl-track.na:hover { background: none; }
+  .pl-track.na .ticon { background: #f0f2f5; color: var(--muted); }
+  .pl-player { display: none; align-items: center; gap: 10px; padding: 10px 14px; border-top: 1px solid #f0f2f5; }
+  .pl-player.on { display: flex; }
+  .pl-bar { flex: 1; height: 6px; background: rgba(24,119,242,0.14); border-radius: 3px; cursor: pointer; position: relative; }
+  .pl-bar::before { content: ""; position: absolute; inset: -8px 0; }
+  .pl-prog { height: 100%; width: 0; background: linear-gradient(90deg, #4d97ff, #1877f2); border-radius: 3px; pointer-events: none; }
+  .pl-time { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; font-weight: 600; flex: 0 0 auto; }
 
   .media-section { margin-bottom: 26px; }
   .media-section > h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); margin-bottom: 10px; }
@@ -94,6 +119,7 @@
 @php
   $labels = ['video' => 'Video', 'audio' => 'Lyd', 'image' => 'Billeder'];
   $hasAny = collect($groups)->flatten()->isNotEmpty();
+  $playlistsWithItems = $playlists->filter(fn ($p) => $p->mediaItems->isNotEmpty())->values();
 @endphp
 
 <div class="view-header">
@@ -126,11 +152,10 @@
             @php $first = false; @endphp
           @endif
         @endforeach
-        @foreach ($playlists as $pl)
-          @continue($pl->media_items_count === 0)
-          <a href="#" data-playlist="{{ $pl->id }}" class="{{ $first ? 'lead' : '' }}"><i class="fa-solid fa-list-ul pl-ico"></i>{{ $pl->name }} (<span class="cnt">{{ $pl->media_items_count }}</span>)</a>
+        @if ($playlistsWithItems->isNotEmpty())
+          <a href="#sec-playlists" data-type="playlists" class="{{ $first ? 'lead' : '' }}">Playlister (<span class="cnt">{{ $playlistsWithItems->count() }}</span>)</a>
           @php $first = false; @endphp
-        @endforeach
+        @endif
       </nav>
     </div>
   @endif
@@ -193,6 +218,43 @@
         </div>
       </section>
     @endforeach
+
+    @if ($playlistsWithItems->isNotEmpty())
+      <section class="media-section" id="sec-playlists" data-type="playlists">
+        <h2>Playlister</h2>
+        <div class="pl-grid">
+          @foreach ($playlistsWithItems as $pl)
+            <div class="media-card pl-card" data-search="{{ \Illuminate\Support\Str::lower(trim($pl->name . ' ' . $pl->mediaItems->pluck('title')->implode(' '))) }}">
+              <div class="pl-head">
+                <div class="pl-name"><i class="fa-solid fa-list-ul"></i> <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ $pl->name }}</span> <span class="pl-count">({{ $pl->mediaItems->count() }})</span></div>
+                @if ($pl->mediaItems->contains(fn ($mi) => $mi->type === 'audio' && $mi->url()))
+                  <button type="button" class="pl-playall"><i class="fa-solid fa-play"></i> Afspil alle</button>
+                @endif
+              </div>
+              <div class="pl-tracks">
+                @foreach ($pl->mediaItems as $mi)
+                  @if ($mi->type === 'audio' && $mi->url())
+                    <button type="button" class="pl-track" data-src="{{ $mi->url() }}">
+                      <span class="ticon"><i class="fa-solid fa-play"></i></span>
+                      <span class="t">{{ $mi->title }}</span>
+                    </button>
+                  @else
+                    <div class="pl-track na">
+                      <span class="ticon"><i class="fa-solid {{ $mi->type === 'video' ? 'fa-film' : 'fa-image' }}"></i></span>
+                      <span class="t">{{ $mi->title }}</span>
+                    </div>
+                  @endif
+                @endforeach
+              </div>
+              <div class="pl-player">
+                <div class="pl-bar"><div class="pl-prog"></div></div>
+                <span class="pl-time">0:00</span>
+              </div>
+            </div>
+          @endforeach
+        </div>
+      </section>
+    @endif
   @endif
 </div>
 
@@ -296,8 +358,7 @@
   var noResults = document.getElementById('mediaNoResults');
   var sections = Array.prototype.slice.call(document.querySelectorAll('.media-section'));
   var navLinks = {};
-  var activeType = null;     // category filter — null shows everything
-  var activePlaylist = null; // playlist filter — mutually exclusive with activeType
+  var activeType = null; // category filter (incl. "playlists") — null shows everything
 
   document.querySelectorAll('#mediaNav a[data-type]').forEach(function (a) {
     navLinks[a.dataset.type] = { el: a, cnt: a.querySelector('.cnt') };
@@ -305,24 +366,10 @@
     // category again shows everything.
     a.addEventListener('click', function (e) {
       e.preventDefault();
-      activePlaylist = null;
       activeType = (activeType === a.dataset.type) ? null : a.dataset.type;
       apply();
     });
   });
-  var playlistLinks = Array.prototype.slice.call(document.querySelectorAll('#mediaNav a[data-playlist]'));
-  playlistLinks.forEach(function (a) {
-    a.addEventListener('click', function (e) {
-      e.preventDefault();
-      activeType = null;
-      activePlaylist = (activePlaylist === a.dataset.playlist) ? null : a.dataset.playlist;
-      apply();
-    });
-  });
-
-  function inPlaylist(card, id) {
-    return (card.getAttribute('data-playlists') || '').split(',').indexOf(id) !== -1;
-  }
 
   function apply() {
     var q = (search.value || '').toLowerCase().trim();
@@ -334,8 +381,6 @@
       var matches = 0;
       sec.querySelectorAll('.media-card').forEach(function (card) {
         var match = q === '' || (card.getAttribute('data-search') || '').indexOf(q) !== -1;
-        // The playlist filter narrows cards inside their type sections.
-        if (match && q === '' && activePlaylist) match = inPlaylist(card, activePlaylist);
         card.style.display = match ? '' : 'none';
         if (match) matches++;
       });
@@ -353,10 +398,6 @@
       }
     });
 
-    playlistLinks.forEach(function (a) {
-      a.classList.toggle('active', q === '' && activePlaylist === a.dataset.playlist);
-    });
-
     // First *visible* nav link loses its "|" separator.
     var firstSeen = false;
     document.querySelectorAll('#mediaNav a').forEach(function (a) {
@@ -370,13 +411,87 @@
 
   if (search) {
     search.addEventListener('input', function () {
-      // Typing a search resets the filters — søg searches everything.
-      if (search.value.trim() !== '') { activeType = null; activePlaylist = null; }
+      // Typing a search resets the filter — søg searches everything.
+      if (search.value.trim() !== '') activeType = null;
       apply();
     });
     clearBtn.addEventListener('click', function () { search.value = ''; apply(); search.focus(); });
     apply();
   }
+
+  // ---- Playlist cards: play all (auto-advance) or one at a time ----
+  function fmtTime(s) {
+    if (!isFinite(s) || s < 0) return '0:00';
+    s = Math.floor(s);
+    return Math.floor(s / 60) + ':' + (s % 60 < 10 ? '0' : '') + (s % 60);
+  }
+  document.querySelectorAll('.pl-card').forEach(function (card) {
+    var tracks = Array.prototype.slice.call(card.querySelectorAll('button.pl-track[data-src]'));
+    if (!tracks.length) return;
+    var audio = new Audio();
+    audio.preload = 'none';
+    if (window.tpAudio && tpAudio.register) tpAudio.register(audio);
+    var playAll = card.querySelector('.pl-playall');
+    var player = card.querySelector('.pl-player');
+    var bar = card.querySelector('.pl-bar');
+    var prog = card.querySelector('.pl-prog');
+    var time = card.querySelector('.pl-time');
+    var current = -1;
+    var queue = false; // "Afspil alle" mode — advance to the next track on end
+
+    function refresh() {
+      tracks.forEach(function (t, j) {
+        var isCurrent = j === current;
+        t.classList.toggle('playing', isCurrent);
+        t.querySelector('.ticon i').className = 'fa-solid ' + (isCurrent && !audio.paused ? 'fa-pause' : 'fa-play');
+      });
+      if (playAll) {
+        playAll.innerHTML = (!audio.paused && queue)
+          ? '<i class="fa-solid fa-pause"></i> Pause'
+          : '<i class="fa-solid fa-play"></i> Afspil alle';
+      }
+    }
+    function playIndex(i) {
+      current = i;
+      audio.src = tracks[i].dataset.src;
+      audio.play();
+      player.classList.add('on');
+      prog.style.width = '0%';
+    }
+
+    tracks.forEach(function (t, i) {
+      t.addEventListener('click', function () {
+        if (current === i) { audio.paused ? audio.play() : audio.pause(); }
+        else { queue = false; playIndex(i); }
+      });
+    });
+    if (playAll) {
+      playAll.addEventListener('click', function () {
+        if (queue && current !== -1) { audio.paused ? audio.play() : audio.pause(); }
+        else { queue = true; playIndex(0); }
+      });
+    }
+
+    audio.addEventListener('play', function () {
+      if (window.tpAudio && tpAudio.pauseOthers) tpAudio.pauseOthers(audio);
+      refresh();
+    });
+    audio.addEventListener('pause', refresh);
+    audio.addEventListener('ended', function () {
+      if (queue && current + 1 < tracks.length) playIndex(current + 1);
+      else { audio.currentTime = 0; queue = false; refresh(); }
+    });
+    audio.addEventListener('loadedmetadata', function () { time.textContent = '0:00 / ' + fmtTime(audio.duration); });
+    audio.addEventListener('timeupdate', function () {
+      if (audio.duration) prog.style.width = (audio.currentTime / audio.duration * 100) + '%';
+      time.textContent = fmtTime(audio.currentTime) + (isFinite(audio.duration) ? ' / ' + fmtTime(audio.duration) : '');
+    });
+    bar.addEventListener('click', function (e) {
+      if (!audio.duration) return;
+      var r = bar.getBoundingClientRect();
+      audio.currentTime = Math.min(Math.max((e.clientX - r.left) / r.width, 0), 1) * audio.duration;
+    });
+  });
 
   // ---- "Tilføj til playliste?" — reveal the name input on "Opret ny…" ----
   function wirePlaylistSelect(select, input) {
