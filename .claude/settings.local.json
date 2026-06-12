@@ -3,7 +3,14 @@
     "allow": [
       "Bash(php artisan *)",
       "Read(//c/Users/Anders/.ssh/**)",
-      "Bash(ssh *)"
+      "Bash(ssh *)",
+      "Bash(git -C \"C:\\\\Users\\\\Anders\\\\Dropbox\\\\__saas\\\\theplayground\" remote -v)",
+      "Bash(git -C \"C:\\\\Users\\\\Anders\\\\Dropbox\\\\__saas\\\\theplayground\" status --short)",
+      "Bash(git -C \"C:\\\\Users\\\\Anders\\\\Dropbox\\\\__saas\\\\theplayground\" branch --show-current)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "PowerShell(Copy-Item *)"
     ]
   }
 }

@@ -12,6 +12,7 @@
   .course-tile-enrolled-badge { position: absolute; top: 10px; right: 10px; background: #16a34a; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,0.18); display: inline-flex; align-items: center; gap: 5px; }
   .empty-card { padding: 28px 20px; text-align: center; color: var(--muted); }
   .empty-card a { color: var(--accent); font-weight: 600; }
+  .courses-intro { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 18px; max-width: 640px; }
 </style>
 @endpush
 
@@ -21,6 +22,8 @@
 </div>
 
 @include('courses._subnav')
+
+<p class="courses-intro">Her finder du de hold, du er tilmeldt. Klik på et hold for at se tider, beskeder og detaljer – og find nye hold under <a href="{{ route('catalog') }}" style="color:var(--accent);font-weight:600;">Alle</a>.</p>
 
 @if ($enrolledCourses->isEmpty())
   <div class="card">

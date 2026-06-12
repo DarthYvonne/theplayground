@@ -5,6 +5,8 @@
 <style>
   .float-shell { max-width: 1100px; }
 
+  .float-intro { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 18px; max-width: 640px; }
+
   /* My upcoming */
   .my-up { margin-bottom: 18px; background: #fff; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
   .my-up h2 { font-size: 14px; font-weight: 700; margin-bottom: 10px; }
@@ -62,6 +64,8 @@
 </div>
 
 <div class="float-shell">
+  <p class="float-intro">Her kan du booke en tur i floating-tanken. Vælg din tank, find en dato med ledige tider og betal online – så er tiden din.</p>
+
   @auth
     @if ($myUpcoming->isNotEmpty())
       <div class="my-up">
