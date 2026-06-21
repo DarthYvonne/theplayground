@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CourseAdminController;
+use App\Http\Controllers\Admin\FloatingAdminController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Auth\AuthController;
@@ -13,20 +14,24 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\FeedController;
 use App\Http\Controllers\FloatingController;
-use App\Http\Controllers\Admin\FloatingAdminController;
 use App\Http\Controllers\MediaLibraryController;
 use App\Http\Controllers\MembersController;
+use App\Http\Controllers\MobilePayWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PreviewRoleController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RespektController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\Trainer\TrainerController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 // Root: send logged-in users to their feed; guests see the public catalog
-Route::get('/', function (\Illuminate\Http\Request $request) {
-    if ($request->user()) return redirect('/feed');
+Route::get('/', function (Request $request) {
+    if ($request->user()) {
+        return redirect('/feed');
+    }
+
     return app(CourseController::class)->index($request);
 })->name('home');
 
@@ -37,8 +42,9 @@ Route::get('/courses/{course}', [CourseController::class, 'show'])->name('course
 Route::get('/courses/{course}/medlemmer', [CourseController::class, 'members'])
     ->middleware('auth')->name('courses.members');
 
-// Stripe webhook (no auth, no CSRF — gated by signature verification)
+// Payment webhooks (no auth, no CSRF — gated by signature verification)
 Route::post('/stripe/webhook', StripeWebhookController::class)->name('stripe.webhook');
+Route::post('/mobilepay/webhook', MobilePayWebhookController::class)->name('mobilepay.webhook');
 
 // Auth
 Route::middleware('guest')->group(function () {
@@ -53,7 +59,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->n
 Route::middleware('auth')->group(function () {
     Route::get('/feed', [DashboardController::class, 'feed'])->name('feed');
     // Legacy: keep /dashboard working for old bookmarks, emailed links, notifications.
-    Route::get('/dashboard', fn (\Illuminate\Http\Request $r) => redirect('/feed' . ($r->getQueryString() ? '?' . $r->getQueryString() : '')))->name('dashboard');
+    Route::get('/dashboard', fn (Request $r) => redirect('/feed'.($r->getQueryString() ? '?'.$r->getQueryString() : '')))->name('dashboard');
     Route::get('/hold/dine', [CourseController::class, 'mine'])->name('catalog.mine');
     Route::get('/api/feed', [FeedController::class, 'list']);
     Route::post('/api/messages/{message}/view', [FeedController::class, 'recordView']);
@@ -84,7 +90,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::get('/profile/hold', [ProfileController::class, 'courses'])->name('profile.courses');
     Route::get('/profile/betaling', [ProfileController::class, 'billing'])->name('profile.billing');
-    Route::post('/profile/betaling/portal', [ProfileController::class, 'billingPortal'])->name('profile.billing.portal');
 
     Route::post('/preview-role', [PreviewRoleController::class, 'update'])->name('preview.role');
 
@@ -94,6 +99,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/courses/{course}/medier/{courseMedia}/delete', [CourseMediaController::class, 'destroy'])->name('courses.media.destroy');
 
     Route::post('/courses/{course}/enroll', [EnrollmentController::class, 'store'])->name('enroll');
+    Route::post('/courses/{course}/enroll/card', [EnrollmentController::class, 'storeCard'])->name('enroll.card');
     Route::get('/courses/{course}/enroll/return', [EnrollmentController::class, 'returnFromCheckout'])->name('enroll.return');
     Route::post('/courses/{course}/cancel', [EnrollmentController::class, 'cancel'])->name('enroll.cancel');
 

@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class FloatingBooking extends Model
 {
     protected $fillable = [
-        'user_id','device_id','slot_start','slot_end','status','amount_cents',
-        'stripe_session_id','stripe_payment_intent_id','paid_at','cancelled_at','cancelled_by',
+        'user_id', 'device_id', 'slot_start', 'slot_end', 'status', 'amount_cents', 'provider',
+        'stripe_session_id', 'stripe_payment_intent_id', 'mobilepay_payment_id', 'paid_at', 'cancelled_at', 'cancelled_by',
     ];
 
     protected function casts(): array
@@ -23,17 +23,54 @@ class FloatingBooking extends Model
         ];
     }
 
-    public function user(): BelongsTo { return $this->belongsTo(User::class); }
-    public function device(): BelongsTo { return $this->belongsTo(FloatingDevice::class, 'device_id'); }
-    public function canceller(): BelongsTo { return $this->belongsTo(User::class, 'cancelled_by'); }
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
-    public function isActive(): bool { return $this->status === 'active'; }
-    public function isPending(): bool { return $this->status === 'pending'; }
-    public function isCancelled(): bool { return $this->status === 'cancelled'; }
+    public function device(): BelongsTo
+    {
+        return $this->belongsTo(FloatingDevice::class, 'device_id');
+    }
+
+    public function canceller(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active';
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === 'cancelled';
+    }
+
+    /** Reference used to reconcile the payment on return from the provider. */
+    public function reconciliationRef(): ?string
+    {
+        return $this->provider === 'mobilepay' ? $this->mobilepay_payment_id : $this->stripe_session_id;
+    }
+
+    /** Reference used to refund the payment. */
+    public function refundRef(): ?string
+    {
+        return $this->provider === 'mobilepay' ? $this->mobilepay_payment_id : $this->stripe_payment_intent_id;
+    }
 
     public function isCancellable(int $cutoffHours): bool
     {
-        if ($this->isCancelled()) return false;
+        if ($this->isCancelled()) {
+            return false;
+        }
+
         return $this->slot_start->copy()->subHours($cutoffHours)->isFuture();
     }
 }

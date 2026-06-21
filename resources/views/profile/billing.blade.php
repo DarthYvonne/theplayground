@@ -8,10 +8,6 @@
   .billing-card h2 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
   .billing-card .sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
 
-  .pm-row { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid #f0f2f5; border-radius: 10px; }
-  .pm-row .icon { width: 44px; height: 44px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-  .pm-row .label { font-weight: 600; }
-  .pm-row .meta { color: var(--muted); font-size: 13px; margin-top: 2px; }
   .pm-empty { color: var(--muted); font-size: 14px; padding: 14px; border: 1px dashed var(--border); border-radius: 10px; text-align: center; }
 
   .sub-list { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
@@ -20,9 +16,11 @@
   .sub-row .info { flex: 1; min-width: 0; }
   .sub-row .t { font-weight: 700; }
   .sub-row .price { color: var(--muted); font-size: 13px; }
+  .sub-row .method { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .sub-row .status { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
   .sub-row .status.active { background: #dcfce7; color: #166534; }
   .sub-row .status.pending { background: #fef3c7; color: #92400e; }
+  .sub-row .status.past_due { background: #fee2e2; color: #991b1b; }
 </style>
 @endpush
 
@@ -35,38 +33,20 @@
 
 <div class="billing-shell">
   <div class="card billing-card">
-    <h2>Betalingsmetode</h2>
-    <div class="sub">Bruges til månedlige abonnementer på hold.</div>
-
-    @if ($user->pm_last_four)
-      <div class="pm-row">
-        <div class="icon"><i class="fa-regular fa-credit-card"></i></div>
-        <div style="flex:1;min-width:0;">
-          <div class="label">{{ ucfirst($user->pm_type ?? 'Kort') }} •••• {{ $user->pm_last_four }}</div>
-          <div class="meta">Gemt på Stripe. Skift kort via portalen nedenfor.</div>
-        </div>
-      </div>
-    @else
-      <div class="pm-empty">Intet kort gemt endnu. Når du tilmelder dig dit første hold, gemmes kortet automatisk her.</div>
-    @endif
-
-    @if ($stripeConfigured && $user->stripe_id)
-      <form method="POST" action="{{ route('profile.billing.portal') }}" style="margin-top:14px;">
-        @csrf
-        <button type="submit" class="btn btn-primary">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> Åbn Stripe-portalen
-        </button>
-        <div class="sub" style="margin-top:8px;margin-bottom:0;">Opdater kort, se kvitteringer og opsig abonnementer i Stripes sikre portal.</div>
-      </form>
-    @endif
+    <h2>Sådan betaler du</h2>
+    <div class="sub" style="margin-bottom:0;">
+      Medlemskaber betales løbende med <strong>MobilePay</strong>: du godkender aftalen i MobilePay-appen,
+      og herefter trækkes beløbet automatisk hver måned. Du kan til enhver tid afmelde et hold — så stopper
+      opkrævningen, og du beholder adgangen perioden ud. Kortbetaling kan bruges som alternativ på enkelte hold.
+    </div>
   </div>
 
   <div class="card billing-card">
-    <h2>Aktive abonnementer</h2>
-    <div class="sub">Hold du betaler for hver måned.</div>
+    <h2>Aktive medlemskaber</h2>
+    <div class="sub">Hold du betaler for løbende.</div>
 
     @if ($enrollments->isEmpty())
-      <div class="pm-empty">Du har ingen aktive abonnementer.</div>
+      <div class="pm-empty">Du har ingen aktive medlemskaber.</div>
     @else
       <div class="sub-list">
         @foreach ($enrollments as $e)
@@ -86,10 +66,19 @@
                   · Fornyes {{ $e->current_period_end->format('d.m.Y') }}
                 @endif
               </div>
+              <div class="method">
+                @if ($e->provider === 'mobilepay')
+                  <i class="fa-solid fa-mobile-screen-button"></i> MobilePay
+                @elseif ($e->provider === 'stripe')
+                  <i class="fa-regular fa-credit-card"></i> Kort
+                @endif
+              </div>
             </div>
             <div>
               @if ($e->cancel_at_period_end)
                 <span class="status pending">Afmeldt</span>
+              @elseif ($e->status === 'past_due')
+                <span class="status past_due">Betaling fejlede</span>
               @elseif ($e->status === 'active')
                 <span class="status active">Aktiv</span>
               @else

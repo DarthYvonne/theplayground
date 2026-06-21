@@ -5,9 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\FloatingBooking;
 use App\Models\FloatingDevice;
 use App\Models\FloatingSetting;
+use App\Models\Payment;
+use App\Payments\Dto\OneTimeRequest;
+use App\Payments\Gateway;
 use App\Support\CalendarWeek;
-use App\Support\StripeConfig;
-use App\Support\StripeService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -62,7 +63,7 @@ class FloatingController extends Controller
             ->where('device_id', $device->id)
             ->whereBetween('slot_start', [$weekStart, $weekEnd])
             ->get()
-            ->keyBy(fn ($b) => $b->slot_start->toDateString() . ' ' . $b->slot_start->format('H:i'));
+            ->keyBy(fn ($b) => $b->slot_start->toDateString().' '.$b->slot_start->format('H:i'));
 
         $days = [];
         for ($i = 0; $i < 7; $i++) {
@@ -71,9 +72,9 @@ class FloatingController extends Controller
             $daySlots = [];
             if ($isOpen) {
                 foreach ($slots as $hhmm) {
-                    $start = Carbon::parse($d->toDateString() . ' ' . $hhmm);
+                    $start = Carbon::parse($d->toDateString().' '.$hhmm);
                     $end = $start->copy()->addMinutes($settings->slot_duration_minutes);
-                    $booking = $bookings->get($d->toDateString() . ' ' . $hhmm);
+                    $booking = $bookings->get($d->toDateString().' '.$hhmm);
                     $status = match (true) {
                         $start->isPast() => 'past',
                         $booking && $user && $booking->user_id === $user->id => 'mine',
@@ -83,7 +84,7 @@ class FloatingController extends Controller
                     $daySlots[] = [
                         'start' => $hhmm,
                         'end' => $end->format('H:i'),
-                        'slot_start' => $d->toDateString() . ' ' . $hhmm,
+                        'slot_start' => $d->toDateString().' '.$hhmm,
                         'status' => $status,
                     ];
                 }
@@ -103,7 +104,7 @@ class FloatingController extends Controller
         return response()->json([
             'device_id' => $device->id,
             'week_param' => CalendarWeek::weekParam($monday),
-            'week_label' => 'Uge ' . $monday->isoWeek . ' · ' . $monday->format('d.m') . '–' . $weekEndDay->format('d.m'),
+            'week_label' => 'Uge '.$monday->isoWeek.' · '.$monday->format('d.m').'–'.$weekEndDay->format('d.m'),
             'prev' => CalendarWeek::weekParam($monday->copy()->subDays(7)),
             'next' => CalendarWeek::weekParam($monday->copy()->addDays(7)),
             'price_label' => $settings->priceLabelFor($device->type),
@@ -111,14 +112,14 @@ class FloatingController extends Controller
         ]);
     }
 
-    public function book(Request $request): RedirectResponse
+    public function book(Request $request, Gateway $gateway): RedirectResponse
     {
         $user = $request->user();
         $settings = FloatingSetting::current();
 
         $data = $request->validate([
-            'device_id' => ['required','integer','exists:floating_devices,id'],
-            'slot_start' => ['required','date_format:Y-m-d H:i'],
+            'device_id' => ['required', 'integer', 'exists:floating_devices,id'],
+            'slot_start' => ['required', 'date_format:Y-m-d H:i'],
         ]);
 
         $start = Carbon::createFromFormat('Y-m-d H:i', $data['slot_start']);
@@ -127,19 +128,19 @@ class FloatingController extends Controller
         if ($start->isPast()) {
             return back()->withErrors(['slot' => 'Tidspunktet er allerede passeret.']);
         }
-        if (!$settings->isOpenOn($start)) {
+        if (! $settings->isOpenOn($start)) {
             return back()->withErrors(['slot' => 'Holdet er lukket den dag.']);
         }
 
         $device = FloatingDevice::findOrFail($data['device_id']);
-        if (!$device->is_active) {
+        if (! $device->is_active) {
             return back()->withErrors(['slot' => 'Tanken er ikke aktiv.']);
         }
 
         // Idempotency: if a pending booking for this user+slot already exists, reuse it.
         $existing = FloatingBooking::where('device_id', $device->id)
             ->where('slot_start', $start)
-            ->whereIn('status', ['pending','active'])
+            ->whereIn('status', ['pending', 'active'])
             ->first();
         if ($existing && $existing->user_id !== $user->id) {
             return back()->withErrors(['slot' => 'Slottet er allerede booket.']);
@@ -149,14 +150,11 @@ class FloatingController extends Controller
         }
 
         $priceCents = $settings->priceCentsFor($device->type);
-        $stripePriceId = $settings->stripePriceIdFor($device->type);
-        $paidFlow = StripeConfig::isConfigured() && $priceCents > 0;
+        $provider = $gateway->oneTime();
+        $paidFlow = $priceCents > 0 && $provider->isConfigured();
 
         if ($paidFlow) {
-            if (!$stripePriceId) {
-                return back()->withErrors(['slot' => 'Stripe-pris mangler for denne tank-type. Bed admin om at gemme Floating-indstillinger igen.']);
-            }
-            $booking = $existing ?? new FloatingBooking();
+            $booking = $existing ?? new FloatingBooking;
             $booking->fill([
                 'user_id' => $user->id,
                 'device_id' => $device->id,
@@ -164,27 +162,34 @@ class FloatingController extends Controller
                 'slot_end' => $end,
                 'status' => 'pending',
                 'amount_cents' => $priceCents,
+                'provider' => $provider->key(),
             ])->save();
 
             try {
-                $session = StripeService::createOneTimeCheckoutSession(
-                    $user,
-                    $stripePriceId,
-                    route('floating.return') . '?session_id={CHECKOUT_SESSION_ID}',
-                    route('floating.index'),
-                    ['booking_id' => $booking->id, 'user_id' => $user->id],
-                );
-                $booking->stripe_session_id = $session['id'] ?? null;
+                $result = $provider->startOneTime(new OneTimeRequest(
+                    user: $user,
+                    amountCents: $priceCents,
+                    description: $device->name.' — '.$start->format('d.m.Y H:i'),
+                    successUrl: route('floating.return', ['booking_id' => $booking->id]),
+                    cancelUrl: route('floating.index'),
+                    metadata: ['booking_id' => $booking->id, 'user_id' => $user->id],
+                ));
+                if ($result->provider === 'mobilepay') {
+                    $booking->mobilepay_payment_id = $result->reference;
+                } else {
+                    $booking->stripe_session_id = $result->reference;
+                }
                 $booking->save();
-                return redirect()->away($session['url']);
+
+                return redirect()->away($result->url);
             } catch (\Throwable $e) {
-                return back()->withErrors(['slot' => 'Stripe-fejl: ' . $e->getMessage()]);
+                return back()->withErrors(['slot' => 'Betalingsfejl: '.$e->getMessage()]);
             }
         }
 
         // Free / no-Stripe flow: create active booking directly.
         DB::transaction(function () use ($user, $device, $start, $end, $priceCents, $existing) {
-            $b = $existing ?? new FloatingBooking();
+            $b = $existing ?? new FloatingBooking;
             $b->fill([
                 'user_id' => $user->id,
                 'device_id' => $device->id,
@@ -199,38 +204,61 @@ class FloatingController extends Controller
         return redirect()->route('floating.index')->with('status', 'Slot booket.');
     }
 
-    public function returnFromCheckout(Request $request): RedirectResponse
+    public function returnFromCheckout(Request $request, Gateway $gateway): RedirectResponse
     {
-        $sessionId = $request->query('session_id');
-        if ($sessionId && StripeConfig::isConfigured()) {
+        $booking = FloatingBooking::find((int) $request->query('booking_id'));
+        if ($booking && $booking->user_id === $request->user()->id && $booking->isPending() && $booking->provider) {
             try {
-                $s = StripeService::retrieveCheckoutSession($sessionId);
-                $bookingId = (int) ($s['metadata']['booking_id'] ?? 0);
-                if ($bookingId && ($s['status'] ?? '') === 'complete') {
-                    $booking = FloatingBooking::find($bookingId);
-                    if ($booking && $booking->user_id === $request->user()->id) {
-                        $booking->status = 'active';
-                        $booking->paid_at = now();
-                        $booking->stripe_payment_intent_id = $s['payment_intent'] ?? $booking->stripe_payment_intent_id;
-                        $booking->save();
-                        return redirect()->route('floating.index')->with('status', 'Betaling modtaget. Slot booket.');
+                $result = $gateway->provider($booking->provider)->getPaymentStatus($booking->reconciliationRef() ?? '');
+                if ($result->isCaptured()) {
+                    $booking->status = 'active';
+                    $booking->paid_at = now();
+                    if ($booking->provider === 'mobilepay') {
+                        $booking->mobilepay_payment_id = $result->reference;
+                    } else {
+                        $booking->stripe_payment_intent_id = $result->reference;
                     }
+                    $booking->save();
+                    $this->recordBookingPayment($booking, $result->reference);
+
+                    return redirect()->route('floating.index')->with('status', 'Betaling modtaget. Slot booket.');
                 }
             } catch (\Throwable) {
-                // fall through
+                // fall through — the webhook will reconcile.
             }
         }
+
         return redirect()->route('floating.index')->with('status', 'Betaling modtaget. Din booking opdateres om et øjeblik.');
     }
 
-    public function cancel(Request $request, FloatingBooking $booking): RedirectResponse
+    /** Idempotent ledger row for a one-time booking payment (shared by return + webhook). */
+    private function recordBookingPayment(FloatingBooking $booking, string $chargeRef): void
+    {
+        Payment::updateOrCreate(
+            ['idempotency_key' => $booking->provider.':onetime:'.$chargeRef],
+            [
+                'user_id' => $booking->user_id,
+                'floating_booking_id' => $booking->id,
+                'provider' => $booking->provider,
+                'kind' => Payment::KIND_ONE_TIME,
+                'external_id' => $chargeRef,
+                'amount_cents' => $booking->amount_cents,
+                'currency' => config('payments.currency', 'dkk'),
+                'status' => Payment::CAPTURED,
+            ],
+        );
+    }
+
+    public function cancel(Request $request, FloatingBooking $booking, Gateway $gateway): RedirectResponse
     {
         $user = $request->user();
         $settings = FloatingSetting::current();
         $isOwner = $user->isOwner();
         abort_unless($isOwner || $booking->user_id === $user->id, 403);
 
-        if ($booking->isCancelled()) return back();
+        if ($booking->isCancelled()) {
+            return back();
+        }
 
         // Refund policy: full refund if cancelled before the cutoff window (i.e. while
         // still within `cancel_cutoff_hours` of breathing room before the slot starts),
@@ -245,12 +273,15 @@ class FloatingController extends Controller
             'cancelled_by' => $user->id,
         ]);
 
-        if ($eligibleForRefund && $booking->paid_at && $booking->stripe_payment_intent_id && StripeConfig::isConfigured()) {
+        if ($eligibleForRefund && $booking->paid_at && $booking->provider && $booking->refundRef()) {
             try {
-                StripeService::refundPaymentIntent($booking->stripe_payment_intent_id);
+                $gateway->provider($booking->provider)->refund($booking->refundRef());
                 $refunded = true;
+                Payment::where('floating_booking_id', $booking->id)
+                    ->where('status', Payment::CAPTURED)
+                    ->update(['status' => Payment::REFUNDED]);
             } catch (\Throwable $e) {
-                return back()->with('status', 'Booking aflyst, men refundering mislykkedes: ' . $e->getMessage());
+                return back()->with('status', 'Booking aflyst, men refundering mislykkedes: '.$e->getMessage());
             }
         }
 
@@ -259,6 +290,7 @@ class FloatingController extends Controller
             $eligibleForRefund => 'Booking aflyst.',
             default => 'Booking aflyst. Da afbestillingsfristen var passeret, refunderes betalingen ikke.',
         };
+
         return back()->with('status', $msg);
     }
 
@@ -274,12 +306,14 @@ class FloatingController extends Controller
             $slots[] = $cursor->format('H:i');
             $cursor->addMinutes($dur);
         }
+
         return $slots;
     }
 
     private function dayLabel(Carbon $d): string
     {
-        $names = ['Mon'=>'Man','Tue'=>'Tir','Wed'=>'Ons','Thu'=>'Tor','Fri'=>'Fre','Sat'=>'Lør','Sun'=>'Søn'];
+        $names = ['Mon' => 'Man', 'Tue' => 'Tir', 'Wed' => 'Ons', 'Thu' => 'Tor', 'Fri' => 'Fre', 'Sat' => 'Lør', 'Sun' => 'Søn'];
+
         return $names[$d->format('D')] ?? $d->format('D');
     }
 }

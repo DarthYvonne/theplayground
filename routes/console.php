@@ -17,3 +17,10 @@ Schedule::call(function () {
         ->where('created_at', '<', now()->subMinutes(30))
         ->update(['status' => 'canceled', 'canceled_at' => now()]);
 })->everyFiveMinutes()->name('expire-pending-enrollments')->withoutOverlapping();
+
+// Create upcoming MobilePay recurring charges ahead of each membership's renewal
+// and email the owner a run summary. No-op until MobilePay is configured.
+Schedule::command('payments:charge-due')
+    ->dailyAt('04:00')
+    ->name('charge-due-memberships')
+    ->withoutOverlapping();

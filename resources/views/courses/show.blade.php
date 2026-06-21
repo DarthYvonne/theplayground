@@ -123,6 +123,22 @@
             @endif
           @elseif ($course->isFull())
             <button class="btn btn-secondary" disabled>Holdet er fuldt</button>
+          @elseif ($mobilePayAvailable)
+            <form method="POST" action="{{ route('enroll', $course) }}">
+              @csrf
+              <button class="btn btn-primary" type="submit"><i class="fa-solid fa-mobile-screen-button"></i> Betal med MobilePay</button>
+            </form>
+            @if ($cardAvailable)
+              <form method="POST" action="{{ route('enroll.card', $course) }}" style="margin-top:8px;">
+                @csrf
+                <button type="submit" style="background:none;border:none;padding:0;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline;text-underline-offset:3px;">Betal med kort i stedet</button>
+              </form>
+            @endif
+          @elseif ($cardAvailable)
+            <form method="POST" action="{{ route('enroll.card', $course) }}">
+              @csrf
+              <button class="btn btn-primary" type="submit"><i class="fa-regular fa-credit-card"></i> Betal med kort</button>
+            </form>
           @else
             <form method="POST" action="{{ route('enroll', $course) }}">
               @csrf
@@ -158,8 +174,6 @@
         <p>
           @if ($enrollment->current_period_end)
             Du beholder din adgang frem til <strong>{{ $enrollment->current_period_end->format('d.m.Y') }}</strong>. Vi opkræver ikke flere betalinger.
-          @elseif ($enrollment->stripe_subscription_id)
-            Du beholder adgang resten af din nuværende betalingsperiode, og vi opkræver dig ikke igen.
           @else
             Din tilmelding bliver annulleret med det samme.
           @endif

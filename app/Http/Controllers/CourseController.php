@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\CourseCancellation;
 use App\Models\Enrollment;
 use App\Models\User;
+use App\Payments\Gateway;
 use App\Support\CalendarWeek;
 use Illuminate\Http\Request;
 
@@ -15,9 +16,10 @@ class CourseController extends Controller
     {
         $courses = Course::with('trainers')
             ->where('is_active', true)
-            ->withCount(['enrollments as active_enrollments_count' => fn ($q) => $q->where('status','active')])
+            ->withCount(['enrollments as active_enrollments_count' => fn ($q) => $q->where('status', 'active')])
             ->orderByDesc('created_at')
             ->get();
+
         return view('courses.index', compact('courses'));
     }
 
@@ -31,15 +33,17 @@ class CourseController extends Controller
             ->orderBy('title')
             ->get();
 
-        $weekdayKeys = ['mon','tue','wed','thu','fri'];
+        $weekdayKeys = ['mon', 'tue', 'wed', 'thu', 'fri'];
         $byDay = array_fill_keys($weekdayKeys, []);
         $weekendCourses = collect();
         foreach ($courses as $c) {
             $days = $c->weekdaysList();
             foreach ($days as $day) {
-                if (isset($byDay[$day])) $byDay[$day][] = $c;
+                if (isset($byDay[$day])) {
+                    $byDay[$day][] = $c;
+                }
             }
-            if (array_intersect($days, ['sat','sun']) && !array_intersect($days, $weekdayKeys)) {
+            if (array_intersect($days, ['sat', 'sun']) && ! array_intersect($days, $weekdayKeys)) {
                 $weekendCourses->push($c);
             }
         }
@@ -64,22 +68,28 @@ class CourseController extends Controller
         $enrolledCourses = Course::with('trainers')
             ->whereIn('id', $user->activeEnrollments()->pluck('course_id'))
             ->get();
+
         return view('courses.mine', compact('enrolledCourses'));
     }
 
-    public function show(Course $course, Request $request)
+    public function show(Course $course, Request $request, Gateway $gateway)
     {
-        if (!$course->is_active && !($request->user()?->isOwner())) abort(404);
+        if (! $course->is_active && ! ($request->user()?->isOwner())) {
+            abort(404);
+        }
         $course->load('trainers');
         $user = $request->user();
         $isEnrolled = $user?->enrolledIn($course) ?? false;
         $enrollment = $user
-            ? Enrollment::where('user_id', $user->id)->where('course_id', $course->id)->whereIn('status', ['active','past_due','pending'])->first()
+            ? Enrollment::where('user_id', $user->id)->where('course_id', $course->id)->whereIn('status', ['active', 'past_due', 'pending'])->first()
             : null;
+
         return view('courses.show', [
             'course' => $course,
             'isEnrolled' => $isEnrolled,
             'enrollment' => $enrollment,
+            'mobilePayAvailable' => $gateway->recurringAvailable(),
+            'cardAvailable' => $gateway->fallback()->isConfigured(),
             'title' => $course->title,
         ]);
     }
