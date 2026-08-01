@@ -37,6 +37,8 @@ class User extends Authenticatable
 
     public function enrollments(): HasMany { return $this->hasMany(Enrollment::class); }
     public function activeEnrollments(): HasMany { return $this->enrollments()->where('status', 'active'); }
+    /** Enrollments the member still counts as "mine" — including ones with a payment problem. */
+    public function currentEnrollments(): HasMany { return $this->enrollments()->whereIn('status', ['active', 'past_due', 'pending']); }
     public function trainerCourses(): BelongsToMany
     {
         return $this->belongsToMany(Course::class, 'course_trainer')->withTimestamps();

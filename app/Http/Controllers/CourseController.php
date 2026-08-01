@@ -5,9 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\CourseCancellation;
 use App\Models\Enrollment;
+use App\Models\Message;
+use App\Models\MessageRead;
 use App\Models\User;
 use App\Payments\Gateway;
 use App\Support\CalendarWeek;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class CourseController extends Controller
@@ -65,11 +68,72 @@ class CourseController extends Controller
     public function mine(Request $request)
     {
         $user = $request->user();
-        $enrolledCourses = Course::with('trainers')
-            ->whereIn('id', $user->activeEnrollments()->pluck('course_id'))
-            ->get();
 
-        return view('courses.mine', compact('enrolledCourses'));
+        // past_due/pending are included on purpose: a failed payment must not make
+        // the hold silently disappear from the one page the member checks.
+        $enrollments = Course::query()
+            ->with('trainers')
+            ->whereIn('id', $user->currentEnrollments()->pluck('course_id'))
+            ->get()
+            ->keyBy('id');
+
+        $statuses = $user->currentEnrollments()->pluck('status', 'course_id');
+        $courseIds = $enrollments->keys()->all();
+
+        $now = Carbon::now();
+        $cancelled = [];
+        foreach (CourseCancellation::mapForRange($courseIds, $now->copy()->startOfDay(), $now->copy()->addDays(14)) as $c) {
+            $cancelled[$c->course_id][] = $c->occurrence_date->toDateString();
+        }
+
+        $unread = $this->unreadByCourse($user, $courseIds);
+        $today = $now->copy()->startOfDay();
+
+        $tiles = $enrollments->map(function (Course $course) use ($now, $today, $cancelled, $unread, $statuses) {
+            $skip = $cancelled[$course->id] ?? [];
+            $next = $course->nextOccurrence($now, $skip);
+
+            return [
+                'course' => $course,
+                'next' => $next,
+                'next_label' => $next ? $course->occurrenceLabel($next, $now) : null,
+                'is_today' => $next && $next->isSameDay($today),
+                'cancelled_today' => $course->runsOn($today) && in_array($today->toDateString(), $skip, true),
+                'unread' => $unread[$course->id] ?? 0,
+                'status' => $statuses[$course->id] ?? 'active',
+            ];
+        })
+            ->sortBy(fn ($t) => $t['next']?->getTimestamp() ?? PHP_INT_MAX)
+            ->values();
+
+        return view('courses.mine', [
+            'tiles' => $tiles,
+            'needsPayment' => $tiles->filter(fn ($t) => $t['status'] !== 'active')->values(),
+        ]);
+    }
+
+    /**
+     * Unread course messages per course, using the same cutoff rule as
+     * User::unreadMessageCount(). One query per course, as elsewhere — a member
+     * is on a handful of holds.
+     *
+     * @param  array<int> $courseIds
+     * @return array<int, int>
+     */
+    private function unreadByCourse(User $user, array $courseIds): array
+    {
+        if (empty($courseIds)) return [];
+
+        $reads = MessageRead::where('user_id', $user->id)->whereIn('course_id', $courseIds)->pluck('last_read_at', 'course_id');
+
+        $counts = [];
+        foreach ($courseIds as $cid) {
+            $q = Message::where('channel_type', 'course')->where('course_id', $cid)->where('user_id', '!=', $user->id);
+            if ($cutoff = $reads[$cid] ?? null) $q->where('created_at', '>', $cutoff);
+            $counts[$cid] = $q->count();
+        }
+
+        return $counts;
     }
 
     public function show(Course $course, Request $request, Gateway $gateway)
