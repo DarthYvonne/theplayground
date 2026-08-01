@@ -17,6 +17,8 @@
     'id' => $t->id,
     'name' => $t->name,
     'role' => ['owner' => 'Ejer', 'trainer' => 'Træner'][$t->role] ?? $t->role,
+    'email' => $t->email,
+    'phone' => $t->phone,
     'picture_url' => $t->pictureUrl(),
     'initials' => $t->initials(),
   ])->values();
@@ -46,14 +48,15 @@
         <label for="description">Beskrivelse</label>
         <textarea id="description" name="description" rows="5" required>{{ old('description', $course->description) }}</textarea>
       </div>
-      <div class="form-row">
-        <div class="cf-label-row">
-          <label>Trænere</label>
-          <button type="button" class="cf-link-btn" id="openTrainerPicker"><i class="fa-solid fa-magnifying-glass"></i> Find trænere</button>
-        </div>
-        <div class="trainer-chips chips-area" id="trainerChips"></div>
-        @error('trainer_ids')<div class="cf-error">{{ $message }}</div>@enderror
+    </section>
+
+    <section class="card cf-card">
+      <div class="cf-card-head">
+        <h2 class="cf-card-title">Trænere</h2>
+        <button type="button" class="cf-link-btn" id="openTrainerPicker"><i class="fa-solid fa-magnifying-glass"></i> Find trænere</button>
       </div>
+      <div class="trainer-list" id="trainerChips"></div>
+      @error('trainer_ids')<div class="cf-error">{{ $message }}</div>@enderror
     </section>
 
     <section class="card cf-card">
@@ -177,8 +180,8 @@
   .cf-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 600px) { .cf-grid-2 { grid-template-columns: 1fr; } }
 
-  .cf-label-row { display: flex; align-items: baseline; gap: 14px; }
-  .cf-label-row label { margin-bottom: 0; }
+  .cf-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 12px; }
+  .cf-card-head .cf-card-title { margin-bottom: 0; }
   .cf-link-btn { background: none; border: none; color: var(--accent); cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; padding: 0; text-decoration: underline; }
   .cf-link-btn:hover { text-decoration-thickness: 2px; }
   .cf-link-btn i { margin-right: 4px; }
@@ -211,11 +214,21 @@
   .weekday-chip:hover span { background: var(--hover); }
   .weekday-chip input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }
 
-  .chips-area { display: flex; flex-wrap: wrap; gap: 6px; min-height: 28px; margin-top: 10px; }
-  .chips-area:empty::before { content: 'Ingen valgt.'; color: var(--muted); font-size: 13px; font-style: italic; }
-  .pill { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-soft); color: var(--accent); padding: 4px 8px 4px 4px; border-radius: 999px; font-weight: 600; font-size: 13px; }
-  .pill button { background: none; border: none; color: inherit; cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; }
-  .pill .av { width: 22px; height: 22px; font-size: 10px; }
+  .trainer-list { display: flex; flex-direction: column; }
+  .tr-empty { color: var(--muted); font-size: 13px; font-style: italic; padding: 4px 0; }
+  .trainer-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #f0f2f5; }
+  .trainer-row:first-child { border-top: none; padding-top: 2px; }
+  .tr-av { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; flex-shrink: 0; font-size: 14px; }
+  .tr-meta { flex: 1; min-width: 0; }
+  .tr-name { font-weight: 700; line-height: 1.25; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .tr-role { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; padding: 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); }
+  .tr-contact { color: var(--muted); font-size: 13px; margin-top: 2px; overflow-wrap: anywhere; }
+  .tr-contact a { color: var(--muted); }
+  .tr-contact a:hover { color: var(--accent); text-decoration: underline; }
+  .tr-dot { margin: 0 6px; }
+  .tr-nocontact { font-style: italic; }
+  .tr-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; padding: 8px; border-radius: 50%; flex-shrink: 0; }
+  .tr-remove:hover { background: var(--hover); color: var(--danger); }
 
   .pick-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 20px; }
   .pick-backdrop.open { display: flex; }
@@ -282,19 +295,36 @@
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   function avatarHtml(t) {
-    if (t.picture_url) return '<img src="' + escapeHtml(t.picture_url) + '" style="width:22px;height:22px;border-radius:50%;object-fit:cover;">';
-    return '<div class="av sm" style="width:22px;height:22px;font-size:10px;">' + escapeHtml(t.initials || '?') + '</div>';
+    if (t.picture_url) return '<img class="tr-av" src="' + escapeHtml(t.picture_url) + '" alt="">';
+    return '<div class="av sm tr-av">' + escapeHtml(t.initials || '?') + '</div>';
+  }
+
+  function contactHtml(t) {
+    var parts = [];
+    if (t.email) parts.push('<a href="mailto:' + escapeHtml(t.email) + '">' + escapeHtml(t.email) + '</a>');
+    if (t.phone) parts.push('<a href="tel:' + escapeHtml(t.phone) + '">' + escapeHtml(t.phone) + '</a>');
+    if (!parts.length) return '<span class="tr-nocontact">Ingen kontaktoplysninger</span>';
+    return parts.join('<span class="tr-dot">·</span>');
   }
 
   function renderChips() {
-    var html = '';
-    Object.keys(selected).forEach(function (id) {
+    var ids = Object.keys(selected);
+    if (!ids.length) {
+      chips.innerHTML = '<div class="tr-empty">Ingen trænere valgt endnu.</div>';
+      return;
+    }
+    chips.innerHTML = ids.map(function (id) {
       var t = selected[id];
-      html += '<span class="pill">' + avatarHtml(t) + '<span>' + escapeHtml(t.name) +
-        '</span><button type="button" data-remove="' + id + '" aria-label="Fjern">×</button>' +
-        '<input type="hidden" name="trainer_ids[]" value="' + id + '"></span>';
-    });
-    chips.innerHTML = html;
+      return '<div class="trainer-row">' +
+        avatarHtml(t) +
+        '<div class="tr-meta">' +
+          '<div class="tr-name">' + escapeHtml(t.name) + '<span class="tr-role">' + escapeHtml(t.role) + '</span></div>' +
+          '<div class="tr-contact">' + contactHtml(t) + '</div>' +
+        '</div>' +
+        '<button type="button" class="tr-remove" data-remove="' + id + '" aria-label="Fjern ' + escapeHtml(t.name) + '"><i class="fa-solid fa-xmark"></i></button>' +
+        '<input type="hidden" name="trainer_ids[]" value="' + id + '">' +
+      '</div>';
+    }).join('');
     chips.querySelectorAll('button[data-remove]').forEach(function (b) {
       b.addEventListener('click', function () { delete selected[b.dataset.remove]; renderChips(); });
     });
@@ -325,7 +355,7 @@
       return '<label class="pick-row ' + (isSel ? 'selected' : '') + '" data-id="' + t.id + '">' +
         '<input type="checkbox" ' + (isSel ? 'checked' : '') + '>' +
         left +
-        '<div class="meta"><div class="nm">' + escapeHtml(t.name) + '</div><div class="sub">' + escapeHtml(t.role) + '</div></div>' +
+        '<div class="meta"><div class="nm">' + escapeHtml(t.name) + '</div><div class="sub">' + escapeHtml(t.role) + (t.email ? ' · ' + escapeHtml(t.email) : '') + '</div></div>' +
         '</label>';
     }).join('');
     body.querySelectorAll('.pick-row').forEach(function (row) {

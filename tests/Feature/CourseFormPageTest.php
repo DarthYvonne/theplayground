@@ -16,14 +16,42 @@ class CourseFormPageTest extends TestCase
         return User::factory()->create(['role' => 'owner']);
     }
 
-    public function test_create_page_renders_the_four_cards(): void
+    public function test_create_page_renders_the_five_cards(): void
     {
         $this->actingAs($this->owner())->get(route('admin.courses.create'))
             ->assertOk()
             ->assertSee('Grundlæggende')
+            ->assertSee('Trænere')
             ->assertSee('Skema')
             ->assertSee('Pris &amp; tilmelding', false)
             ->assertSee('Forsidemedie');
+    }
+
+    public function test_trainer_rows_get_contact_details(): void
+    {
+        $owner = $this->owner();
+        $trainer = User::factory()->create([
+            'role' => 'trainer',
+            'name' => 'Mette Træner',
+            'email' => 'mette@example.dk',
+            'phone' => '12345678',
+        ]);
+
+        $course = Course::create([
+            'title' => 'Hold A',
+            'description' => 'x',
+            'price_cents' => 0,
+            'is_active' => true,
+            'max_participants' => 10,
+        ]);
+        $course->trainers()->sync([$trainer->id, $owner->id]);
+
+        $html = $this->actingAs($owner)->get(route('admin.courses.edit', $course))->assertOk()->getContent();
+
+        // The rows are built client-side from this payload.
+        $this->assertStringContainsString('mette@example.dk', $html);
+        $this->assertStringContainsString('12345678', $html);
+        $this->assertStringContainsString('Mette Tr', $html);
     }
 
     public function test_delete_button_targets_the_destroy_form_not_the_update_form(): void
