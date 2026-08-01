@@ -73,10 +73,17 @@
     <section class="card cf-card" id="skemaCard">
       <h2 class="cf-card-title">Skema</h2>
 
-      <div class="sk-list" id="skList"></div>
+      <div class="sk-table-wrap" id="skTableWrap" hidden>
+        <table class="sk-table">
+          <thead>
+            <tr><th scope="col">Dag</th><th scope="col">Tid</th><th><span class="sr-only">Fjern</span></th></tr>
+          </thead>
+          <tbody id="skList"></tbody>
+        </table>
+      </div>
       <div class="sk-empty" id="skEmpty">Ingen træningstider endnu.</div>
 
-      <div class="sk-add" id="skAdd" hidden>
+      <div class="sk-add">
         <select id="skDay" aria-label="Ugedag">
           @foreach (\App\Models\Course::WEEKDAYS as $code => $name)
             <option value="{{ $code }}">{{ $name }}</option>
@@ -87,13 +94,8 @@
         <span class="sk-word">til</span>
         <input type="time" id="skEnd" aria-label="Til">
         <button type="button" class="btn btn-primary btn-sm" id="skConfirm">Tilføj</button>
-        <button type="button" class="cf-link-btn" id="skCancel">Annullér</button>
         <div class="cf-error" id="skError" hidden></div>
       </div>
-
-      <button type="button" class="btn btn-secondary btn-sm sk-open" id="skOpen">
-        <i class="fa-solid fa-plus"></i> <span id="skOpenLabel">Tilføj træningstid</span>
-      </button>
 
       @error('slots')<div class="cf-error">{{ $message }}</div>@enderror
     </section>
@@ -221,21 +223,22 @@
   .cf-footer-spacer { flex: 1; min-width: 8px; }
   .cf-footer form { margin: 0; }
 
-  .sk-empty { color: var(--muted); font-size: 13px; font-style: italic; margin-bottom: 14px; }
-  .sk-list { display: flex; flex-direction: column; }
-  .sk-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f2f5; }
-  .sk-row:first-child { padding-top: 0; }
-  .sk-row .sk-day { flex: 0 0 96px; font-weight: 700; font-size: 14px; }
-  .sk-row .sk-time { flex: 1; color: var(--muted); font-size: 14px; }
+  .sk-empty { color: var(--muted); font-size: 13px; font-style: italic; }
+  .sk-table-wrap { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .sk-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .sk-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); font-weight: 700; padding: 9px 14px; background: #f7f8fa; border-bottom: 1px solid var(--border); }
+  .sk-table td { padding: 11px 14px; border-bottom: 1px solid #f0f2f5; vertical-align: middle; }
+  .sk-table tr:last-child td { border-bottom: none; }
+  .sk-table .sk-day { font-weight: 700; width: 40%; }
+  .sk-table .sk-time { color: var(--muted); }
+  .sk-table .sk-actions { width: 1%; text-align: right; padding-left: 0; }
   .sk-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 6px 8px; border-radius: 50%; }
   .sk-remove:hover { background: var(--hover); color: var(--danger); }
-  .sk-list + .sk-add, .sk-list + .sk-open { margin-top: 14px; }
-
-  .sk-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px; background: #f7f8fa; border-radius: 10px; margin-bottom: 12px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .sk-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px; background: #f7f8fa; border-radius: 10px; margin-top: 14px; }
   .sk-add select, .sk-add input[type=time] { width: auto; }
   .sk-word { color: var(--muted); font-size: 13px; }
   .sk-add .cf-error { flex-basis: 100%; margin-top: 0; }
-  .sk-open { align-self: flex-start; }
   @media (max-width: 600px) {
     .sk-add select, .sk-add input[type=time] { flex: 1 1 40%; min-width: 0; }
   }
@@ -311,10 +314,8 @@
   var slots = @json($slotRows);
 
   var list = document.getElementById('skList');
+  var wrap = document.getElementById('skTableWrap');
   var empty = document.getElementById('skEmpty');
-  var addBox = document.getElementById('skAdd');
-  var openBtn = document.getElementById('skOpen');
-  var openLabel = document.getElementById('skOpenLabel');
   var daySel = document.getElementById('skDay');
   var startIn = document.getElementById('skStart');
   var endIn = document.getElementById('skEnd');
@@ -338,43 +339,26 @@
   function render() {
     sortSlots();
     list.innerHTML = slots.map(function (s, i) {
-      return '<div class="sk-row">' +
-        '<span class="sk-day">' + escapeHtml(DAYS[s.weekday] || s.weekday) + '</span>' +
-        '<span class="sk-time">' + escapeHtml(timeText(s)) + '</span>' +
-        '<button type="button" class="sk-remove" data-i="' + i + '" aria-label="Fjern træningstid"><i class="fa-solid fa-xmark"></i></button>' +
-        '<input type="hidden" name="slots[' + i + '][weekday]" value="' + escapeHtml(s.weekday) + '">' +
-        '<input type="hidden" name="slots[' + i + '][start]" value="' + escapeHtml(s.start || '') + '">' +
-        '<input type="hidden" name="slots[' + i + '][end]" value="' + escapeHtml(s.end || '') + '">' +
-      '</div>';
+      return '<tr>' +
+        '<td class="sk-day">' + escapeHtml(DAYS[s.weekday] || s.weekday) + '</td>' +
+        '<td class="sk-time">' + escapeHtml(timeText(s)) +
+          '<input type="hidden" name="slots[' + i + '][weekday]" value="' + escapeHtml(s.weekday) + '">' +
+          '<input type="hidden" name="slots[' + i + '][start]" value="' + escapeHtml(s.start || '') + '">' +
+          '<input type="hidden" name="slots[' + i + '][end]" value="' + escapeHtml(s.end || '') + '">' +
+        '</td>' +
+        '<td class="sk-actions"><button type="button" class="sk-remove" data-i="' + i + '" aria-label="Fjern træningstid"><i class="fa-solid fa-xmark"></i></button></td>' +
+      '</tr>';
     }).join('');
 
     list.querySelectorAll('.sk-remove').forEach(function (b) {
       b.addEventListener('click', function () { slots.splice(parseInt(b.dataset.i, 10), 1); render(); });
     });
 
+    wrap.hidden = slots.length === 0;
     empty.hidden = slots.length > 0;
-    openLabel.textContent = slots.length ? 'Tilføj træningstid for dette hold' : 'Tilføj træningstid';
   }
 
   function showError(msg) { errorEl.textContent = msg; errorEl.hidden = false; }
-
-  function openAdd() {
-    addBox.hidden = false;
-    openBtn.hidden = true;
-    errorEl.hidden = true;
-    startIn.value = '';
-    endIn.value = '';
-    daySel.focus();
-  }
-
-  function closeAdd() {
-    addBox.hidden = true;
-    openBtn.hidden = false;
-    errorEl.hidden = true;
-  }
-
-  openBtn.addEventListener('click', openAdd);
-  document.getElementById('skCancel').addEventListener('click', closeAdd);
 
   document.getElementById('skConfirm').addEventListener('click', function () {
     var day = daySel.value;
@@ -388,12 +372,13 @@
 
     slots.push({ weekday: day, start: start, end: end });
     render();
-    closeAdd();
+    errorEl.hidden = true;
+    startIn.value = '';
+    endIn.value = '';
+    daySel.focus();
   });
 
   render();
-  // A course with no times yet opens straight into the add row.
-  if (!slots.length) openAdd();
 })();
 </script>
 <script>
