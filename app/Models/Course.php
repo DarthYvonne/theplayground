@@ -2,7 +2,9 @@
 
 namespace App\Models;
 
+use App\Support\CourseOccurrence;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -16,7 +18,6 @@ class Course extends Model
     protected $fillable = [
         'title','description','image_path','price_cents',
         'max_participants','is_active','free_enrollment','stripe_product_id','stripe_price_id',
-        'start_time','end_time','weekdays',
         'video_path','original_video_path','video_processing_status','video_thumbnail_path',
     ];
 
@@ -37,45 +38,80 @@ class Course extends Model
 
     private const ISO_DAYS = ['mon' => 1, 'tue' => 2, 'wed' => 3, 'thu' => 4, 'fri' => 5, 'sat' => 6, 'sun' => 7];
 
+    public function schedules(): HasMany
+    {
+        return $this->hasMany(CourseSchedule::class);
+    }
+
+    public static function weekdayKey(Carbon $day): string
+    {
+        return array_search($day->isoWeekday(), self::ISO_DAYS, true) ?: 'mon';
+    }
+
+    /** Slots in calendar order: Monday first, earliest slot first. */
+    public function orderedSchedules(): Collection
+    {
+        $order = array_flip(array_keys(self::WEEKDAYS));
+        return $this->schedules
+            ->sortBy(fn (CourseSchedule $s) => sprintf('%d%s', $order[$s->weekday] ?? 9, $s->start_time ?? ''))
+            ->values();
+    }
+
     /** @return array<string> */
     public function weekdaysList(): array
     {
-        if (!$this->weekdays) return [];
-        return array_values(array_filter(explode(',', $this->weekdays), fn ($d) => isset(self::WEEKDAYS[$d])));
+        return $this->orderedSchedules()->pluck('weekday')->unique()->values()->all();
     }
 
+    /** @return Collection<int, CourseSchedule> */
+    public function schedulesOn(string $weekday): Collection
+    {
+        return $this->orderedSchedules()->where('weekday', $weekday)->values();
+    }
+
+    /**
+     * "Mandag og Onsdag 17:00–18:30" when the days share an hour, and
+     * "Mandag 17:00–18:30 · Onsdag 19:00–20:00" when they do not.
+     */
     public function scheduleLabel(): ?string
     {
-        $days = $this->weekdaysList();
-        $time = $this->timeRange();
-        if (!$days && !$time) return null;
-        $dayPart = $this->daysLabel($days);
-        return trim(trim($dayPart) . ($time ? ' · ' . $time : ''));
+        $schedules = $this->orderedSchedules();
+        if ($schedules->isEmpty()) return null;
+
+        $groups = [];
+        foreach ($schedules as $s) {
+            $groups[$s->timeRange() ?? ''][] = $s->weekday;
+        }
+
+        $parts = [];
+        foreach ($groups as $time => $days) {
+            $label = $this->daysLabel(array_values(array_unique($days)));
+            $parts[] = trim($label . ($time !== '' ? ' ' . $time : ''));
+        }
+
+        return implode(' · ', $parts) ?: null;
     }
 
+    /** The shared time range, or null when the days differ. */
     public function timeRange(): ?string
     {
-        if (!$this->start_time && !$this->end_time) return null;
-        $fmt = fn ($t) => $t ? substr((string) $t, 0, 5) : '';
-        if ($this->start_time && $this->end_time) return $fmt($this->start_time) . '–' . $fmt($this->end_time);
-        return $fmt($this->start_time ?: $this->end_time);
+        $ranges = $this->orderedSchedules()->map(fn (CourseSchedule $s) => $s->timeRange())->unique();
+        return $ranges->count() === 1 ? $ranges->first() : null;
     }
 
     public function runsOn(Carbon $day): bool
     {
-        $days = $this->weekdaysList();
-        if (! $days) return false;
-        return in_array($day->isoWeekday(), array_map(fn ($d) => self::ISO_DAYS[$d], $days), true);
+        return in_array(self::weekdayKey($day), $this->weekdaysList(), true);
     }
 
     /**
-     * The next date this course actually runs, skipping the given YYYY-MM-DD
-     * dates (cancellations). A session counts as "next" until it ends, so a
-     * course does not jump to next week the minute it starts.
+     * The next slot this course actually runs, skipping the given YYYY-MM-DD
+     * dates (cancellations). A slot counts as "next" until it ends, so a course
+     * does not jump forward the minute it starts.
      *
      * @param  array<string> $skipDates
      */
-    public function nextOccurrence(?Carbon $from = null, array $skipDates = []): ?Carbon
+    public function nextOccurrence(?Carbon $from = null, array $skipDates = []): ?CourseOccurrence
     {
         if (! $this->weekdaysList()) return null;
 
@@ -85,45 +121,16 @@ class Course extends Model
         // Two weeks clears a full cycle plus any run of cancelled sessions.
         for ($i = 0; $i <= 14; $i++) {
             $day = $from->copy()->addDays($i)->startOfDay();
-            if (! $this->runsOn($day)) continue;
             if (isset($skip[$day->toDateString()])) continue;
-            if ($this->occurrenceEnd($day)->lt($from)) continue;
-            return $this->occurrenceStart($day);
+
+            foreach ($this->schedulesOn(self::weekdayKey($day)) as $slot) {
+                $end = $slot->endOn($day);
+                if ($end->lt($from)) continue;
+                return new CourseOccurrence($slot->startOn($day), $end, $slot);
+            }
         }
 
         return null;
-    }
-
-    /** "I dag kl. 17:00" / "I morgen kl. 17:00" / "Onsdag kl. 17:00" / "12.08. kl. 17:00". */
-    public function occurrenceLabel(Carbon $occurrence, ?Carbon $now = null): string
-    {
-        $now = $now ? $now->copy() : Carbon::now();
-        $time = $this->start_time ? ' kl. ' . substr((string) $this->start_time, 0, 5) : '';
-        $days = (int) $now->copy()->startOfDay()->diffInDays($occurrence->copy()->startOfDay(), false);
-
-        if ($days === 0) return 'I dag' . $time;
-        if ($days === 1) return 'I morgen' . $time;
-        if ($days < 7) return self::WEEKDAYS[array_search($occurrence->isoWeekday(), self::ISO_DAYS, true)] . $time;
-        return $occurrence->format('d.m.') . $time;
-    }
-
-    private function occurrenceStart(Carbon $day): Carbon
-    {
-        [$h, $m] = $this->timeParts($this->start_time, '00:00');
-        return $day->copy()->setTime($h, $m);
-    }
-
-    private function occurrenceEnd(Carbon $day): Carbon
-    {
-        [$h, $m] = $this->timeParts($this->end_time ?: $this->start_time, '23:59');
-        return $day->copy()->setTime($h, $m);
-    }
-
-    /** @return array{0:int,1:int} */
-    private function timeParts(?string $time, string $fallback): array
-    {
-        $parts = explode(':', $time ? substr((string) $time, 0, 5) : $fallback);
-        return [(int) ($parts[0] ?? 0), (int) ($parts[1] ?? 0)];
     }
 
     private function daysLabel(array $days): string

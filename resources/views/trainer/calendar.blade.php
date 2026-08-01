@@ -137,21 +137,22 @@
         $timed[$key] = [];
         $untimed[$key] = [];
         $dateStr = $weekdayDates[$key]->toDateString();
-        foreach ($byDay[$key] ?? [] as $c) {
+        foreach ($byDay[$key] ?? [] as $slot) {
+            $c = $slot->course;
             $cancelled = isset($cancelledMap[$c->id . ':' . $dateStr]);
-            $startMin = $parseTime($c->start_time);
+            $startMin = $parseTime($slot->start_time);
             if ($startMin === null) {
-                $untimed[$key][] = ['course' => $c, 'cancelled' => $cancelled, 'date' => $dateStr];
+                $untimed[$key][] = ['course' => $c, 'time' => null, 'cancelled' => $cancelled, 'date' => $dateStr];
                 continue;
             }
-            $endMin = $parseTime($c->end_time) ?? ($startMin + 60);
+            $endMin = $parseTime($slot->end_time) ?? ($startMin + 60);
             if ($endMin <= $startMin) $endMin = $startMin + 60;
             $visibleStart = max($startMin, $startHour * 60);
             $visibleEnd = min($endMin, $endHour * 60);
             if ($visibleEnd <= $visibleStart) continue;
             $top = ($visibleStart - $startHour * 60) / 60 * $hourPx;
             $height = max(($visibleEnd - $visibleStart) / 60 * $hourPx, 28);
-            $timed[$key][] = ['course' => $c, 'top' => $top, 'height' => $height, 'cancelled' => $cancelled, 'date' => $dateStr];
+            $timed[$key][] = ['course' => $c, 'time' => $slot->timeRange(), 'top' => $top, 'height' => $height, 'cancelled' => $cancelled, 'date' => $dateStr];
         }
     }
     $hasUntimed = collect($untimed)->flatten(1)->isNotEmpty();
@@ -203,7 +204,7 @@
           <div class="cal-event-wrap" style="top: {{ $ev['top'] }}px; height: {{ $ev['height'] }}px;">
             <a href="{{ route('courses.show', $c) }}" class="cal-event {{ $ev['cancelled'] ? 'cancelled' : '' }}">
               <div class="t">{{ $c->title }}</div>
-              @if ($c->timeRange())<div class="tm">{{ $c->timeRange() }}</div>@endif
+              @if ($ev['time'])<div class="tm">{{ $ev['time'] }}</div>@endif
               @if ($ev['cancelled'])<div class="aflyst-badge">Aflyst</div>@endif
             </a>
             @if ($canCancelFor($c))
@@ -227,7 +228,7 @@
         @php $c = $ev['course']; @endphp
         <div class="row {{ $ev['cancelled'] ? 'cancelled' : '' }}">
           <a href="{{ route('courses.show', $c) }}" style="color:inherit;display:flex;gap:10px;align-items:center;flex:1;">
-            <div class="tm">{{ $c->timeRange() ?? '—' }}</div>
+            <div class="tm">{{ $ev['time'] ?? '—' }}</div>
             <div class="ti">{{ $c->title }}</div>
             @if ($ev['cancelled'])<span class="aflyst-tag">Aflyst</span>@endif
           </a>

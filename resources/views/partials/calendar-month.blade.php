@@ -63,15 +63,16 @@
       @endphp
       <div class="cal-month-cell {{ $inMonth ? '' : 'out' }} {{ $isToday ? 'today' : '' }}">
         <a href="{{ $weekLink }}" class="day-num">{{ $cursor->day }}</a>
-        @foreach ($visible as $c)
+        @foreach ($visible as $slot)
           @php
+            $c = $slot->course;
             $cancelled = isset($cancelledMap[$c->id . ':' . $dateStr]);
             $enrolled = isset($enrolledSet[$c->id]);
           @endphp
           <a href="{{ $weekLink }}" class="chip {{ $cancelled ? 'cancelled' : '' }}" title="{{ $c->title }}{{ $enrolled ? ' (tilmeldt)' : '' }}{{ $cancelled ? ' (aflyst)' : '' }}">
             @if ($enrolled)<i class="fa-solid fa-circle-check enrolled-mark" aria-label="Tilmeldt"></i>@endif
             <span class="ti">{{ $c->title }}</span>
-            @if ($c->start_time)<span class="tm">{{ substr($c->start_time, 0, 5) }}</span>@endif
+            @if ($slot->startsAt())<span class="tm">{{ $slot->startsAt() }}</span>@endif
           </a>
         @endforeach
         @if ($hidden > 0)

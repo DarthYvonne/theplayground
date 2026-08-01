@@ -8,6 +8,7 @@ use App\Models\Course;
 use App\Models\CourseCancellation;
 use App\Models\User;
 use App\Support\CalendarWeek;
+use App\Support\ScheduleGrid;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -27,21 +28,12 @@ class CourseAdminController extends Controller
     public function calendar(Request $request)
     {
         $ctx = CalendarWeek::resolveContext($request);
-        $courses = Course::with('trainers')->where('is_active', true)->orderBy('start_time')->orderBy('title')->get();
+        $courses = Course::with(['trainers', 'schedules'])->where('is_active', true)->orderBy('title')->get();
 
-        $byDay = [];
-        foreach (array_keys(Course::WEEKDAYS) as $day) {
-            $byDay[$day] = [];
-        }
-        foreach ($courses as $c) {
-            foreach ($c->weekdaysList() as $day) {
-                if (isset($byDay[$day])) {
-                    $byDay[$day][] = $c;
-                }
-            }
-        }
+        $byDay = ScheduleGrid::byDay($courses, array_keys(Course::WEEKDAYS));
         $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
-        $weekendCourses = collect($byDay['sat'] ?? [])->concat($byDay['sun'] ?? [])->unique('id')->values();
+        $weekendCourses = collect($byDay['sat'] ?? [])->concat($byDay['sun'] ?? [])
+            ->map(fn ($slot) => $slot->course)->unique('id')->values();
 
         $cancelledMap = CourseCancellation::mapForRange($courses->pluck('id')->all(), $ctx['rangeStart'], $ctx['rangeEnd']);
         $monday = $ctx['monday'];
@@ -61,7 +53,7 @@ class CourseAdminController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
-        [$data, $trainerIds] = $this->validateData($request);
+        [$data, $trainerIds, $slots] = $this->validateData($request);
         if ($request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('courses', 'public');
         }
@@ -73,6 +65,7 @@ class CourseAdminController extends Controller
         }
         $course = Course::create($data);
         $course->trainers()->sync($trainerIds);
+        $this->syncSchedules($course, $slots);
         if ($videoPath) {
             ProcessVideoJob::dispatch(Course::class, $course->id, $videoPath, 'course_videos', true);
         }
@@ -87,7 +80,7 @@ class CourseAdminController extends Controller
 
     public function update(Request $request, Course $course): RedirectResponse
     {
-        [$data, $trainerIds] = $this->validateData($request);
+        [$data, $trainerIds, $slots] = $this->validateData($request);
         if ($request->hasFile('image')) {
             if ($course->image_path) {
                 Storage::disk('public')->delete($course->image_path);
@@ -112,6 +105,7 @@ class CourseAdminController extends Controller
         }
         $course->update($data);
         $course->trainers()->sync($trainerIds);
+        $this->syncSchedules($course, $slots);
         if ($newVideoPath) {
             ProcessVideoJob::dispatch(Course::class, $course->id, $newVideoPath, 'course_videos', true);
         }
@@ -169,10 +163,11 @@ class CourseAdminController extends Controller
             'max_participants' => ['required', 'integer', 'min:1', 'max:1000'],
             'is_active' => ['nullable', 'boolean'],
             'free_enrollment' => ['nullable', 'boolean'],
-            'start_time' => ['nullable', 'date_format:H:i'],
-            'end_time' => ['nullable', 'date_format:H:i'],
             'weekdays' => ['nullable', 'array'],
             'weekdays.*' => ['in:mon,tue,wed,thu,fri,sat,sun'],
+            'schedule' => ['nullable', 'array'],
+            'schedule.*.start' => ['nullable', 'date_format:H:i'],
+            'schedule.*.end' => ['nullable', 'date_format:H:i'],
         ]);
         $trainerIds = array_values(array_unique(array_map('intval', $data['trainer_ids'])));
         unset($data['trainer_ids']);
@@ -180,10 +175,40 @@ class CourseAdminController extends Controller
         unset($data['price_kr']);
         $data['is_active'] = $request->boolean('is_active');
         $data['free_enrollment'] = $request->boolean('free_enrollment');
-        $data['weekdays'] = ! empty($data['weekdays']) ? implode(',', $data['weekdays']) : null;
-        unset($data['video'], $data['remove_video']);
 
-        return [$data, $trainerIds];
+        $slots = $this->slotsFrom($data['weekdays'] ?? [], $data['schedule'] ?? []);
+        unset($data['video'], $data['remove_video'], $data['weekdays'], $data['schedule']);
+
+        return [$data, $trainerIds, $slots];
+    }
+
+    /**
+     * One slot per checked weekday, each with its own hours. A day whose end is
+     * at or before its start keeps only the start — a range that ends before it
+     * begins would push the calendar's next-occurrence maths backwards.
+     *
+     * @return array<int, array{weekday:string, start_time:?string, end_time:?string}>
+     */
+    private function slotsFrom(array $weekdays, array $schedule): array
+    {
+        $slots = [];
+        foreach (array_keys(Course::WEEKDAYS) as $day) {
+            if (! in_array($day, $weekdays, true)) continue;
+            $start = $schedule[$day]['start'] ?? null;
+            $end = $schedule[$day]['end'] ?? null;
+            if ($start && $end && $end <= $start) $end = null;
+            $slots[] = ['weekday' => $day, 'start_time' => $start ?: null, 'end_time' => $end ?: null];
+        }
+
+        return $slots;
+    }
+
+    /** @param array<int, array{weekday:string, start_time:?string, end_time:?string}> $slots */
+    private function syncSchedules(Course $course, array $slots): void
+    {
+        $course->schedules()->delete();
+        if ($slots) $course->schedules()->createMany($slots);
+        $course->unsetRelation('schedules');
     }
 
     private function trainers()

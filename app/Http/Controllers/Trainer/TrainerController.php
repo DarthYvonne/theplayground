@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseCancellation;
 use App\Support\CalendarWeek;
+use App\Support\ScheduleGrid;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -27,21 +28,15 @@ class TrainerController extends Controller
         $ctx = CalendarWeek::resolveContext($request);
 
         $courses = $user->trainerCourses()
-            ->with('trainers')
+            ->with(['trainers', 'schedules'])
             ->where('is_active', true)
-            ->orderBy('start_time')
             ->orderBy('title')
             ->get();
 
-        $byDay = [];
-        foreach (array_keys(Course::WEEKDAYS) as $day) $byDay[$day] = [];
-        foreach ($courses as $c) {
-            foreach ($c->weekdaysList() as $day) {
-                if (isset($byDay[$day])) $byDay[$day][] = $c;
-            }
-        }
+        $byDay = ScheduleGrid::byDay($courses, array_keys(Course::WEEKDAYS));
         $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
-        $weekendCourses = collect($byDay['sat'] ?? [])->concat($byDay['sun'] ?? [])->unique('id')->values();
+        $weekendCourses = collect($byDay['sat'] ?? [])->concat($byDay['sun'] ?? [])
+            ->map(fn ($slot) => $slot->course)->unique('id')->values();
 
         $cancelledMap = CourseCancellation::mapForRange($courses->pluck('id')->all(), $ctx['rangeStart'], $ctx['rangeEnd']);
         $monday = $ctx['monday'];

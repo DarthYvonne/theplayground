@@ -15,18 +15,26 @@ class MineCoursesPageTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function course(string $title, string $weekdays, string $start = '17:00', string $end = '18:30'): Course
+    /** @param string|array<string, array{0:?string,1:?string}> $weekdays */
+    private function course(string $title, string|array $weekdays, string $start = '17:00', string $end = '18:30'): Course
     {
-        return Course::create([
+        $course = Course::create([
             'title' => $title,
             'description' => 'x',
             'price_cents' => 0,
             'free_enrollment' => true,
             'is_active' => true,
-            'weekdays' => $weekdays,
-            'start_time' => $start,
-            'end_time' => $end,
         ]);
+
+        $slots = is_array($weekdays)
+            ? $weekdays
+            : array_fill_keys(array_filter(explode(',', $weekdays)), [$start, $end]);
+
+        foreach ($slots as $day => [$from, $to]) {
+            $course->schedules()->create(['weekday' => $day, 'start_time' => $from, 'end_time' => $to]);
+        }
+
+        return $course->fresh();
     }
 
     private function enroll(User $user, Course $course, string $status = 'active'): Enrollment

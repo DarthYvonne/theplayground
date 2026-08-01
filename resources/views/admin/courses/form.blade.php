@@ -25,6 +25,23 @@
   $priceKr = ($course->price_cents ?? 0) / 100;
   $priceKrDisplay = $priceKr == (int) $priceKr ? (string) (int) $priceKr : rtrim(rtrim(number_format($priceKr, 2, '.', ''), '0'), '.');
   $selectedDays = is_array(old('weekdays')) ? old('weekdays') : $course->weekdaysList();
+
+  // One start/end per weekday, from old input on a failed submit or the saved slots.
+  $oldSchedule = is_array(old('schedule')) ? old('schedule') : null;
+  $savedSlots = $course->exists ? $course->orderedSchedules()->keyBy('weekday') : collect();
+  $dayTimes = [];
+  foreach (\App\Models\Course::WEEKDAYS as $code => $_) {
+    $slot = $savedSlots->get($code);
+    $dayTimes[$code] = $oldSchedule !== null
+      ? ['start' => $oldSchedule[$code]['start'] ?? '', 'end' => $oldSchedule[$code]['end'] ?? '']
+      : ['start' => $slot?->startsAt() ?? '', 'end' => $slot?->end_time ? substr((string) $slot->end_time, 0, 5) : ''];
+  }
+
+  // Start in "same time" mode unless the chosen days actually differ.
+  $chosenTimes = collect($selectedDays)->map(fn ($d) => $dayTimes[$d] ?? null)->filter()->unique();
+  $sameTimeDefault = $chosenTimes->count() <= 1;
+  $sharedStart = $sameTimeDefault ? ($chosenTimes->first()['start'] ?? '') : '';
+  $sharedEnd = $sameTimeDefault ? ($chosenTimes->first()['end'] ?? '') : '';
   $videoStatusLabel = [
     'pending' => 'Afventer behandling…',
     'processing' => 'Behandler…',
@@ -59,28 +76,45 @@
       @error('trainer_ids')<div class="cf-error">{{ $message }}</div>@enderror
     </section>
 
-    <section class="card cf-card">
+    <section class="card cf-card" id="skemaCard">
       <h2 class="cf-card-title">Skema</h2>
-      <div class="form-row">
-        <label>Ugedag(e)</label>
-        <div class="weekday-row">
+
+      <div class="weekday-row">
+        @foreach (\App\Models\Course::WEEKDAYS as $code => $name)
+          <label class="weekday-chip">
+            <input type="checkbox" name="weekdays[]" value="{{ $code }}" {{ in_array($code, $selectedDays, true) ? 'checked' : '' }}>
+            <span>{{ $name }}</span>
+          </label>
+        @endforeach
+      </div>
+
+      <div class="sk-empty" id="skEmpty">Vælg de dage holdet træner.</div>
+
+      <div class="sk-body" id="skBody" hidden>
+        <label class="sk-same">
+          <input type="checkbox" id="skSameTime" {{ $sameTimeDefault ? 'checked' : '' }}>
+          <span>Samme tid alle dage</span>
+        </label>
+
+        <div class="sk-shared" id="skShared">
+          <span class="sk-day">Alle dage</span>
+          <input type="time" id="skSharedStart" value="{{ $sharedStart }}" aria-label="Fra, alle dage">
+          <span class="sk-dash">–</span>
+          <input type="time" id="skSharedEnd" value="{{ $sharedEnd }}" aria-label="Til, alle dage">
+        </div>
+
+        <div class="sk-days" id="skDays">
           @foreach (\App\Models\Course::WEEKDAYS as $code => $name)
-            <label class="weekday-chip">
-              <input type="checkbox" name="weekdays[]" value="{{ $code }}" {{ in_array($code, $selectedDays, true) ? 'checked' : '' }}>
-              <span>{{ $name }}</span>
-            </label>
+            <div class="sk-row" data-day="{{ $code }}" hidden>
+              <span class="sk-day">{{ $name }}</span>
+              <input type="time" name="schedule[{{ $code }}][start]" value="{{ $dayTimes[$code]['start'] }}" aria-label="Fra, {{ $name }}">
+              <span class="sk-dash">–</span>
+              <input type="time" name="schedule[{{ $code }}][end]" value="{{ $dayTimes[$code]['end'] }}" aria-label="Til, {{ $name }}">
+            </div>
           @endforeach
         </div>
-      </div>
-      <div class="cf-grid-2">
-        <div class="form-row">
-          <label for="start_time">Fra</label>
-          <input id="start_time" type="time" name="start_time" value="{{ old('start_time', $course->start_time ? substr((string) $course->start_time, 0, 5) : '') }}">
-        </div>
-        <div class="form-row">
-          <label for="end_time">Til</label>
-          <input id="end_time" type="time" name="end_time" value="{{ old('end_time', $course->end_time ? substr((string) $course->end_time, 0, 5) : '') }}">
-        </div>
+
+        <p class="sk-hint">Lad tiderne stå tomme, hvis holdet ikke har et fast klokkeslæt.</p>
       </div>
     </section>
 
@@ -207,6 +241,22 @@
   .cf-footer-spacer { flex: 1; min-width: 8px; }
   .cf-footer form { margin: 0; }
 
+  .sk-empty { color: var(--muted); font-size: 13px; font-style: italic; margin-top: 14px; }
+  .sk-body { margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0f2f5; }
+  .sk-same { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+  .sk-same input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
+  .sk-shared, .sk-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
+  .sk-row + .sk-row { border-top: 1px solid #f7f8fa; }
+  .sk-day { flex: 0 0 96px; font-size: 13px; font-weight: 600; color: var(--text); }
+  .sk-shared .sk-day { color: var(--muted); }
+  .sk-shared input[type=time], .sk-row input[type=time] { width: auto; flex: 0 1 128px; }
+  .sk-dash { color: var(--muted); }
+  .sk-hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+  @media (max-width: 600px) {
+    .sk-day { flex-basis: 74px; }
+    .sk-shared input[type=time], .sk-row input[type=time] { flex: 1 1 0; min-width: 0; }
+  }
+
   .weekday-row { display: flex; flex-wrap: wrap; gap: 6px; }
   .weekday-chip { display: inline-flex; align-items: center; cursor: pointer; user-select: none; font-weight: 500; }
   .weekday-chip input { position: absolute; opacity: 0; pointer-events: none; }
@@ -272,6 +322,60 @@
 </div>
 
 @push('scripts')
+<script>
+// Skema: chips choose the days, each chosen day gets its own hours. "Samme tid
+// alle dage" mirrors one pair into every day so the common case stays one entry.
+(function () {
+  var card = document.getElementById('skemaCard');
+  if (!card) return;
+
+  var dayBoxes = card.querySelectorAll('input[name="weekdays[]"]');
+  var body = document.getElementById('skBody');
+  var empty = document.getElementById('skEmpty');
+  var same = document.getElementById('skSameTime');
+  var shared = document.getElementById('skShared');
+  var sharedStart = document.getElementById('skSharedStart');
+  var sharedEnd = document.getElementById('skSharedEnd');
+  var rows = {};
+  card.querySelectorAll('.sk-row').forEach(function (r) { rows[r.dataset.day] = r; });
+
+  function chosenDays() {
+    return Array.prototype.filter.call(dayBoxes, function (b) { return b.checked; }).map(function (b) { return b.value; });
+  }
+
+  function applyShared() {
+    chosenDays().forEach(function (d) {
+      var row = rows[d];
+      if (!row) return;
+      row.querySelector('input[name$="[start]"]').value = sharedStart.value;
+      row.querySelector('input[name$="[end]"]').value = sharedEnd.value;
+    });
+  }
+
+  function render() {
+    var days = chosenDays();
+    var any = days.length > 0;
+    body.hidden = !any;
+    empty.hidden = any;
+
+    Object.keys(rows).forEach(function (d) {
+      var chosen = days.indexOf(d) !== -1;
+      // Rows stay in the DOM but unnamed inputs are not submitted, so an
+      // unchecked day cannot leave a stray time behind.
+      rows[d].hidden = !chosen || same.checked;
+      rows[d].querySelectorAll('input[type=time]').forEach(function (i) { i.disabled = !chosen; });
+    });
+
+    shared.hidden = !same.checked;
+    if (same.checked) applyShared();
+  }
+
+  dayBoxes.forEach(function (b) { b.addEventListener('change', render); });
+  same.addEventListener('change', render);
+  [sharedStart, sharedEnd].forEach(function (i) { i.addEventListener('input', applyShared); });
+  render();
+})();
+</script>
 <script>
 (function () {
   var ALL = @json($trainersPayload);

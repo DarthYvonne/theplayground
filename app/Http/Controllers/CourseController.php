@@ -10,6 +10,7 @@ use App\Models\MessageRead;
 use App\Models\User;
 use App\Payments\Gateway;
 use App\Support\CalendarWeek;
+use App\Support\ScheduleGrid;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -30,27 +31,19 @@ class CourseController extends Controller
     {
         $ctx = CalendarWeek::resolveContext($request);
 
-        $courses = Course::with('trainers')
+        $courses = Course::with(['trainers', 'schedules'])
             ->where('is_active', true)
-            ->orderBy('start_time')
             ->orderBy('title')
             ->get();
 
         $weekdayKeys = ['mon', 'tue', 'wed', 'thu', 'fri'];
-        $byDay = array_fill_keys($weekdayKeys, []);
-        $weekendCourses = collect();
-        foreach ($courses as $c) {
+        $byDay = ScheduleGrid::byDay($courses, $weekdayKeys);
+
+        $weekendCourses = $courses->filter(function (Course $c) use ($weekdayKeys) {
             $days = $c->weekdaysList();
-            foreach ($days as $day) {
-                if (isset($byDay[$day])) {
-                    $byDay[$day][] = $c;
-                }
-            }
-            if (array_intersect($days, ['sat', 'sun']) && ! array_intersect($days, $weekdayKeys)) {
-                $weekendCourses->push($c);
-            }
-        }
-        $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
+            return array_intersect($days, ['sat', 'sun']) && ! array_intersect($days, $weekdayKeys);
+        })->values();
+        $unscheduled = $courses->filter(fn (Course $c) => empty($c->weekdaysList()))->values();
 
         $enrolledIds = $request->user()?->activeEnrollments()->pluck('course_id')->all() ?? [];
         $cancelledMap = CourseCancellation::mapForRange($courses->pluck('id')->all(), $ctx['rangeStart'], $ctx['rangeEnd']);
@@ -72,7 +65,7 @@ class CourseController extends Controller
         // past_due/pending are included on purpose: a failed payment must not make
         // the hold silently disappear from the one page the member checks.
         $enrollments = Course::query()
-            ->with('trainers')
+            ->with(['trainers', 'schedules'])
             ->whereIn('id', $user->currentEnrollments()->pluck('course_id'))
             ->get()
             ->keyBy('id');
@@ -96,14 +89,14 @@ class CourseController extends Controller
             return [
                 'course' => $course,
                 'next' => $next,
-                'next_label' => $next ? $course->occurrenceLabel($next, $now) : null,
-                'is_today' => $next && $next->isSameDay($today),
+                'next_label' => $next?->label($now),
+                'is_today' => $next && $next->start->isSameDay($today),
                 'cancelled_today' => $course->runsOn($today) && in_array($today->toDateString(), $skip, true),
                 'unread' => $unread[$course->id] ?? 0,
                 'status' => $statuses[$course->id] ?? 'active',
             ];
         })
-            ->sortBy(fn ($t) => $t['next']?->getTimestamp() ?? PHP_INT_MAX)
+            ->sortBy(fn ($t) => $t['next']?->start->getTimestamp() ?? PHP_INT_MAX)
             ->values();
 
         return view('courses.mine', [
