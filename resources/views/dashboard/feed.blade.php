@@ -16,8 +16,8 @@
   .composer-actions { display: flex; align-items: center; justify-content: flex-start; margin-top: 10px; gap: 10px; }
   .composer-actions .btn { padding: 9px 22px; margin-left: auto; }
   .composer-error { color: var(--danger); font-size: 12px; margin-top: 6px; }
-  .composer-attach-btn { background: none; border: none; width: 26px; height: 26px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
-  .composer-attach-btn + .composer-attach-btn { margin-left: -6px; }
+  .composer-attach-btn { background: none; border: none; width: 34px; height: 34px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 19px; }
+  .composer-attach-btn + .composer-attach-btn { margin-left: -8px; }
   .composer-attach-btn:hover { background: var(--hover); color: var(--accent); }
   .composer-attach-btn:disabled { cursor: default; opacity: 0.5; }
   .composer-upload-status { color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
@@ -93,10 +93,11 @@
   .resp-row:hover { background: var(--hover); }
   .resp-row .nm { font-weight: 600; }
   .resp-loading, .resp-error { color: var(--muted); padding: 18px; text-align: center; font-size: 13px; }
-  .respekt-btn { background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 400; color: var(--accent); display: inline-flex; align-items: center; gap: 6px; }
+  .respekt-btn { background: none; border: none; padding: 0; cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 400; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
   .respekt-btn .respekt-text { text-decoration: underline; }
+  .respekt-btn:hover { color: var(--text); }
   .respekt-btn:hover .respekt-text { text-decoration-thickness: 2px; }
-  .respekt-btn.active { color: var(--accent); }
+  .respekt-btn.active, .respekt-btn.active:hover { color: var(--accent); font-weight: 700; }
   .respekt-btn i { font-size: 14px; text-decoration: none; }
 
   .feed-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); }
