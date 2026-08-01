@@ -22,7 +22,7 @@ class CourseFormPageTest extends TestCase
             ->assertOk()
             ->assertSee('Grundlæggende')
             ->assertSee('Trænere')
-            ->assertSee('Skema')
+            ->assertSee('Træningstider')
             ->assertSee('Pris &amp; tilmelding', false)
             ->assertSee('Forsidemedie');
     }

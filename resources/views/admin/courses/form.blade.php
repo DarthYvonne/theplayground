@@ -59,6 +59,15 @@
         <label for="description">Beskrivelse</label>
         <textarea id="description" name="description" rows="5" required>{{ old('description', $course->description) }}</textarea>
       </div>
+
+      <div class="cf-active">
+        <label class="switch">
+          <input type="checkbox" name="is_active" value="1" {{ old('is_active', $course->is_active) ? 'checked' : '' }}>
+          <span class="knob"></span>
+          <span>Aktivt &mdash; holdet udbydes</span>
+        </label>
+        <div class="hint">Som kladde kan ingen se holdet eller tilmelde sig &mdash; det er kun synligt for ejere.</div>
+      </div>
     </section>
 
     <section class="card cf-card">
@@ -71,7 +80,7 @@
     </section>
 
     <section class="card cf-card" id="skemaCard">
-      <h2 class="cf-card-title">Skema</h2>
+      <h2 class="cf-card-title">Træningstider</h2>
 
       <div class="sk-table-wrap" id="skTableWrap" hidden>
         <table class="sk-table">
@@ -115,14 +124,9 @@
       </div>
       <div class="cf-switch-stack">
         <label class="switch">
-          <input type="checkbox" name="is_active" value="1" {{ old('is_active', $course->is_active) ? 'checked' : '' }}>
-          <span class="knob"></span>
-          <span>Aktiv (vises på forsiden)</span>
-        </label>
-        <label class="switch">
           <input type="checkbox" name="free_enrollment" value="1" {{ old('free_enrollment', $course->free_enrollment) ? 'checked' : '' }}>
           <span class="knob"></span>
-          <span>Gratis tilmelding (spring Stripe over &mdash; mest til test)</span>
+          <span>Gratis tilmelding (spring betaling over &mdash; mest til test)</span>
         </label>
       </div>
     </section>
@@ -204,6 +208,8 @@
   .cf-error { color: var(--danger); font-size: 12px; margin-top: 6px; }
 
   .cf-switch-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+  .cf-active { margin-top: 4px; padding-top: 14px; border-top: 1px solid #f0f2f5; }
+  .cf-active .hint { margin-top: 6px; }
 
   .cf-media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   @media (max-width: 600px) { .cf-media-grid { grid-template-columns: 1fr; } }
