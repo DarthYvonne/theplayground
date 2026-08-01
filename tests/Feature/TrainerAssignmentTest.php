@@ -116,6 +116,26 @@ class TrainerAssignmentTest extends TestCase
         $this->assertSame(0, Course::where('title', 'Nyt hold')->count());
     }
 
+    public function test_course_can_still_be_created_with_a_trainer_and_an_owner(): void
+    {
+        $owner = $this->owner();
+        $trainer = User::factory()->create(['role' => 'trainer']);
+
+        $this->actingAs($owner)->post(route('admin.courses.store'), [
+            'title' => 'Nyt hold',
+            'description' => 'x',
+            'trainer_ids' => [$trainer->id, $owner->id],
+            'price_kr' => 150,
+            'max_participants' => 10,
+        ])->assertSessionHasNoErrors();
+
+        $course = Course::where('title', 'Nyt hold')->firstOrFail();
+        $this->assertEqualsCanonicalizing(
+            [$trainer->id, $owner->id],
+            $course->trainers->pluck('id')->all()
+        );
+    }
+
     public function test_owner_sees_the_courses_a_trainer_is_assigned_to(): void
     {
         $owner = $this->owner();
