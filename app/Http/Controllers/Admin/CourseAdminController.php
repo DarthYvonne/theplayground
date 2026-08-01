@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class CourseAdminController extends Controller
 {
@@ -157,7 +158,10 @@ class CourseAdminController extends Controller
             'title' => ['required', 'string', 'max:160'],
             'description' => ['required', 'string', 'max:4000'],
             'trainer_ids' => ['required', 'array', 'min:1'],
-            'trainer_ids.*' => ['integer', 'exists:users,id'],
+            // Role-checked, not just exists: the picker only offers trainers/owners,
+            // and a course trainer list holding anyone else leaves them with a stale
+            // "Træner" badge and a broadcast button that fails.
+            'trainer_ids.*' => ['integer', Rule::exists('users', 'id')->whereIn('role', ['owner', 'trainer'])],
             'image' => ['nullable', 'image', 'max:16384'],
             'video' => ['nullable', 'file', 'mimes:mp4,mov,avi,webm,m4v,mkv', 'max:512000'],
             'remove_video' => ['nullable', 'boolean'],

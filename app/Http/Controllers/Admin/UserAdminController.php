@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Course;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 
 class UserAdminController extends Controller
 {
@@ -17,7 +19,11 @@ class UserAdminController extends Controller
     }
 
     public function edit(User $user) {
-        return view('admin.users.edit', compact('user'));
+        return view('admin.users.edit', [
+            'user' => $user,
+            'trainerCourses' => $user->trainerCourses()->with('trainers')->orderBy('title')->get(),
+            'eligibleTrainers' => User::whereIn('role', ['owner', 'trainer'])->where('id', '!=', $user->id)->orderBy('name')->get(),
+        ]);
     }
 
     public function update(Request $request, User $user): RedirectResponse {
@@ -52,9 +58,41 @@ class UserAdminController extends Controller
         if ($user->role === 'owner' && $data['role'] !== 'owner' && User::where('role','owner')->count() <= 1) {
             return back()->withErrors(['role' => 'Kan ikke nedgradere den sidste ejer.']);
         }
+        // A course's trainer list must only hold trainers/owners, or the member
+        // page shows a stale "Træner" badge and a broadcast button that fails.
+        // Same rule as destroy(): move the holds first — see "Underviser på" below.
+        if (! in_array($data['role'], ['owner', 'trainer'], true)) {
+            $courses = $user->trainerCourses()->orderBy('title')->pluck('title');
+            if ($courses->isNotEmpty()) {
+                return back()->withErrors(['role' => $user->name . ' underviser på ' . $courses->join(', ', ' og ') . '. Skift træner på holdet herunder først.']);
+            }
+        }
         $user->update(['role' => $data['role']]);
         $label = ['user' => 'bruger', 'assistant' => 'assistent', 'trainer' => 'træner', 'owner' => 'ejer'][$data['role']] ?? $data['role'];
         return back()->with('status', $user->name . ' er nu ' . $label . '.');
+    }
+
+    /**
+     * Swap this user out for another trainer on one course, without opening the
+     * full course form. Other trainers on the course are left alone.
+     */
+    public function swapTrainer(Request $request, User $user, Course $course): RedirectResponse {
+        $data = $request->validate([
+            'trainer_id' => ['required', 'integer', Rule::exists('users', 'id')->whereIn('role', ['owner', 'trainer'])],
+        ]);
+
+        if (! $course->hasTrainer($user)) {
+            return back()->withErrors(['trainer' => $user->name . ' underviser ikke på ' . $course->title . '.']);
+        }
+        if ((int) $data['trainer_id'] === $user->id) {
+            return back()->withErrors(['trainer' => 'Vælg en anden træner.']);
+        }
+
+        $replacement = User::find((int) $data['trainer_id']);
+        $course->trainers()->detach($user->id);
+        $course->trainers()->syncWithoutDetaching([$replacement->id]);
+
+        return back()->with('status', $replacement->name . ' er nu træner på ' . $course->title . ' i stedet for ' . $user->name . '.');
     }
 
     public function destroy(Request $request, User $user): RedirectResponse {

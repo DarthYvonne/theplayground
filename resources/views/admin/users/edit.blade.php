@@ -43,6 +43,33 @@
   </div>
 </div>
 
+@if ($trainerCourses->isNotEmpty())
+  <div class="card card-pad" style="margin-bottom:14px;">
+    <div style="font-weight:700;margin-bottom:4px;">Underviser på</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:12px;">
+      Skift træner her, hvis {{ $user->name }} skal væk fra et hold. Holdet beholder sine øvrige trænere.
+    </div>
+    @foreach ($trainerCourses as $c)
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid #f0f2f5;">
+        <a href="{{ route('admin.courses.edit', $c) }}" style="font-weight:600;flex:1;min-width:140px;">{{ $c->title }}</a>
+        @if ($eligibleTrainers->isEmpty())
+          <span style="color:var(--muted);font-size:13px;">Ingen andre trænere at vælge.</span>
+        @else
+          <form method="POST" action="{{ route('admin.users.swapTrainer', [$user, $c]) }}" style="display:flex;gap:8px;align-items:center;">
+            @csrf
+            <select name="trainer_id" style="width:auto;" aria-label="Ny træner på {{ $c->title }}">
+              @foreach ($eligibleTrainers as $t)
+                <option value="{{ $t->id }}">{{ $t->name }}</option>
+              @endforeach
+            </select>
+            <button type="submit" class="btn">Skift træner</button>
+          </form>
+        @endif
+      </div>
+    @endforeach
+  </div>
+@endif
+
 <form method="POST" action="{{ route('admin.users.update', $user) }}" enctype="multipart/form-data" class="card card-pad">
   @csrf
   <div class="form-row">

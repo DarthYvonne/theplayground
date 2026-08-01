@@ -166,6 +166,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/users/{user}/edit', [UserAdminController::class, 'edit'])->name('users.edit');
         Route::post('/users/{user}', [UserAdminController::class, 'update'])->name('users.update');
         Route::post('/users/{user}/role', [UserAdminController::class, 'updateRole'])->name('users.role');
+        Route::post('/users/{user}/hold/{course}/traener', [UserAdminController::class, 'swapTrainer'])->name('users.swapTrainer');
         Route::post('/users/{user}/delete', [UserAdminController::class, 'destroy'])->name('users.destroy');
         Route::get('/settings', [SettingsController::class, 'revenue'])->name('settings.revenue');
         Route::get('/settings/andet', [SettingsController::class, 'other'])->name('settings.other');
