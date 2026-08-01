@@ -16,12 +16,13 @@ class CourseFormPageTest extends TestCase
         return User::factory()->create(['role' => 'owner']);
     }
 
-    public function test_create_page_renders_the_three_cards(): void
+    public function test_create_page_renders_the_four_cards(): void
     {
         $this->actingAs($this->owner())->get(route('admin.courses.create'))
             ->assertOk()
             ->assertSee('Grundlæggende')
-            ->assertSee('Skema &amp; pris', false)
+            ->assertSee('Skema')
+            ->assertSee('Pris &amp; tilmelding', false)
             ->assertSee('Forsidemedie');
     }
 

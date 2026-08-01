@@ -57,7 +57,7 @@
     </section>
 
     <section class="card cf-card">
-      <h2 class="cf-card-title">Skema &amp; pris</h2>
+      <h2 class="cf-card-title">Skema</h2>
       <div class="form-row">
         <label>Ugedag(e)</label>
         <div class="weekday-row">
@@ -79,8 +79,11 @@
           <input id="end_time" type="time" name="end_time" value="{{ old('end_time', $course->end_time ? substr((string) $course->end_time, 0, 5) : '') }}">
         </div>
       </div>
+    </section>
 
-      <div class="cf-grid-2 cf-price-row">
+    <section class="card cf-card">
+      <h2 class="cf-card-title">Pris &amp; tilmelding</h2>
+      <div class="cf-grid-2">
         <div class="form-row">
           <label for="price_kr">Pris (kr/måned)</label>
           <input id="price_kr" type="number" name="price_kr" min="0" step="0.01" value="{{ old('price_kr', $priceKrDisplay) }}" required>
@@ -170,8 +173,6 @@
   .cf-card { padding: 20px 22px; }
   .cf-card-title { font-size: 15px; font-weight: 700; margin: 0 0 16px; }
   .cf-section-hint { color: var(--muted); font-size: 13px; margin: -10px 0 16px; }
-  /* Price sits in the same card as the schedule — a rule keeps them readable as two groups. */
-  .cf-price-row { margin-top: 18px; padding-top: 18px; border-top: 1px solid #f0f2f5; }
 
   .cf-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 600px) { .cf-grid-2 { grid-template-columns: 1fr; } }
