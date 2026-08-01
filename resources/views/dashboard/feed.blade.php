@@ -13,11 +13,11 @@
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
   }
   .composer textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(24,119,242,0.15); }
-  .composer-actions { display: flex; align-items: center; justify-content: flex-end; margin-top: 10px; gap: 10px; }
-  .composer-actions .btn { padding: 9px 22px; }
+  .composer-actions { display: flex; align-items: center; justify-content: flex-start; margin-top: 10px; gap: 10px; }
+  .composer-actions .btn { padding: 9px 22px; margin-left: auto; }
   .composer-error { color: var(--danger); font-size: 12px; margin-top: 6px; }
-  .composer-attach-btn { background: none; border: none; width: 44px; height: 44px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; }
-  .composer-attach-btn + .composer-attach-btn { margin-left: -10px; }
+  .composer-attach-btn { background: none; border: none; width: 26px; height: 26px; border-radius: 50%; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
+  .composer-attach-btn + .composer-attach-btn { margin-left: -6px; }
   .composer-attach-btn:hover { background: var(--hover); color: var(--accent); }
   .composer-attach-btn:disabled { cursor: default; opacity: 0.5; }
   .composer-upload-status { color: var(--muted); font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
@@ -172,6 +172,17 @@
       <button type="button" class="composer-preview-remove" id="feedComposerPreviewRemove" aria-label="Fjern vedhæftning"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="composer-actions">
+      <button type="button" class="composer-attach-btn" id="feedComposerImageBtn" aria-label="Vedhæft billede" title="Vedhæft billede">
+        <i class="fa-regular fa-image"></i>
+      </button>
+      <button type="button" class="composer-attach-btn" id="feedComposerVideoBtn" aria-label="Vedhæft video" title="Vedhæft video">
+        <i class="fa-solid fa-film"></i>
+      </button>
+      @if ($user->isOwner())
+        <button type="button" class="composer-attach-btn" id="feedComposerLibraryBtn" aria-label="Vælg fra mediebibliotek" title="Vælg fra mediebibliotek">
+          <i class="fa-solid fa-photo-film"></i>
+        </button>
+      @endif
       <span id="feedComposerUploadStatus" class="composer-upload-status" style="display:none;">
         <i class="fa-solid fa-spinner fa-spin"></i>
         <span class="composer-upload-progress" id="feedComposerUploadProgress">
@@ -179,17 +190,6 @@
           <span class="pct">Overfører…</span>
         </span>
       </span>
-      @if ($user->isOwner())
-        <button type="button" class="composer-attach-btn" id="feedComposerLibraryBtn" aria-label="Vælg fra mediebibliotek" title="Vælg fra mediebibliotek">
-          <i class="fa-solid fa-photo-film"></i>
-        </button>
-      @endif
-      <button type="button" class="composer-attach-btn" id="feedComposerVideoBtn" aria-label="Vedhæft video" title="Vedhæft video">
-        <i class="fa-solid fa-film"></i>
-      </button>
-      <button type="button" class="composer-attach-btn" id="feedComposerImageBtn" aria-label="Vedhæft billede" title="Vedhæft billede">
-        <i class="fa-regular fa-image"></i>
-      </button>
       <input type="file" id="feedComposerImageInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;">
       <input type="file" id="feedComposerVideoInput" accept="video/mp4,video/quicktime,video/webm,video/x-m4v,video/x-matroska,video/avi" style="display:none;">
       <button type="submit" class="btn btn-primary" id="feedComposerSubmit" disabled>Slå op</button>
