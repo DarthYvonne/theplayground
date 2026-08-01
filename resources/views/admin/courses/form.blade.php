@@ -33,11 +33,11 @@
 @endphp
 
 <div class="course-form-shell">
-  <form method="POST" action="{{ $course->exists ? route('admin.courses.update', $course) : route('admin.courses.store') }}" enctype="multipart/form-data" class="card course-form">
+  <form method="POST" action="{{ $course->exists ? route('admin.courses.update', $course) : route('admin.courses.store') }}" enctype="multipart/form-data" class="course-form">
     @csrf
 
-    <section class="cf-section">
-      <h2 class="cf-section-title">Grundlæggende</h2>
+    <section class="card cf-card">
+      <h2 class="cf-card-title">Grundlæggende</h2>
       <div class="form-row">
         <label for="title">Titel</label>
         <input id="title" type="text" name="title" value="{{ old('title', $course->title) }}" required>
@@ -56,8 +56,8 @@
       </div>
     </section>
 
-    <section class="cf-section">
-      <h2 class="cf-section-title">Skema</h2>
+    <section class="card cf-card">
+      <h2 class="cf-card-title">Skema &amp; pris</h2>
       <div class="form-row">
         <label>Ugedag(e)</label>
         <div class="weekday-row">
@@ -79,11 +79,8 @@
           <input id="end_time" type="time" name="end_time" value="{{ old('end_time', $course->end_time ? substr((string) $course->end_time, 0, 5) : '') }}">
         </div>
       </div>
-    </section>
 
-    <section class="cf-section">
-      <h2 class="cf-section-title">Pris &amp; tilmelding</h2>
-      <div class="cf-grid-2">
+      <div class="cf-grid-2 cf-price-row">
         <div class="form-row">
           <label for="price_kr">Pris (kr/måned)</label>
           <input id="price_kr" type="number" name="price_kr" min="0" step="0.01" value="{{ old('price_kr', $priceKrDisplay) }}" required>
@@ -108,8 +105,8 @@
       </div>
     </section>
 
-    <section class="cf-section">
-      <h2 class="cf-section-title">Forsidemedie</h2>
+    <section class="card cf-card">
+      <h2 class="cf-card-title">Forsidemedie</h2>
       <p class="cf-section-hint">Upload enten et billede eller en video. En video erstatter billedet på listesider og spilles på holdets side.</p>
 
       <div class="cf-media-grid">
@@ -149,24 +146,32 @@
       @if ($course->exists)
         <a href="{{ route('courses.show', $course) }}" class="btn btn-secondary"><i class="fa-regular fa-eye"></i> Vis</a>
         <span class="cf-footer-spacer"></span>
-        <form method="POST" action="{{ route('admin.courses.destroy', $course) }}" onsubmit="return confirm('Slet holdet og alle relaterede tilmeldinger?');">
-          @csrf
-          <button class="btn btn-danger" type="submit"><i class="fa-solid fa-trash"></i> Slet hold</button>
-        </form>
+        {{-- Submits the form below, not this one: a <form> nested in a <form> is
+             dropped by the parser, which sent this button to update instead. --}}
+        <button class="btn btn-danger" type="submit" form="delete-course-form"
+          onclick="return confirm('Slet holdet og alle relaterede tilmeldinger?');">
+          <i class="fa-solid fa-trash"></i> Slet hold
+        </button>
       @endif
     </div>
   </form>
+
+  @if ($course->exists)
+    <form id="delete-course-form" method="POST" action="{{ route('admin.courses.destroy', $course) }}">
+      @csrf
+    </form>
+  @endif
 </div>
 
 @push('styles')
 <style>
   .course-form-shell { max-width: 760px; }
-  .course-form { padding: 0; overflow: hidden; }
 
-  .cf-section { padding: 22px 24px; border-bottom: 1px solid #f0f2f5; }
-  .cf-section:last-of-type { border-bottom: none; }
-  .cf-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 14px; }
-  .cf-section-hint { color: var(--muted); font-size: 13px; margin: -6px 0 14px; }
+  .cf-card { padding: 20px 22px; }
+  .cf-card-title { font-size: 15px; font-weight: 700; margin: 0 0 16px; }
+  .cf-section-hint { color: var(--muted); font-size: 13px; margin: -10px 0 16px; }
+  /* Price sits in the same card as the schedule — a rule keeps them readable as two groups. */
+  .cf-price-row { margin-top: 18px; padding-top: 18px; border-top: 1px solid #f0f2f5; }
 
   .cf-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media (max-width: 600px) { .cf-grid-2 { grid-template-columns: 1fr; } }
@@ -194,7 +199,7 @@
   .cf-remove { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; color: var(--text); }
   .cf-remove input { accent-color: var(--danger); }
 
-  .cf-footer { display: flex; align-items: center; gap: 10px; padding: 18px 24px; background: #fafbfc; border-top: 1px solid #f0f2f5; flex-wrap: wrap; }
+  .cf-footer { display: flex; align-items: center; gap: 10px; padding: 2px 2px 26px; flex-wrap: wrap; }
   .cf-footer-spacer { flex: 1; min-width: 8px; }
   .cf-footer form { margin: 0; }
 
