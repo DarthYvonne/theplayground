@@ -163,11 +163,10 @@ class CourseAdminController extends Controller
             'max_participants' => ['required', 'integer', 'min:1', 'max:1000'],
             'is_active' => ['nullable', 'boolean'],
             'free_enrollment' => ['nullable', 'boolean'],
-            'weekdays' => ['nullable', 'array'],
-            'weekdays.*' => ['in:mon,tue,wed,thu,fri,sat,sun'],
-            'schedule' => ['nullable', 'array'],
-            'schedule.*.start' => ['nullable', 'date_format:H:i'],
-            'schedule.*.end' => ['nullable', 'date_format:H:i'],
+            'slots' => ['nullable', 'array'],
+            'slots.*.weekday' => ['required', 'in:mon,tue,wed,thu,fri,sat,sun'],
+            'slots.*.start' => ['nullable', 'date_format:H:i'],
+            'slots.*.end' => ['nullable', 'date_format:H:i'],
         ]);
         $trainerIds = array_values(array_unique(array_map('intval', $data['trainer_ids'])));
         unset($data['trainer_ids']);
@@ -176,31 +175,37 @@ class CourseAdminController extends Controller
         $data['is_active'] = $request->boolean('is_active');
         $data['free_enrollment'] = $request->boolean('free_enrollment');
 
-        $slots = $this->slotsFrom($data['weekdays'] ?? [], $data['schedule'] ?? []);
-        unset($data['video'], $data['remove_video'], $data['weekdays'], $data['schedule']);
+        $slots = $this->slotsFrom($data['slots'] ?? []);
+        unset($data['video'], $data['remove_video'], $data['slots']);
 
         return [$data, $trainerIds, $slots];
     }
 
     /**
-     * One slot per checked weekday, each with its own hours. A day whose end is
-     * at or before its start keeps only the start — a range that ends before it
-     * begins would push the calendar's next-occurrence maths backwards.
+     * Training times, in calendar order. An end at or before its start keeps
+     * only the start — a range ending before it begins would push the
+     * next-occurrence maths backwards. Identical day+start pairs collapse.
      *
      * @return array<int, array{weekday:string, start_time:?string, end_time:?string}>
      */
-    private function slotsFrom(array $weekdays, array $schedule): array
+    private function slotsFrom(array $input): array
     {
-        $slots = [];
-        foreach (array_keys(Course::WEEKDAYS) as $day) {
-            if (! in_array($day, $weekdays, true)) continue;
-            $start = $schedule[$day]['start'] ?? null;
-            $end = $schedule[$day]['end'] ?? null;
-            if ($start && $end && $end <= $start) $end = null;
-            $slots[] = ['weekday' => $day, 'start_time' => $start ?: null, 'end_time' => $end ?: null];
-        }
+        $order = array_flip(array_keys(Course::WEEKDAYS));
 
-        return $slots;
+        return collect($input)
+            ->filter(fn ($s) => isset(Course::WEEKDAYS[$s['weekday'] ?? '']))
+            ->map(function ($s) {
+                $start = $s['start'] ?? null;
+                $end = $s['end'] ?? null;
+                if ($start && $end && $end <= $start) $end = null;
+                if (! $start) $end = null;
+
+                return ['weekday' => $s['weekday'], 'start_time' => $start ?: null, 'end_time' => $end ?: null];
+            })
+            ->unique(fn ($s) => $s['weekday'] . '|' . $s['start_time'])
+            ->sortBy(fn ($s) => sprintf('%d%s', $order[$s['weekday']], $s['start_time'] ?? ''))
+            ->values()
+            ->all();
     }
 
     /** @param array<int, array{weekday:string, start_time:?string, end_time:?string}> $slots */

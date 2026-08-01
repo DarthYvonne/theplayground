@@ -24,24 +24,18 @@
   ])->values();
   $priceKr = ($course->price_cents ?? 0) / 100;
   $priceKrDisplay = $priceKr == (int) $priceKr ? (string) (int) $priceKr : rtrim(rtrim(number_format($priceKr, 2, '.', ''), '0'), '.');
-  $selectedDays = is_array(old('weekdays')) ? old('weekdays') : $course->weekdaysList();
-
-  // One start/end per weekday, from old input on a failed submit or the saved slots.
-  $oldSchedule = is_array(old('schedule')) ? old('schedule') : null;
-  $savedSlots = $course->exists ? $course->orderedSchedules()->keyBy('weekday') : collect();
-  $dayTimes = [];
-  foreach (\App\Models\Course::WEEKDAYS as $code => $_) {
-    $slot = $savedSlots->get($code);
-    $dayTimes[$code] = $oldSchedule !== null
-      ? ['start' => $oldSchedule[$code]['start'] ?? '', 'end' => $oldSchedule[$code]['end'] ?? '']
-      : ['start' => $slot?->startsAt() ?? '', 'end' => $slot?->end_time ? substr((string) $slot->end_time, 0, 5) : ''];
-  }
-
-  // Start in "same time" mode unless the chosen days actually differ.
-  $chosenTimes = collect($selectedDays)->map(fn ($d) => $dayTimes[$d] ?? null)->filter()->unique();
-  $sameTimeDefault = $chosenTimes->count() <= 1;
-  $sharedStart = $sameTimeDefault ? ($chosenTimes->first()['start'] ?? '') : '';
-  $sharedEnd = $sameTimeDefault ? ($chosenTimes->first()['end'] ?? '') : '';
+  // Training times, from old input on a failed submit or the saved slots.
+  $slotRows = is_array(old('slots'))
+    ? collect(old('slots'))->map(fn ($s) => [
+        'weekday' => $s['weekday'] ?? '',
+        'start' => $s['start'] ?? '',
+        'end' => $s['end'] ?? '',
+      ])->filter(fn ($s) => isset(\App\Models\Course::WEEKDAYS[$s['weekday']]))->values()
+    : ($course->exists ? $course->orderedSchedules()->map(fn ($s) => [
+        'weekday' => $s->weekday,
+        'start' => $s->startsAt() ?? '',
+        'end' => $s->end_time ? substr((string) $s->end_time, 0, 5) : '',
+      ])->values() : collect());
   $videoStatusLabel = [
     'pending' => 'Afventer behandling…',
     'processing' => 'Behandler…',
@@ -79,43 +73,29 @@
     <section class="card cf-card" id="skemaCard">
       <h2 class="cf-card-title">Skema</h2>
 
-      <div class="weekday-row">
-        @foreach (\App\Models\Course::WEEKDAYS as $code => $name)
-          <label class="weekday-chip">
-            <input type="checkbox" name="weekdays[]" value="{{ $code }}" {{ in_array($code, $selectedDays, true) ? 'checked' : '' }}>
-            <span>{{ $name }}</span>
-          </label>
-        @endforeach
-      </div>
+      <div class="sk-list" id="skList"></div>
+      <div class="sk-empty" id="skEmpty">Ingen træningstider endnu.</div>
 
-      <div class="sk-empty" id="skEmpty">Vælg de dage holdet træner.</div>
-
-      <div class="sk-body" id="skBody" hidden>
-        <label class="sk-same">
-          <input type="checkbox" id="skSameTime" {{ $sameTimeDefault ? 'checked' : '' }}>
-          <span>Samme tid alle dage</span>
-        </label>
-
-        <div class="sk-shared" id="skShared">
-          <span class="sk-day">Alle dage</span>
-          <input type="time" id="skSharedStart" value="{{ $sharedStart }}" aria-label="Fra, alle dage">
-          <span class="sk-dash">–</span>
-          <input type="time" id="skSharedEnd" value="{{ $sharedEnd }}" aria-label="Til, alle dage">
-        </div>
-
-        <div class="sk-days" id="skDays">
+      <div class="sk-add" id="skAdd" hidden>
+        <select id="skDay" aria-label="Ugedag">
           @foreach (\App\Models\Course::WEEKDAYS as $code => $name)
-            <div class="sk-row" data-day="{{ $code }}" hidden>
-              <span class="sk-day">{{ $name }}</span>
-              <input type="time" name="schedule[{{ $code }}][start]" value="{{ $dayTimes[$code]['start'] }}" aria-label="Fra, {{ $name }}">
-              <span class="sk-dash">–</span>
-              <input type="time" name="schedule[{{ $code }}][end]" value="{{ $dayTimes[$code]['end'] }}" aria-label="Til, {{ $name }}">
-            </div>
+            <option value="{{ $code }}">{{ $name }}</option>
           @endforeach
-        </div>
-
-        <p class="sk-hint">Lad tiderne stå tomme, hvis holdet ikke har et fast klokkeslæt.</p>
+        </select>
+        <span class="sk-word">fra</span>
+        <input type="time" id="skStart" aria-label="Fra">
+        <span class="sk-word">til</span>
+        <input type="time" id="skEnd" aria-label="Til">
+        <button type="button" class="btn btn-primary btn-sm" id="skConfirm">Tilføj</button>
+        <button type="button" class="cf-link-btn" id="skCancel">Annullér</button>
+        <div class="cf-error" id="skError" hidden></div>
       </div>
+
+      <button type="button" class="btn btn-secondary btn-sm sk-open" id="skOpen">
+        <i class="fa-solid fa-plus"></i> <span id="skOpenLabel">Tilføj træningstid</span>
+      </button>
+
+      @error('slots')<div class="cf-error">{{ $message }}</div>@enderror
     </section>
 
     <section class="card cf-card">
@@ -241,28 +221,24 @@
   .cf-footer-spacer { flex: 1; min-width: 8px; }
   .cf-footer form { margin: 0; }
 
-  .sk-empty { color: var(--muted); font-size: 13px; font-style: italic; margin-top: 14px; }
-  .sk-body { margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0f2f5; }
-  .sk-same { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
-  .sk-same input { width: 15px; height: 15px; accent-color: var(--accent); cursor: pointer; }
-  .sk-shared, .sk-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; }
-  .sk-row + .sk-row { border-top: 1px solid #f7f8fa; }
-  .sk-day { flex: 0 0 96px; font-size: 13px; font-weight: 600; color: var(--text); }
-  .sk-shared .sk-day { color: var(--muted); }
-  .sk-shared input[type=time], .sk-row input[type=time] { width: auto; flex: 0 1 128px; }
-  .sk-dash { color: var(--muted); }
-  .sk-hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
-  @media (max-width: 600px) {
-    .sk-day { flex-basis: 74px; }
-    .sk-shared input[type=time], .sk-row input[type=time] { flex: 1 1 0; min-width: 0; }
-  }
+  .sk-empty { color: var(--muted); font-size: 13px; font-style: italic; margin-bottom: 14px; }
+  .sk-list { display: flex; flex-direction: column; }
+  .sk-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f2f5; }
+  .sk-row:first-child { padding-top: 0; }
+  .sk-row .sk-day { flex: 0 0 96px; font-weight: 700; font-size: 14px; }
+  .sk-row .sk-time { flex: 1; color: var(--muted); font-size: 14px; }
+  .sk-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; padding: 6px 8px; border-radius: 50%; }
+  .sk-remove:hover { background: var(--hover); color: var(--danger); }
+  .sk-list + .sk-add, .sk-list + .sk-open { margin-top: 14px; }
 
-  .weekday-row { display: flex; flex-wrap: wrap; gap: 6px; }
-  .weekday-chip { display: inline-flex; align-items: center; cursor: pointer; user-select: none; font-weight: 500; }
-  .weekday-chip input { position: absolute; opacity: 0; pointer-events: none; }
-  .weekday-chip span { padding: 8px 14px; border-radius: 999px; border: 1px solid var(--border); background: #fff; font-size: 13px; transition: background 0.1s, border-color 0.1s, color 0.1s; }
-  .weekday-chip:hover span { background: var(--hover); }
-  .weekday-chip input:checked + span { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .sk-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 12px; background: #f7f8fa; border-radius: 10px; margin-bottom: 12px; }
+  .sk-add select, .sk-add input[type=time] { width: auto; }
+  .sk-word { color: var(--muted); font-size: 13px; }
+  .sk-add .cf-error { flex-basis: 100%; margin-top: 0; }
+  .sk-open { align-self: flex-start; }
+  @media (max-width: 600px) {
+    .sk-add select, .sk-add input[type=time] { flex: 1 1 40%; min-width: 0; }
+  }
 
   .trainer-list { display: flex; flex-direction: column; }
   .tr-empty { color: var(--muted); font-size: 13px; font-style: italic; padding: 4px 0; }
@@ -323,57 +299,101 @@
 
 @push('scripts')
 <script>
-// Skema: chips choose the days, each chosen day gets its own hours. "Samme tid
-// alle dage" mirrors one pair into every day so the common case stays one entry.
+// Skema: training times are added one at a time — day, from, to — and listed
+// as they accumulate. A course can run on several days at different hours, or
+// twice on the same day.
 (function () {
   var card = document.getElementById('skemaCard');
   if (!card) return;
 
-  var dayBoxes = card.querySelectorAll('input[name="weekdays[]"]');
-  var body = document.getElementById('skBody');
-  var empty = document.getElementById('skEmpty');
-  var same = document.getElementById('skSameTime');
-  var shared = document.getElementById('skShared');
-  var sharedStart = document.getElementById('skSharedStart');
-  var sharedEnd = document.getElementById('skSharedEnd');
-  var rows = {};
-  card.querySelectorAll('.sk-row').forEach(function (r) { rows[r.dataset.day] = r; });
+  var DAYS = @json(\App\Models\Course::WEEKDAYS);
+  var ORDER = Object.keys(DAYS);
+  var slots = @json($slotRows);
 
-  function chosenDays() {
-    return Array.prototype.filter.call(dayBoxes, function (b) { return b.checked; }).map(function (b) { return b.value; });
+  var list = document.getElementById('skList');
+  var empty = document.getElementById('skEmpty');
+  var addBox = document.getElementById('skAdd');
+  var openBtn = document.getElementById('skOpen');
+  var openLabel = document.getElementById('skOpenLabel');
+  var daySel = document.getElementById('skDay');
+  var startIn = document.getElementById('skStart');
+  var endIn = document.getElementById('skEnd');
+  var errorEl = document.getElementById('skError');
+
+  function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, function (m) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+
+  function timeText(s) {
+    if (!s.start && !s.end) return 'Ingen fast tid';
+    if (s.start && s.end) return s.start + '–' + s.end;
+    return s.start || s.end;
   }
 
-  function applyShared() {
-    chosenDays().forEach(function (d) {
-      var row = rows[d];
-      if (!row) return;
-      row.querySelector('input[name$="[start]"]').value = sharedStart.value;
-      row.querySelector('input[name$="[end]"]').value = sharedEnd.value;
+  function sortSlots() {
+    slots.sort(function (a, b) {
+      var d = ORDER.indexOf(a.weekday) - ORDER.indexOf(b.weekday);
+      return d !== 0 ? d : String(a.start || '').localeCompare(String(b.start || ''));
     });
   }
 
   function render() {
-    var days = chosenDays();
-    var any = days.length > 0;
-    body.hidden = !any;
-    empty.hidden = any;
+    sortSlots();
+    list.innerHTML = slots.map(function (s, i) {
+      return '<div class="sk-row">' +
+        '<span class="sk-day">' + escapeHtml(DAYS[s.weekday] || s.weekday) + '</span>' +
+        '<span class="sk-time">' + escapeHtml(timeText(s)) + '</span>' +
+        '<button type="button" class="sk-remove" data-i="' + i + '" aria-label="Fjern træningstid"><i class="fa-solid fa-xmark"></i></button>' +
+        '<input type="hidden" name="slots[' + i + '][weekday]" value="' + escapeHtml(s.weekday) + '">' +
+        '<input type="hidden" name="slots[' + i + '][start]" value="' + escapeHtml(s.start || '') + '">' +
+        '<input type="hidden" name="slots[' + i + '][end]" value="' + escapeHtml(s.end || '') + '">' +
+      '</div>';
+    }).join('');
 
-    Object.keys(rows).forEach(function (d) {
-      var chosen = days.indexOf(d) !== -1;
-      // Rows stay in the DOM but unnamed inputs are not submitted, so an
-      // unchecked day cannot leave a stray time behind.
-      rows[d].hidden = !chosen || same.checked;
-      rows[d].querySelectorAll('input[type=time]').forEach(function (i) { i.disabled = !chosen; });
+    list.querySelectorAll('.sk-remove').forEach(function (b) {
+      b.addEventListener('click', function () { slots.splice(parseInt(b.dataset.i, 10), 1); render(); });
     });
 
-    shared.hidden = !same.checked;
-    if (same.checked) applyShared();
+    empty.hidden = slots.length > 0;
+    openLabel.textContent = slots.length ? 'Tilføj træningstid for dette hold' : 'Tilføj træningstid';
   }
 
-  dayBoxes.forEach(function (b) { b.addEventListener('change', render); });
-  same.addEventListener('change', render);
-  [sharedStart, sharedEnd].forEach(function (i) { i.addEventListener('input', applyShared); });
+  function showError(msg) { errorEl.textContent = msg; errorEl.hidden = false; }
+
+  function openAdd() {
+    addBox.hidden = false;
+    openBtn.hidden = true;
+    errorEl.hidden = true;
+    startIn.value = '';
+    endIn.value = '';
+    daySel.focus();
+  }
+
+  function closeAdd() {
+    addBox.hidden = true;
+    openBtn.hidden = false;
+    errorEl.hidden = true;
+  }
+
+  openBtn.addEventListener('click', openAdd);
+  document.getElementById('skCancel').addEventListener('click', closeAdd);
+
+  document.getElementById('skConfirm').addEventListener('click', function () {
+    var day = daySel.value;
+    var start = startIn.value;
+    var end = endIn.value;
+
+    if (end && !start) return showError('Vælg et starttidspunkt.');
+    if (start && end && end <= start) return showError('Sluttidspunktet skal ligge efter starttidspunktet.');
+    var clash = slots.some(function (s) { return s.weekday === day && (s.start || '') === (start || ''); });
+    if (clash) return showError('Den træningstid er allerede tilføjet.');
+
+    slots.push({ weekday: day, start: start, end: end });
+    render();
+    closeAdd();
+  });
+
   render();
+  // A course with no times yet opens straight into the add row.
+  if (!slots.length) openAdd();
 })();
 </script>
 <script>

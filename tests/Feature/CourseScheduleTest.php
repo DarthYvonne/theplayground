@@ -92,16 +92,14 @@ class CourseScheduleTest extends TestCase
             'trainer_ids' => [$owner->id],
             'price_kr' => 100,
             'max_participants' => 10,
-            'weekdays' => ['mon', 'wed'],
-            'schedule' => [
-                'mon' => ['start' => '17:00', 'end' => '18:30'],
-                'wed' => ['start' => '19:00', 'end' => '20:00'],
-                // Not checked, so it must not be saved.
-                'fri' => ['start' => '06:00', 'end' => '07:00'],
+            'slots' => [
+                ['weekday' => 'wed', 'start' => '19:00', 'end' => '20:00'],
+                ['weekday' => 'mon', 'start' => '17:00', 'end' => '18:30'],
             ],
         ])->assertSessionHasNoErrors();
 
         $course = Course::where('title', 'Split hold')->firstOrFail();
+        // Stored in calendar order regardless of the order they were added.
         $this->assertSame(['mon', 'wed'], $course->weekdaysList());
         $this->assertSame('17:00–18:30', $course->schedulesOn('mon')->first()->timeRange());
         $this->assertSame('19:00–20:00', $course->schedulesOn('wed')->first()->timeRange());
@@ -119,8 +117,7 @@ class CourseScheduleTest extends TestCase
             'trainer_ids' => [$owner->id],
             'price_kr' => 0,
             'max_participants' => 10,
-            'weekdays' => ['thu'],
-            'schedule' => ['thu' => ['start' => '20:00', 'end' => '21:00']],
+            'slots' => [['weekday' => 'thu', 'start' => '20:00', 'end' => '21:00']],
         ])->assertSessionHasNoErrors();
 
         $course->refresh();
@@ -138,8 +135,7 @@ class CourseScheduleTest extends TestCase
             'trainer_ids' => [$owner->id],
             'price_kr' => 0,
             'max_participants' => 10,
-            'weekdays' => ['mon'],
-            'schedule' => ['mon' => ['start' => '18:00', 'end' => '17:00']],
+            'slots' => [['weekday' => 'mon', 'start' => '18:00', 'end' => '17:00']],
         ])->assertSessionHasNoErrors();
 
         $slot = Course::where('title', 'Bagvendt')->firstOrFail()->schedulesOn('mon')->first();
@@ -159,6 +155,62 @@ class CourseScheduleTest extends TestCase
 
         $this->assertStringContainsString('17:00–18:30', $html);
         $this->assertStringContainsString('19:00–20:00', $html);
+    }
+
+    public function test_two_slots_on_the_same_day_can_be_added(): void
+    {
+        $owner = User::factory()->create(['role' => 'owner']);
+
+        $this->actingAs($owner)->post(route('admin.courses.store'), [
+            'title' => 'Morgen og aften',
+            'description' => 'x',
+            'trainer_ids' => [$owner->id],
+            'price_kr' => 0,
+            'max_participants' => 10,
+            'slots' => [
+                ['weekday' => 'tue', 'start' => '18:00', 'end' => '19:00'],
+                ['weekday' => 'tue', 'start' => '09:00', 'end' => '10:00'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $slots = Course::where('title', 'Morgen og aften')->firstOrFail()->schedulesOn('tue');
+        $this->assertCount(2, $slots);
+        $this->assertSame('09:00–10:00', $slots->first()->timeRange());
+    }
+
+    public function test_the_same_day_and_start_is_not_stored_twice(): void
+    {
+        $owner = User::factory()->create(['role' => 'owner']);
+
+        $this->actingAs($owner)->post(route('admin.courses.store'), [
+            'title' => 'Dublet',
+            'description' => 'x',
+            'trainer_ids' => [$owner->id],
+            'price_kr' => 0,
+            'max_participants' => 10,
+            'slots' => [
+                ['weekday' => 'mon', 'start' => '17:00', 'end' => '18:00'],
+                ['weekday' => 'mon', 'start' => '17:00', 'end' => '18:00'],
+            ],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertCount(1, Course::where('title', 'Dublet')->firstOrFail()->schedulesOn('mon'));
+    }
+
+    public function test_an_unknown_weekday_is_rejected(): void
+    {
+        $owner = User::factory()->create(['role' => 'owner']);
+
+        $this->actingAs($owner)->post(route('admin.courses.store'), [
+            'title' => 'Ugyldig',
+            'description' => 'x',
+            'trainer_ids' => [$owner->id],
+            'price_kr' => 0,
+            'max_participants' => 10,
+            'slots' => [['weekday' => 'funday', 'start' => '17:00', 'end' => '18:00']],
+        ])->assertSessionHasErrors('slots.0.weekday');
+
+        $this->assertSame(0, Course::where('title', 'Ugyldig')->count());
     }
 
     /**
