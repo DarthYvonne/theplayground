@@ -5,8 +5,10 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Mail\ResetPasswordMail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
@@ -41,6 +43,19 @@ class User extends Authenticatable
     }
     public function messages(): HasMany { return $this->hasMany(Message::class); }
     public function notifications(): HasMany { return $this->hasMany(AppNotification::class)->latest(); }
+
+    /**
+     * Sent synchronously rather than queued: a stalled queue worker would leave
+     * the user locked out with no way to tell, and reset volume is tiny.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        Mail::to($this->email)->send(new ResetPasswordMail(
+            $this,
+            route('password.reset', ['token' => $token, 'email' => $this->email]),
+            (int) config('auth.passwords.users.expire', 60),
+        ));
+    }
 
     public function effectiveRole(): string
     {

@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\FloatingAdminController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserAdminController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\BeskederController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\CommentController;
@@ -52,6 +53,15 @@ Route::middleware('guest')->group(function () {
     Route::post('/login', [AuthController::class, 'login']);
     Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
     Route::post('/register', [AuthController::class, 'register']);
+
+    // Password recovery. Throttled per IP so the form can't be used to spam
+    // someone's inbox or to guess reset tokens.
+    Route::get('/glemt-adgangskode', [PasswordResetController::class, 'showForgot'])->name('password.request');
+    Route::post('/glemt-adgangskode', [PasswordResetController::class, 'sendLink'])
+        ->middleware('throttle:6,1')->name('password.email');
+    Route::get('/nulstil-adgangskode/{token}', [PasswordResetController::class, 'showReset'])->name('password.reset');
+    Route::post('/nulstil-adgangskode', [PasswordResetController::class, 'reset'])
+        ->middleware('throttle:6,1')->name('password.update');
 });
 Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
 

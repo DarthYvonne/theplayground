@@ -13,6 +13,7 @@
       <div class="form-row">
         <label for="password">Adgangskode</label>
         <input id="password" type="password" name="password" required>
+        <a href="{{ route('password.request') }}" style="display:inline-block;margin-top:6px;font-size:13px;color:var(--muted);">Glemt din adgangskode?</a>
       </div>
       <div class="form-row">
         <label class="switch"><input type="checkbox" name="remember" value="1"><span class="knob"></span><span>Husk mig</span></label>
