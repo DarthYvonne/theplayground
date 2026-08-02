@@ -66,9 +66,9 @@
   .nav-group.open .nav-group-toggle .chev { transform: rotate(180deg); }
   .nav-group-items { display: none; }
   .nav-group.open .nav-group-items { display: block; }
-  /* Indent aligns child labels under the parent label, not its icon. */
-  .nav-group-items a { padding-left: 22px; font-weight: 500; }
-  .nav-group-items a .ico { font-size: 13px; }
+  /* No icons on the children, so the indent alone has to line their labels up
+     with "Træning" above: 12px padding + 22px icon + 12px gap. */
+  .nav-group-items a { padding-left: 46px; font-weight: 500; }
 
   .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); padding: 16px 12px 6px; }
   .nav-divider { height: 1px; background: #f0f2f5; margin: 10px 12px; }
@@ -245,9 +245,9 @@
           <i class="fa-solid fa-chevron-down chev" aria-hidden="true"></i>
         </button>
         <div class="nav-group-items" id="navTraeningItems">
-          <a href="{{ route('catalog.mine') }}" class="{{ $holdActive ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-people-line"></i></span> Hold</a>
-          <a href="{{ route('faellestraening.index') }}" class="{{ $faellesActive ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-people-group"></i></span> Fællestræning</a>
-          <a href="{{ route('personlig.index') }}" class="{{ $personligActive ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-user-ninja"></i></span> Personlig træning</a>
+          <a href="{{ route('catalog.mine') }}" class="{{ $holdActive ? 'active' : '' }}">Hold</a>
+          <a href="{{ route('faellestraening.index') }}" class="{{ $faellesActive ? 'active' : '' }}">Fællestræning</a>
+          <a href="{{ route('personlig.index') }}" class="{{ $personligActive ? 'active' : '' }}">Personlig træning</a>
         </div>
       </div>
 
