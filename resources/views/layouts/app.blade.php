@@ -260,7 +260,7 @@
       </div>
 
       <a href="{{ route('floating.index') }}" class="{{ request()->is('floating*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-water"></i></span> Floating</a>
-      <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-circle-user"></i></span> Find medlem</a>
+      <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-circle-user"></i></span> Find person</a>
 
       @if (auth()->user()->isTrainer() || auth()->user()->isOwner())
         <div class="nav-divider"></div>
