@@ -9,8 +9,6 @@
      compete with it. Dismissed per browser session, never per account. */
   .next-up { display: flex; align-items: center; background: var(--accent-soft); border: 1px solid rgba(24,119,242,0.20); border-radius: 12px; padding: 4px 6px 4px 12px; margin-bottom: 14px; }
   .next-up .nu-link { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; color: inherit; text-decoration: none; padding: 6px 4px; border-radius: 8px; }
-  /* Solid, because the strip itself is now accent-soft. */
-  .next-up .nu-ico { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; flex: 0 0 auto; }
   .next-up .nu-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
   .next-up .nu-kind { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--accent); }
   .next-up .nu-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -180,7 +178,6 @@
   @if ($next)
     <div class="next-up" id="nextUp">
       <a href="{{ $next->url }}" class="nu-link">
-        <span class="nu-ico"><i class="fa-regular fa-clock"></i></span>
         <span class="nu-text">
           <span class="nu-kind">Næste: {{ $next->kind }}</span>
           <span class="nu-title">{{ $next->title }} &middot; {{ $next->when }}</span>
@@ -202,10 +199,18 @@
 
         if (store && store.getItem(KEY) === '1') { box.style.display = 'none'; return; }
 
+        function dismiss() {
+          try { if (store) store.setItem(KEY, '1'); } catch (e) {}
+        }
+
         document.getElementById('nextUpClose').addEventListener('click', function () {
           box.style.display = 'none';
-          try { if (store) store.setItem(KEY, '1'); } catch (e) {}
+          dismiss();
         });
+
+        // Following the link counts as dealing with it — no preventDefault, the
+        // write is synchronous and lands before the page unloads.
+        box.querySelector('.nu-link').addEventListener('click', dismiss);
       })();
     </script>
   @endif
