@@ -741,10 +741,16 @@ window.__courseType = { isPersonlig: {{ $isPersonligForm ? 'true' : 'false' }} }
   var timer = null;
 
   function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function avatar(m, cls) {
-    return m.picture_url
-      ? '<img class="' + cls + '" src="' + escapeHtml(m.picture_url) + '" alt="">'
-      : '<div class="av sm ' + cls + '">' + escapeHtml(m.initials || '?') + '</div>';
+  // Two shapes, matching the trainer picker: 40px .tr-av in the chip under the
+  // button, 32px .av.sm in the modal rows. A bare <img> carries no size of its
+  // own, so the photo always needs either a class or an .av box around it.
+  function chipAvatar(m) {
+    if (m.picture_url) return '<img class="tr-av" src="' + escapeHtml(m.picture_url) + '" alt="">';
+    return '<div class="av sm tr-av">' + escapeHtml(m.initials || '?') + '</div>';
+  }
+  function rowAvatar(m) {
+    if (m.picture_url) return '<div class="av sm"><img src="' + escapeHtml(m.picture_url) + '" alt=""></div>';
+    return '<div class="av sm">' + escapeHtml(m.initials || '?') + '</div>';
   }
 
   function renderChip() {
@@ -753,7 +759,7 @@ window.__courseType = { isPersonlig: {{ $isPersonligForm ? 'true' : 'false' }} }
       return;
     }
     chip.innerHTML = '<div class="trainer-row">' +
-      avatar(selected, 'tr-av') +
+      chipAvatar(selected) +
       '<div class="tr-meta"><div class="tr-name">' + escapeHtml(selected.label) + '</div>' +
       '<div class="tr-contact">' + escapeHtml(selected.sub || '') + '</div></div>' +
       '<button type="button" class="tr-remove" id="memberRemove" aria-label="Fjern"><i class="fa-solid fa-xmark"></i></button>' +
@@ -772,8 +778,10 @@ window.__courseType = { isPersonlig: {{ $isPersonligForm ? 'true' : 'false' }} }
       return;
     }
     body.innerHTML = results.map(function (m) {
-      return '<label class="pick-row" data-id="' + m.id + '">' +
-        avatar(m, '') +
+      // The already-picked member reads as picked here too, same as the trainer list.
+      var isSel = selected && String(selected.id) === String(m.id);
+      return '<label class="pick-row ' + (isSel ? 'selected' : '') + '" data-id="' + m.id + '">' +
+        rowAvatar(m) +
         '<div class="meta"><div class="nm">' + escapeHtml(m.label) + '</div>' +
         '<div class="sub">' + escapeHtml(m.sub || '') + '</div></div>' +
       '</label>';
