@@ -219,7 +219,12 @@ class CourseScheduleTest extends TestCase
      */
     public function test_migration_backfills_existing_courses_into_slots(): void
     {
-        $this->artisan('migrate:rollback', ['--step' => 1])->assertSuccessful();
+        // Unwind until the old columns are back, rather than a fixed step count
+        // that any later migration would silently invalidate.
+        for ($i = 0; $i < 10 && ! \Schema::hasColumn('courses', 'weekdays'); $i++) {
+            $this->artisan('migrate:rollback', ['--step' => 1])->assertSuccessful();
+        }
+        $this->assertTrue(\Schema::hasColumn('courses', 'weekdays'), 'could not roll back to the pre-slot schema');
 
         $id = \DB::table('courses')->insertGetId([
             'title' => 'Gammelt hold',

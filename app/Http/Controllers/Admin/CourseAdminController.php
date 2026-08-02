@@ -48,7 +48,7 @@ class CourseAdminController extends Controller
 
     public function create()
     {
-        return view('admin.courses.form', ['course' => new Course(['is_active' => false, 'max_participants' => 10]), 'trainers' => $this->trainers()]);
+        return view('admin.courses.form', ['course' => new Course(['is_active' => false, 'max_participants' => 10, 'chat_enabled' => true]), 'trainers' => $this->trainers()]);
     }
 
     public function store(Request $request): RedirectResponse
@@ -81,6 +81,15 @@ class CourseAdminController extends Controller
     public function update(Request $request, Course $course): RedirectResponse
     {
         [$data, $trainerIds, $slots] = $this->validateData($request);
+
+        // Deactivating hides the hold and 404s its page, but billing keeps
+        // running — so a member would pay for something they cannot reach.
+        $members = $course->memberCount();
+        if ($course->is_active && ! $data['is_active'] && $members > 0) {
+            return back()
+                ->withErrors(['is_active' => 'Holdet har ' . $members . ' ' . ($members === 1 ? 'medlem' : 'medlemmer') . ' og kan ikke gøres inaktivt. Afmeld medlemmerne først.'])
+                ->withInput();
+        }
         if ($request->hasFile('image')) {
             if ($course->image_path) {
                 Storage::disk('public')->delete($course->image_path);
@@ -143,13 +152,25 @@ class CourseAdminController extends Controller
 
     private function saveMessage(Course $course, string $verb): string
     {
-        return 'Holdet er '.$verb.'.';
+        $subject = match ($course->type) {
+            Course::TYPE_FAELLES => 'Fællestræningen er',
+            Course::TYPE_PERSONLIG => 'Den personlige træning er',
+            default => 'Holdet er',
+        };
+
+        return $subject.' '.$verb.'.';
     }
 
     private function validateData(Request $request): array
     {
+        // Price and capacity are meaningless for a fællestræning — it is free to
+        // members and nobody registers — so the form hides them and they are not
+        // required back.
+        $isFaelles = $request->input('type') === Course::TYPE_FAELLES;
+
         $data = $request->validate([
             'title' => ['required', 'string', 'max:160'],
+            'type' => ['nullable', Rule::in(array_keys(Course::TYPES))],
             'description' => ['required', 'string', 'max:4000'],
             'trainer_ids' => ['required', 'array', 'min:1'],
             // Role-checked, not just exists: the picker only offers trainers/owners,
@@ -159,10 +180,11 @@ class CourseAdminController extends Controller
             'image' => ['nullable', 'image', 'max:16384'],
             'video' => ['nullable', 'file', 'mimes:mp4,mov,avi,webm,m4v,mkv', 'max:512000'],
             'remove_video' => ['nullable', 'boolean'],
-            'price_kr' => ['required', 'numeric', 'min:0', 'max:100000'],
-            'max_participants' => ['required', 'integer', 'min:1', 'max:1000'],
+            'price_kr' => [Rule::requiredIf(! $isFaelles), 'nullable', 'numeric', 'min:0', 'max:100000'],
+            'max_participants' => [Rule::requiredIf(! $isFaelles), 'nullable', 'integer', 'min:1', 'max:1000'],
             'is_active' => ['nullable', 'boolean'],
             'free_enrollment' => ['nullable', 'boolean'],
+            'chat_enabled' => ['nullable', 'boolean'],
             'slots' => ['nullable', 'array'],
             'slots.*.weekday' => ['required', 'in:mon,tue,wed,thu,fri,sat,sun'],
             'slots.*.start' => ['nullable', 'date_format:H:i'],
@@ -170,10 +192,21 @@ class CourseAdminController extends Controller
         ]);
         $trainerIds = array_values(array_unique(array_map('intval', $data['trainer_ids'])));
         unset($data['trainer_ids']);
-        $data['price_cents'] = (int) round(((float) $data['price_kr']) * 100);
-        unset($data['price_kr']);
+        $data['type'] = $data['type'] ?? Course::TYPE_HOLD;
         $data['is_active'] = $request->boolean('is_active');
         $data['free_enrollment'] = $request->boolean('free_enrollment');
+
+        if ($isFaelles) {
+            // Stored flat rather than left to the view: a fællestræning that ever
+            // carried a price would start charging the moment it was retyped.
+            $data['price_cents'] = 0;
+            $data['max_participants'] = $data['max_participants'] ?? 100;
+            $data['chat_enabled'] = $request->boolean('chat_enabled');
+        } else {
+            $data['price_cents'] = (int) round(((float) $data['price_kr']) * 100);
+            $data['chat_enabled'] = true;
+        }
+        unset($data['price_kr']);
 
         $slots = $this->slotsFrom($data['slots'] ?? []);
         unset($data['video'], $data['remove_video'], $data['slots']);

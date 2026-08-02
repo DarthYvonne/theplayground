@@ -87,6 +87,22 @@ class User extends Authenticatable
         return $this->enrollments()->where('course_id', $course->id)->where('status', 'active')->exists();
     }
 
+    /**
+     * Does this user pay us a recurring monthly fee for anything? That is what
+     * makes fællestræning free, and it stays true while a payment is retrying —
+     * a member is not locked out of a perk because their card bounced.
+     *
+     * Personlig træning satisfies this on its own the day it exists as a paid
+     * course; no extra rule is needed here.
+     */
+    public function hasPaidMembership(): bool
+    {
+        return $this->enrollments()
+            ->whereIn('status', ['active', 'past_due'])
+            ->whereHas('course', fn ($q) => $q->paidMembership())
+            ->exists();
+    }
+
     public function unreadNotificationCount(): int
     {
         return $this->notifications()->whereNull('read_at')->count();
@@ -97,6 +113,12 @@ class User extends Authenticatable
         $courses = $this->activeEnrollments()->pluck('course_id')->all();
         if ($this->isTrainer()) {
             $courses = array_unique(array_merge($courses, $this->trainerCourses()->pluck('id')->all()));
+        }
+        // Fællestræning has no enrollment to read this off, so membership is the key.
+        if ($this->hasPaidMembership()) {
+            $courses = array_unique(array_merge($courses, Course::query()
+                ->faellestraening()->where('is_active', true)->where('chat_enabled', true)
+                ->pluck('id')->all()));
         }
         if (empty($courses)) return 0;
         $reads = MessageRead::where('user_id', $this->id)->whereIn('course_id', $courses)->pluck('last_read_at', 'course_id');

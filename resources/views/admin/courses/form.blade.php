@@ -4,7 +4,19 @@
 <div class="view-header">
   <h1>
     <a href="{{ route('admin.courses.index') }}" style="color:inherit;"><i class="fa-solid fa-arrow-left" style="font-size:16px;margin-right:8px;"></i></a>
-    {{ $course->exists ? 'Rediger hold' : 'Nyt hold' }}
+    @php
+      // "et hold" but "en fællestræning" / "en personlig træning" — the
+      // indefinite article follows the noun's gender.
+      $noun = match ($course->type) {
+        \App\Models\Course::TYPE_FAELLES => ['en', 'fællestræning'],
+        \App\Models\Course::TYPE_PERSONLIG => ['en', 'personlig træning'],
+        default => ['et', 'hold'],
+      };
+      $heading = $course->exists
+        ? 'Rediger ' . $noun[1]
+        : ($noun[0] === 'et' ? 'Nyt ' : 'Ny ') . $noun[1];
+    @endphp
+    {{ $heading }}
   </h1>
   @include('partials.header-actions')
 </div>
@@ -36,6 +48,11 @@
         'start' => $s->startsAt() ?? '',
         'end' => $s->end_time ? substr((string) $s->end_time, 0, 5) : '',
       ])->values() : collect());
+  // An active hold with members cannot be switched off — they would keep paying
+  // for a page that 404s. Turning a stray inactive one back on stays allowed.
+  $memberCount = $course->exists ? $course->memberCount() : 0;
+  $lockActive = $memberCount > 0 && $course->is_active;
+
   $videoStatusLabel = [
     'pending' => 'Afventer behandling…',
     'processing' => 'Behandler…',
@@ -56,17 +73,39 @@
         <input id="title" type="text" name="title" value="{{ old('title', $course->title) }}" required>
       </div>
       <div class="form-row">
+        <label for="type">Type</label>
+        <select id="type" name="type">
+          @foreach (\App\Models\Course::TYPES as $value => $label)
+            <option value="{{ $value }}" {{ old('type', $course->type ?? 'hold') === $value ? 'selected' : '' }}>{{ $label }}</option>
+          @endforeach
+        </select>
+        <div class="hint">Bestemmer hvor den vises under Træning i menuen. Fællestræning er gratis for medlemmer og har hverken pris eller tilmelding.</div>
+      </div>
+      <div class="form-row">
         <label for="description">Beskrivelse</label>
         <textarea id="description" name="description" rows="5" required>{{ old('description', $course->description) }}</textarea>
       </div>
 
       <div class="cf-active">
-        <label class="switch">
-          <input type="checkbox" name="is_active" value="1" {{ old('is_active', $course->is_active) ? 'checked' : '' }}>
+        @if ($lockActive)
+          {{-- Disabled boxes submit nothing, so the current state rides along separately. --}}
+          <input type="hidden" name="is_active" value="1">
+        @endif
+        <label class="switch {{ $lockActive ? 'locked' : '' }}">
+          <input type="checkbox" name="is_active" value="1" {{ old('is_active', $course->is_active) ? 'checked' : '' }} @disabled($lockActive)>
           <span class="knob"></span>
           <span>Aktivt &mdash; holdet udbydes</span>
         </label>
-        <div class="hint">Som kladde kan ingen se holdet eller tilmelde sig &mdash; det er kun synligt for ejere.</div>
+        @if ($lockActive)
+          <div class="hint">
+            <i class="fa-solid fa-lock"></i>
+            Holdet har {{ $memberCount }} {{ $memberCount === 1 ? 'medlem' : 'medlemmer' }} og kan ikke gøres inaktivt.
+            Medlemmerne betaler stadig, så de skal afmeldes først.
+          </div>
+        @else
+          <div class="hint">Som kladde kan ingen se holdet eller tilmelde sig &mdash; det er kun synligt for ejere.</div>
+        @endif
+        @error('is_active')<div class="cf-error">{{ $message }}</div>@enderror
       </div>
     </section>
 
@@ -109,7 +148,7 @@
       @error('slots')<div class="cf-error">{{ $message }}</div>@enderror
     </section>
 
-    <section class="card cf-card">
+    <section class="card cf-card" id="prisCard">
       <h2 class="cf-card-title">Pris &amp; tilmelding</h2>
       <div class="cf-grid-2">
         <div class="form-row">
@@ -128,6 +167,25 @@
           <span class="knob"></span>
           <span>Gratis tilmelding (spring betaling over &mdash; mest til test)</span>
         </label>
+      </div>
+    </section>
+
+    <section class="card cf-card" id="faellesCard">
+      <h2 class="cf-card-title">Fællestræning</h2>
+      <p class="cf-section-hint">
+        Fællestræning er gratis for alle med et løbende medlemskab &mdash; de er automatisk med og møder bare op.
+        Der er ingen tilmelding, ingen pris og ingen deltagerliste.
+      </p>
+      <div class="cf-switch-stack">
+        <label class="switch">
+          <input type="checkbox" name="chat_enabled" value="1" {{ old('chat_enabled', $course->chat_enabled ?? true) ? 'checked' : '' }}>
+          <span class="knob"></span>
+          <span>Chat &mdash; deltagerne kan skrive sammen</span>
+        </label>
+      </div>
+      <div class="hint" style="margin-top:6px;">
+        Chatten er åben for alle med medlemskab, så alle får besked når der skrives.
+        Slå den fra hvis træningen ikke skal have sin egen chat.
       </div>
     </section>
 
@@ -210,6 +268,11 @@
   .cf-switch-stack { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
   .cf-active { margin-top: 4px; padding-top: 14px; border-top: 1px solid #f0f2f5; }
   .cf-active .hint { margin-top: 6px; }
+  .cf-active .hint .fa-lock { margin-right: 4px; }
+  /* Locked: still legible as "on", but plainly not yours to change. */
+  .switch.locked { cursor: not-allowed; color: var(--muted); }
+  .switch.locked .knob { background: #ccd0d5; opacity: 0.55; }
+  .switch.locked input:checked + .knob { background: #9aa4b0; }
 
   .cf-media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   @media (max-width: 600px) { .cf-media-grid { grid-template-columns: 1fr; } }
@@ -307,6 +370,29 @@
 </div>
 
 @push('scripts')
+<script>
+// Type switch: a fællestræning has no price, no capacity and no enrollment, so
+// that whole card goes away and the fællestræning options take its place.
+// `required` has to come off with it — a hidden required field blocks submit.
+(function () {
+  var typeSel = document.getElementById('type');
+  var pris = document.getElementById('prisCard');
+  var faelles = document.getElementById('faellesCard');
+  if (!typeSel || !pris || !faelles) return;
+
+  var gated = [document.getElementById('price_kr'), document.getElementById('max_participants')];
+
+  function apply() {
+    var isFaelles = typeSel.value === '{{ \App\Models\Course::TYPE_FAELLES }}';
+    pris.hidden = isFaelles;
+    faelles.hidden = !isFaelles;
+    gated.forEach(function (el) { if (el) el.required = !isFaelles; });
+  }
+
+  typeSel.addEventListener('change', apply);
+  apply();
+})();
+</script>
 <script>
 // Skema: training times are added one at a time — day, from, to — and listed
 // as they accumulate. A course can run on several days at different hours, or

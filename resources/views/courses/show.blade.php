@@ -31,6 +31,8 @@
   .card-footer .afmeld { background: none; border: none; padding: 0; color: var(--muted); font-size: 13px; cursor: pointer; font-family: inherit; text-decoration: underline; text-underline-offset: 3px; }
   .card-footer .afmeld:hover { color: var(--danger); }
   .card-footer .enrolled-note { display: inline-flex; align-items: center; gap: 6px; color: #166534; font-weight: 700; font-size: 14px; }
+  .card-footer .needs-membership { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; flex-wrap: wrap; }
+  .card-footer .needs-membership a { color: var(--accent); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 
   .card-footer .owner-actions { display: inline-flex; gap: 4px; margin-left: auto; }
   .cf-iconbtn { width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border); background: #fff; color: var(--muted); border-radius: 8px; cursor: pointer; font-size: 14px; padding: 0; }
@@ -79,18 +81,25 @@
       <h1 class="course-title">{{ $course->title }}</h1>
 
       <div class="info-ribbon">
-        <span class="item"><strong>{{ $course->price() }}</strong></span>
-        @if ($course->free_enrollment)
-          <span class="item" style="color:#166534;font-weight:700;"><i class="fa-solid fa-gift"></i> Gratis tilmelding</span>
+        @if ($course->isFaellestraening())
+          <span class="item"><strong>Inkluderet i medlemskab</strong></span>
+        @else
+          <span class="item"><strong>{{ $course->price() }}</strong></span>
+          @if ($course->free_enrollment)
+            <span class="item" style="color:#166534;font-weight:700;"><i class="fa-solid fa-gift"></i> Gratis tilmelding</span>
+          @endif
         @endif
         @if ($course->scheduleLabel())
           <span class="item"><i class="fa-regular fa-clock"></i>{{ $course->scheduleLabel() }}</span>
         @endif
-        <span class="item">
-          <i class="fa-regular fa-user"></i>
-          <strong>{{ $course->activeCount() }}/{{ $course->max_participants }}</strong> tilmeldt
-          @if ($course->isFull())<span class="full">· Fuldt</span>@endif
-        </span>
+        {{-- Nobody registers for a fællestræning, so there is no count to show. --}}
+        @if (! $course->isFaellestraening())
+          <span class="item">
+            <i class="fa-regular fa-user"></i>
+            <strong>{{ $course->activeCount() }}/{{ $course->max_participants }}</strong> tilmeldt
+            @if ($course->isFull())<span class="full">· Fuldt</span>@endif
+          </span>
+        @endif
         @if (auth()->user()?->isOwner() && !$course->is_active)
           <span class="item draft">Kladde</span>
         @endif
@@ -111,7 +120,19 @@
     <div class="card-footer">
       <div class="footer-left">
         @auth
-          @if ($isEnrolled)
+          @if ($course->isFaellestraening())
+            {{-- No signup: a membership already covers it, and single sessions
+                 are sold outside the platform. --}}
+            @if ($isCovered)
+              <span class="enrolled-note"><i class="fa-solid fa-circle-check"></i> Gratis for dig &mdash; mød bare op</span>
+            @else
+              <span class="needs-membership">
+                <i class="fa-solid fa-circle-info"></i>
+                Fællestræning er gratis med et løbende medlemskab.
+                <a href="{{ route('catalog') }}">Se holdene</a>
+              </span>
+            @endif
+          @elseif ($isEnrolled)
             @if ($enrollment && $enrollment->cancel_at_period_end)
               <span class="enrolled-note" style="color:#92400e;">
                 <i class="fa-solid fa-clock"></i>
@@ -146,7 +167,9 @@
             </form>
           @endif
         @else
-          <a href="{{ route('login') }}" class="btn btn-primary">Log ind for at tilmelde dig</a>
+          <a href="{{ route('login') }}" class="btn btn-primary">
+            {{ $course->isFaellestraening() ? 'Log ind for at se mere' : 'Log ind for at tilmelde dig' }}
+          </a>
         @endauth
       </div>
 

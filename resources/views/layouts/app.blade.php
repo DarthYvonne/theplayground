@@ -58,6 +58,18 @@
   .nav a.active .ico { color: var(--accent); }
   .nav .badge-pill { margin-left: auto; background: var(--danger); color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center; }
   .nav .count-pill { background: #1c1e21; color: #fff; font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 10px; min-width: 20px; text-align: center; margin-left: 6px; }
+  /* Collapsible nav group ("Træning") — the toggle matches a nav link exactly,
+     so the group header does not read as a different kind of control. */
+  .nav-group-toggle { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; margin-bottom: 2px; cursor: pointer; background: none; border: none; font-family: inherit; font-size: 14px; font-weight: 500; color: var(--text); text-align: left; }
+  .nav-group-toggle:hover { background: var(--hover); }
+  .nav-group-toggle .chev { margin-left: auto; font-size: 11px; color: var(--muted); transition: transform 0.15s; }
+  .nav-group.open .nav-group-toggle .chev { transform: rotate(180deg); }
+  .nav-group-items { display: none; }
+  .nav-group.open .nav-group-items { display: block; }
+  /* Indent aligns child labels under the parent label, not its icon. */
+  .nav-group-items a { padding-left: 22px; font-weight: 500; }
+  .nav-group-items a .ico { font-size: 13px; }
+
   .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); padding: 16px 12px 6px; }
   .nav-divider { height: 1px; background: #f0f2f5; margin: 10px 12px; }
   .logout-form { margin-top: 2px; }
@@ -218,7 +230,27 @@
     </div>
     <nav class="nav">
       <a href="{{ url('/feed') }}" class="{{ request()->is('feed*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-heart"></i></span> Feed</a>
-      <a href="{{ route('catalog.mine') }}" class="{{ request()->is('hold') || request()->is('hold/*') || request()->is('calendar') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
+
+      @php
+        $holdActive = request()->is('hold') || request()->is('hold/*') || request()->is('calendar');
+        $faellesActive = request()->is('faellestraening*');
+        $personligActive = request()->is('personlig-traening*');
+        // Open on the pages it contains, so the current page is never hidden.
+        $traeningOpen = $holdActive || $faellesActive || $personligActive;
+      @endphp
+      <div class="nav-group {{ $traeningOpen ? 'open' : '' }}" id="navTraening">
+        <button type="button" class="nav-group-toggle" aria-expanded="{{ $traeningOpen ? 'true' : 'false' }}" aria-controls="navTraeningItems">
+          <span class="ico"><i class="fa-solid fa-dumbbell"></i></span>
+          <span class="nav-group-label">Træning</span>
+          <i class="fa-solid fa-chevron-down chev" aria-hidden="true"></i>
+        </button>
+        <div class="nav-group-items" id="navTraeningItems">
+          <a href="{{ route('catalog.mine') }}" class="{{ $holdActive ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-people-line"></i></span> Hold</a>
+          <a href="{{ route('faellestraening.index') }}" class="{{ $faellesActive ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-people-group"></i></span> Fællestræning</a>
+          <a href="{{ route('personlig.index') }}" class="{{ $personligActive ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-user-ninja"></i></span> Personlig træning</a>
+        </div>
+      </div>
+
       <a href="{{ route('floating.index') }}" class="{{ request()->is('floating*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-water"></i></span> Floating</a>
       @php $beskederUnread = auth()->user()->unreadDirectMessageCount(); @endphp
       <a href="{{ route('beskeder.index') }}" class="{{ request()->is('beskeder*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Beskeder @if ($beskederUnread > 0)<span class="badge-pill">{{ $beskederUnread > 99 ? '99+' : $beskederUnread }}</span>@endif</a>
@@ -316,6 +348,26 @@
     backdrop.addEventListener('click', close);
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
     sidebar.querySelectorAll('a').forEach(function (a) { a.addEventListener('click', close); });
+  }
+
+  // "Træning" group. Server-rendered open on its own pages; elsewhere the
+  // member's last choice wins, so a collapsed menu stays collapsed.
+  var group = document.getElementById('navTraening');
+  if (group) {
+    var btn = group.querySelector('.nav-group-toggle');
+    var forcedOpen = group.classList.contains('open');
+    if (!forcedOpen) {
+      try {
+        if (localStorage.getItem('nav.traening') === 'open') group.classList.add('open');
+      } catch (e) { /* private mode — default closed */ }
+    }
+    function syncGroup() {
+      var open = group.classList.contains('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      try { localStorage.setItem('nav.traening', open ? 'open' : 'closed'); } catch (e) {}
+    }
+    syncGroup();
+    btn.addEventListener('click', function () { group.classList.toggle('open'); syncGroup(); });
   }
 
   var titleEl = document.getElementById('topbarTitle');

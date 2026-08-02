@@ -16,9 +16,33 @@ use Illuminate\Http\Request;
 
 class CourseController extends Controller
 {
+    public function faellestraening(Request $request)
+    {
+        $courses = Course::with(['trainers', 'schedules'])
+            ->faellestraening()
+            ->where('is_active', true)
+            ->orderBy('title')
+            ->get();
+
+        return view('courses.faellestraening', compact('courses'));
+    }
+
+    public function personlig(Request $request)
+    {
+        $courses = Course::with(['trainers', 'schedules'])
+            ->personlig()
+            ->where('is_active', true)
+            ->withCount(['enrollments as active_enrollments_count' => fn ($q) => $q->where('status', 'active')])
+            ->orderBy('title')
+            ->get();
+
+        return view('courses.personlig', compact('courses'));
+    }
+
     public function index(Request $request)
     {
-        $courses = Course::with('trainers')
+        $courses = Course::with(['trainers', 'schedules'])
+            ->hold()
             ->where('is_active', true)
             ->withCount(['enrollments as active_enrollments_count' => fn ($q) => $q->where('status', 'active')])
             ->orderByDesc('created_at')
@@ -145,6 +169,9 @@ class CourseController extends Controller
             'course' => $course,
             'isEnrolled' => $isEnrolled,
             'enrollment' => $enrollment,
+            // Fællestræning is included in an existing membership, so the page
+            // shows whether this viewer is covered instead of a checkout button.
+            'isCovered' => $course->isFaellestraening() && (bool) $user?->hasPaidMembership(),
             'mobilePayAvailable' => $gateway->recurringAvailable(),
             'cardAvailable' => $gateway->fallback()->isConfigured(),
             'title' => $course->title,
@@ -154,7 +181,9 @@ class CourseController extends Controller
     public function members(Course $course, Request $request)
     {
         $u = $request->user();
-        abort_unless($u->isOwner() || $course->hasTrainer($u) || $u->enrolledIn($course), 403);
+        // A fællestræning has no roster to show — every paying member may turn up.
+        abort_unless($course->hasMemberList(), 404);
+        abort_unless($course->grantsAccessTo($u), 403);
 
         $course->load('trainers');
         $memberIds = Enrollment::where('course_id', $course->id)

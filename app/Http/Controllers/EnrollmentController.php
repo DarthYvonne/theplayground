@@ -181,6 +181,9 @@ class EnrollmentController extends Controller
     private function guard(Request $request, Course $course): ?RedirectResponse
     {
         abort_unless($course->is_active, 404);
+        // There is nothing to sign up for: a fællestræning is included in a
+        // membership, and anyone else buys a single session off-platform.
+        abort_unless($course->allowsEnrollment(), 404);
         if ($request->user()->enrolledIn($course)) {
             return redirect()->route('courses.show', $course)->with('status', 'Du er allerede tilmeldt.');
         }

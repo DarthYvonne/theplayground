@@ -38,6 +38,8 @@ Route::get('/', function (Request $request) {
 
 // Public catalog
 Route::get('/hold', [CourseController::class, 'index'])->name('catalog');
+Route::get('/faellestraening', [CourseController::class, 'faellestraening'])->name('faellestraening.index');
+Route::get('/personlig-traening', [CourseController::class, 'personlig'])->name('personlig.index');
 Route::get('/calendar', [CourseController::class, 'calendar'])->name('home.calendar');
 Route::get('/courses/{course}', [CourseController::class, 'show'])->name('courses.show');
 Route::get('/courses/{course}/medlemmer', [CourseController::class, 'members'])

@@ -9,6 +9,7 @@ use App\Models\Enrollment;
 use App\Models\Message;
 use App\Models\MessageRead;
 use App\Models\Respekt;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -361,9 +362,14 @@ class ChatController extends Controller
 
     private function notifyHoldMembers(Course $course, $sender, Message $message): void
     {
-        $recipientIds = Enrollment::where('course_id', $course->id)
-            ->where('status', 'active')
-            ->pluck('user_id')
+        // Nobody enrolls in a fællestræning, so its audience is everyone whose
+        // membership makes it free for them.
+        $audience = $course->isFaellestraening()
+            ? User::whereHas('enrollments', fn ($q) => $q->whereIn('status', ['active', 'past_due'])
+                ->whereHas('course', fn ($c) => $c->paidMembership()))->pluck('id')
+            : Enrollment::where('course_id', $course->id)->where('status', 'active')->pluck('user_id');
+
+        $recipientIds = $audience
             ->merge($course->trainers()->pluck('users.id'))
             ->unique()
             ->reject(fn ($id) => $id === $sender->id)
@@ -393,9 +399,10 @@ class ChatController extends Controller
 
     private function authorizeCourse(Request $request, Course $course): void
     {
-        $u = $request->user();
-        $ok = $u->isOwner() || $course->hasTrainer($u) || $u->enrolledIn($course);
-        abort_unless($ok, 403);
+        // A fællestræning whose owner turned chat off has no channel at all —
+        // not even for trainers, or they would be talking to nobody.
+        abort_unless($course->hasChat(), 404);
+        abort_unless($course->grantsAccessTo($request->user()), 403);
     }
 
     private function serialize($messages, int $viewerId): array

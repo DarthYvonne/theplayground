@@ -2,16 +2,24 @@
   /** @var \App\Models\Course $course */
   $u = auth()->user();
   $canManageCourse = $u && ($u->isOwner() || $course->hasTrainer($u));
-  $hasAccess = $canManageCourse || ($u && $u->enrolledIn($course));
+  // For a fællestræning this is "do you have a paid membership" — there are no
+  // enrollments to ask about.
+  $hasAccess = $course->grantsAccessTo($u);
+  $showChatTab = $course->hasChat();
+  $showMemberTab = $course->hasMemberList();
   $unreadCount = 0;
   $showMediaTab = false;
   $memberCount = 0;
   if ($hasAccess) {
-    $memberCount = \App\Models\Enrollment::where('course_id', $course->id)->where('status', 'active')->count();
-    $lastRead = \App\Models\MessageRead::where('user_id', $u->id)->where('course_id', $course->id)->value('last_read_at');
-    $q = \App\Models\Message::where('channel_type', 'course')->where('course_id', $course->id)->where('user_id', '!=', $u->id);
-    if ($lastRead) $q->where('created_at', '>', $lastRead);
-    $unreadCount = $q->count();
+    $memberCount = $showMemberTab
+      ? \App\Models\Enrollment::where('course_id', $course->id)->where('status', 'active')->count()
+      : 0;
+    if ($showChatTab) {
+      $lastRead = \App\Models\MessageRead::where('user_id', $u->id)->where('course_id', $course->id)->value('last_read_at');
+      $q = \App\Models\Message::where('channel_type', 'course')->where('course_id', $course->id)->where('user_id', '!=', $u->id);
+      if ($lastRead) $q->where('created_at', '>', $lastRead);
+      $unreadCount = $q->count();
+    }
     // Trainers/owners always see Medier (so they can add); members only when there's content.
     $showMediaTab = $canManageCourse || \App\Models\CourseMedia::where('course_id', $course->id)->exists();
   }
@@ -68,19 +76,23 @@
   <a href="{{ route('courses.show', $course) }}" class="{{ request()->routeIs('courses.show') ? 'active' : '' }}" aria-label="Om">
     <i class="fa-solid fa-house"></i><span>Om</span>
   </a>
-  <a href="{{ route('chat.course', $course) }}" class="{{ request()->routeIs('chat.course') ? 'active' : '' }}" aria-label="Chat">
-    <i class="fa-regular fa-comment"></i><span>Chat</span>
-    @if ($unreadCount > 0 && !request()->routeIs('chat.course'))
-      <span class="tab-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
-    @endif
-  </a>
+  @if ($showChatTab)
+    <a href="{{ route('chat.course', $course) }}" class="{{ request()->routeIs('chat.course') ? 'active' : '' }}" aria-label="Chat">
+      <i class="fa-regular fa-comment"></i><span>Chat</span>
+      @if ($unreadCount > 0 && !request()->routeIs('chat.course'))
+        <span class="tab-badge">{{ $unreadCount > 99 ? '99+' : $unreadCount }}</span>
+      @endif
+    </a>
+  @endif
   @if ($showMediaTab)
     <a href="{{ route('courses.media', $course) }}" class="{{ request()->routeIs('courses.media') ? 'active' : '' }}" aria-label="Medier">
       <i class="fa-solid fa-photo-film"></i><span>Medier</span>
     </a>
   @endif
-  <a href="{{ route('courses.members', $course) }}" class="{{ request()->routeIs('courses.members') ? 'active' : '' }}" aria-label="Medlemmer">
-    <i class="fa-regular fa-user"></i><span>Medlemmer ({{ $memberCount }})</span>
-  </a>
+  @if ($showMemberTab)
+    <a href="{{ route('courses.members', $course) }}" class="{{ request()->routeIs('courses.members') ? 'active' : '' }}" aria-label="Medlemmer">
+      <i class="fa-regular fa-user"></i><span>Medlemmer ({{ $memberCount }})</span>
+    </a>
+  @endif
 </nav>
 @endif

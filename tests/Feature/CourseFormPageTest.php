@@ -76,6 +76,65 @@ class CourseFormPageTest extends TestCase
         $this->assertGreaterThan($mainFormEnd, strpos($html, 'id="delete-course-form"'));
     }
 
+    public function test_active_toggle_is_locked_while_the_hold_has_members(): void
+    {
+        $owner = $this->owner();
+        $course = Course::create([
+            'title' => 'Fuldt hold',
+            'description' => 'x',
+            'price_cents' => 15000,
+            'is_active' => true,
+            'max_participants' => 10,
+        ]);
+        $course->trainers()->sync([$owner->id]);
+        \App\Models\Enrollment::create([
+            'user_id' => User::factory()->create(['role' => 'user'])->id,
+            'course_id' => $course->id,
+            'status' => 'active',
+            'enrolled_at' => now(),
+        ]);
+
+        $this->actingAs($owner)->get(route('admin.courses.edit', $course))
+            ->assertOk()
+            ->assertSee('kan ikke gøres inaktivt')
+            ->assertSee('disabled', false);
+
+        // And the guard holds even if the disabled attribute is bypassed.
+        $this->actingAs($owner)->post(route('admin.courses.update', $course), [
+            'title' => 'Fuldt hold',
+            'description' => 'x',
+            'trainer_ids' => [$owner->id],
+            'price_kr' => 150,
+            'max_participants' => 10,
+            // is_active omitted entirely — the off state.
+        ])->assertSessionHasErrors('is_active');
+
+        $this->assertTrue($course->fresh()->is_active);
+    }
+
+    public function test_a_hold_without_members_can_still_be_deactivated(): void
+    {
+        $owner = $this->owner();
+        $course = Course::create([
+            'title' => 'Tomt hold',
+            'description' => 'x',
+            'price_cents' => 0,
+            'is_active' => true,
+            'max_participants' => 10,
+        ]);
+        $course->trainers()->sync([$owner->id]);
+
+        $this->actingAs($owner)->post(route('admin.courses.update', $course), [
+            'title' => 'Tomt hold',
+            'description' => 'x',
+            'trainer_ids' => [$owner->id],
+            'price_kr' => 0,
+            'max_participants' => 10,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertFalse($course->fresh()->is_active);
+    }
+
     public function test_delete_still_works(): void
     {
         $owner = $this->owner();

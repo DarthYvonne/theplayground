@@ -15,9 +15,19 @@ class Course extends Model
 {
     use HasFactory;
 
+    public const TYPE_HOLD = 'hold';
+    public const TYPE_FAELLES = 'faellestraening';
+    public const TYPE_PERSONLIG = 'personlig_traening';
+
+    public const TYPES = [
+        self::TYPE_HOLD => 'Hold',
+        self::TYPE_FAELLES => 'Fællestræning',
+        self::TYPE_PERSONLIG => 'Personlig træning',
+    ];
+
     protected $fillable = [
-        'title','description','image_path','price_cents',
-        'max_participants','is_active','free_enrollment','stripe_product_id','stripe_price_id',
+        'title','type','description','image_path','price_cents',
+        'max_participants','is_active','free_enrollment','chat_enabled','stripe_product_id','stripe_price_id',
         'video_path','original_video_path','video_processing_status','video_thumbnail_path',
     ];
 
@@ -26,6 +36,7 @@ class Course extends Model
         return [
             'is_active' => 'boolean',
             'free_enrollment' => 'boolean',
+            'chat_enabled' => 'boolean',
             'price_cents' => 'integer',
             'max_participants' => 'integer',
         ];
@@ -215,7 +226,46 @@ class Course extends Model
         return $amt . ' kr/md';
     }
 
+    public function isFaellestraening(): bool { return $this->type === self::TYPE_FAELLES; }
+    public function isPersonlig(): bool { return $this->type === self::TYPE_PERSONLIG; }
+    public function typeLabel(): string { return self::TYPES[$this->type] ?? self::TYPES[self::TYPE_HOLD]; }
+    public function scopeHold($q) { return $q->where('type', self::TYPE_HOLD); }
+    public function scopeFaellestraening($q) { return $q->where('type', self::TYPE_FAELLES); }
+    public function scopePersonlig($q) { return $q->where('type', self::TYPE_PERSONLIG); }
+
+    /** A paid, recurring hold — the thing a membership is. Fællestræning never is. */
+    public function scopePaidMembership($q)
+    {
+        return $q->where('type', '!=', self::TYPE_FAELLES)
+            ->where('price_cents', '>', 0)
+            ->where('free_enrollment', false);
+    }
+
+    /** Nobody signs up for a fællestræning: paying members are simply welcome. */
+    public function allowsEnrollment(): bool { return ! $this->isFaellestraening(); }
+    public function hasMemberList(): bool { return ! $this->isFaellestraening(); }
+    public function hasChat(): bool { return ! $this->isFaellestraening() || $this->chat_enabled; }
+
+    /**
+     * May this user open the training's inner pages (chat, medier)?
+     * A hold asks "are you enrolled"; a fællestræning has no enrollments, so it
+     * asks "do you pay us monthly for anything" instead.
+     */
+    public function grantsAccessTo(?User $user): bool
+    {
+        if (! $user) return false;
+        if ($user->isOwner() || $this->hasTrainer($user)) return true;
+
+        return $this->isFaellestraening()
+            ? $user->hasPaidMembership()
+            : $user->enrolledIn($this);
+    }
+
     public function activeCount(): int { return $this->activeEnrollments()->count(); }
-    public function isFull(): bool { return $this->activeCount() >= $this->max_participants; }
+    /** Everyone the hold still owes something to — including a member whose payment is failing. */
+    public function memberCount(): int { return $this->enrollments()->whereIn('status', ['active', 'past_due', 'pending'])->count(); }
+    // Capacity is unknowable for a fællestræning — nobody registers, so there is
+    // nothing to count and the session is never "full".
+    public function isFull(): bool { return $this->allowsEnrollment() && $this->activeCount() >= $this->max_participants; }
     public function slotsLeft(): int { return max(0, $this->max_participants - $this->activeCount()); }
 }

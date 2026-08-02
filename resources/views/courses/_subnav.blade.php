@@ -11,7 +11,7 @@
 
 @php
   $dineCount = auth()->check() ? auth()->user()->currentEnrollments()->count() : 0;
-  $alleCount = \App\Models\Course::where('is_active', true)->count();
+  $alleCount = \App\Models\Course::hold()->where('is_active', true)->count();
 @endphp
 <nav class="home-tabs" aria-label="Hold">
   @auth

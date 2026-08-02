@@ -30,10 +30,17 @@
         <div class="card-pad">
           <div class="course-tile-title">{{ $c->title }}</div>
           <div class="course-tile-meta">
-            {{ $c->active_enrollments_count }}/{{ $c->max_participants }} tilmeldte ·
-            {{ $c->price() }} ·
+            {{-- Fællestræning has neither a price nor a roster, so showing
+                 "0/100 tilmeldte · 0 kr/md" would just read as a broken hold. --}}
+            @unless ($c->isFaellestraening())
+              {{ $c->active_enrollments_count }}/{{ $c->max_participants }} tilmeldte ·
+              {{ $c->price() }} ·
+            @endunless
             @if ($c->is_active)<span style="color:#166534;font-weight:600;">Aktiv</span>@else<span>Kladde</span>@endif
           </div>
+          @unless ($c->type === \App\Models\Course::TYPE_HOLD)
+            <div class="course-tile-meta" style="margin-top:4px;"><span class="tag muted">{{ $c->typeLabel() }}</span></div>
+          @endunless
           <div class="course-tile-meta" style="margin-top:4px;"><i class="fa-regular fa-user" style="margin-right:4px;"></i>{{ $c->trainerNames() ?: '—' }}</div>
         </div>
       </a>

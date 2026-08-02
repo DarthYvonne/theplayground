@@ -18,7 +18,7 @@ class CourseMediaController extends Controller
     {
         $user = $request->user();
         $canManage = $this->canManage($user, $course);
-        abort_unless($canManage || $user->enrolledIn($course), 403);
+        abort_unless($course->grantsAccessTo($user), 403);
 
         $items = CourseMedia::with(['mediaItem', 'user', 'playlist.mediaItems'])
             ->where('course_id', $course->id)
