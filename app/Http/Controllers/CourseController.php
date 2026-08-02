@@ -92,7 +92,26 @@ class CourseController extends Controller
         })->values();
         $unscheduled = $courses->filter(fn (Course $c) => empty($c->weekdaysList()))->values();
 
-        $enrolledIds = $request->user()?->activeEnrollments()->pluck('course_id')->all() ?? [];
+        $user = $request->user();
+        $enrolledIds = $user?->activeEnrollments()->pluck('course_id')->all() ?? [];
+
+        // "Connected" is broader than enrolled, because only a hold is something
+        // you sign up for: a trainer teaches rather than joins, nobody enrolls in
+        // a fællestræning at all — a paid membership simply covers it — and a
+        // personlig træning is held by name. All of them are still your own week,
+        // so all of them earn the green outline.
+        $connectedIds = [];
+        if ($user) {
+            $paid = $user->hasPaidMembership();
+            $joined = array_flip($user->enrollments()->whereIn('status', ['active', 'past_due'])->pluck('course_id')->all());
+
+            $connectedIds = $courses->filter(fn (Course $c) => isset($joined[$c->id])
+                || $c->trainers->contains('id', $user->id)
+                || ($c->isFaellestraening() && $paid)
+                || ($c->isPersonlig() && $c->member_id === $user->id))
+                ->pluck('id')->all();
+        }
+
         $cancelledMap = CourseCancellation::mapForRange($courses->pluck('id')->all(), $ctx['rangeStart'], $ctx['rangeEnd']);
 
         $monday = $ctx['monday'];
@@ -100,7 +119,7 @@ class CourseController extends Controller
         $view = $ctx['view'];
 
         return view('courses.calendar', compact(
-            'byDay', 'unscheduled', 'weekendCourses', 'enrolledIds',
+            'byDay', 'unscheduled', 'weekendCourses', 'enrolledIds', 'connectedIds',
             'monday', 'monthAnchor', 'view', 'cancelledMap'
         ));
     }

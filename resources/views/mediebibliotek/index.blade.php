@@ -27,7 +27,16 @@
   .pl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
   @media (max-width: 600px) { .pl-grid { grid-template-columns: 1fr; } }
   .pl-cover { display: block; width: 100%; height: 120px; object-fit: cover; background: #f0f2f5; }
-  .pl-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid #f0f2f5; }
+  /* Inverted header — the blue block the rest of the card hangs from. Same
+     gradient as .pl-playall, which then has to flip to white to stay visible. */
+  .pl-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: linear-gradient(135deg, #4d97ff 0%, #1664d8 100%); color: #fff; }
+  .pl-head .pl-name { color: #fff; }
+  .pl-head .pl-name .pl-count { color: rgba(255,255,255,0.75); }
+  .pl-head .pl-playall { background: #fff; color: #1664d8; box-shadow: 0 2px 8px rgba(0,0,0,0.20); }
+  .pl-head .pl-playall:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.28); }
+  .pl-head .pl-actions .ibtn { color: rgba(255,255,255,0.85); }
+  .pl-head .pl-actions .ibtn:hover { background: rgba(255,255,255,0.18); color: #fff; }
+  .pl-head .pl-actions .ibtn.danger:hover { background: rgba(255,255,255,0.18); color: #ffd7d7; }
   .pl-name { font-weight: 700; font-size: 14px; flex: 1; min-width: 0; display: flex; gap: 6px; align-items: center; }
   .pl-name .nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .pl-name .pl-count { color: var(--muted); font-weight: 600; }
@@ -429,7 +438,10 @@
   var noResults = document.getElementById('mediaNoResults');
   var sections = Array.prototype.slice.call(document.querySelectorAll('.media-section'));
   var navLinks = {};
-  var activeType = null; // category filter (incl. "playlists") — null shows everything
+  // Category filter (incl. "playlists"); null shows everything. The library opens
+  // on Lyd rather than dumping every category at once — falling back to
+  // everything only when there is no audio to land on.
+  var activeType = document.querySelector('#mediaNav a[data-type="audio"]') ? 'audio' : null;
 
   document.querySelectorAll('#mediaNav a[data-type]').forEach(function (a) {
     navLinks[a.dataset.type] = { el: a, cnt: a.querySelector('.cnt') };

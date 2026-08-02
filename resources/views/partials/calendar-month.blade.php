@@ -6,6 +6,8 @@
        $cancelledMap  - array<string, CourseCancellation>
        $routeName     - calendar route name (used to link day → week view)
        $enrolledSet   - array<int,bool> of course ids the user is enrolled in (optional)
+       $connectedSet  - array<int,bool> of course ids the user is part of at all —
+                        enrolled, teaching, or covered by a membership (optional)
 --}}
 @push('styles')
 <style>
@@ -26,6 +28,9 @@
   .cal-month-cell .chip .ti { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
   .cal-month-cell .chip .tm { color: var(--muted); font-size: 10px; flex-shrink: 0; }
   .cal-month-cell .chip .enrolled-mark { color: #16a34a; font-size: 11px; flex-shrink: 0; }
+  /* Inset rather than a border: a chip is 11px tall-ish and a real border would
+     shove the title around. Same green as the Hold cards. */
+  .cal-month-cell .chip.mine { box-shadow: inset 0 0 0 2px #16a34a; }
   .cal-month-cell .chip.cancelled { background: #f5f7fa; }
   .cal-month-cell .chip.cancelled .ti { text-decoration: line-through; color: var(--muted); }
   .cal-month-cell .more { font-size: 11px; color: var(--muted); padding: 2px 6px; }
@@ -40,6 +45,7 @@
   $endOfGrid = $monthAnchor->copy()->endOfMonth()->startOfWeek(\Carbon\Carbon::MONDAY)->addDays(4);
   $today = \Carbon\Carbon::now()->startOfDay();
   $enrolledSet = $enrolledSet ?? [];
+  $connectedSet = $connectedSet ?? [];
 @endphp
 
 <div class="cal-month">
@@ -69,7 +75,7 @@
             $cancelled = isset($cancelledMap[$c->id . ':' . $dateStr]);
             $enrolled = isset($enrolledSet[$c->id]);
           @endphp
-          <a href="{{ $weekLink }}" class="chip {{ $cancelled ? 'cancelled' : '' }}" title="{{ $c->title }}{{ $enrolled ? ' (tilmeldt)' : '' }}{{ $cancelled ? ' (aflyst)' : '' }}">
+          <a href="{{ $weekLink }}" class="chip {{ $cancelled ? 'cancelled' : '' }} {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}" title="{{ $c->title }}{{ $enrolled ? ' (tilmeldt)' : '' }}{{ $cancelled ? ' (aflyst)' : '' }}">
             @if ($enrolled)<i class="fa-solid fa-circle-check enrolled-mark" aria-label="Tilmeldt"></i>@endif
             <span class="ti">{{ $c->title }}</span>
             @if ($slot->startsAt())<span class="tm">{{ $slot->startsAt() }}</span>@endif

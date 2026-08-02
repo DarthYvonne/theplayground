@@ -7,7 +7,10 @@
   a.course-tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
   .course-tile-title { font-size: 18px; line-height: 1.25; }
   .course-tile-sched { color: var(--muted); font-size: 13px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
-  .course-tile-trainer { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .course-tile-trainer { color: var(--muted); font-size: 13px; margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+  /* Smaller than .av.sm — 32px towers over 13px muted text on a tile row. */
+  .course-tile-trainer .av { width: 26px; height: 26px; font-size: 10px; }
+  .course-tile-trainer .avs { display: flex; gap: 4px; flex-shrink: 0; }
   .ft-intro { color: var(--muted); font-size: 14px; line-height: 1.5; margin-bottom: 18px; max-width: 640px; }
   .empty-card { padding: 28px 20px; text-align: center; color: var(--muted); }
 </style>
@@ -44,7 +47,16 @@
           @if ($course->scheduleLabel())
             <div class="course-tile-sched"><i class="fa-regular fa-clock"></i>{{ $course->scheduleLabel() }}</div>
           @endif
-          <div class="course-tile-trainer"><i class="fa-regular fa-user" style="margin-right:4px;"></i>{{ $course->trainerNames() }}</div>
+          @if ($course->trainers->isNotEmpty())
+            <div class="course-tile-trainer">
+              <span class="avs">
+                @foreach ($course->trainers as $trainer)
+                  @include('partials.avatar', ['u' => $trainer])
+                @endforeach
+              </span>
+              <span>{{ $course->trainerNames() }}</span>
+            </div>
+          @endif
         </div>
       </a>
     @endforeach

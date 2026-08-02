@@ -53,6 +53,12 @@
   /* "Tilmeldt" indicator — inline green text, no pill. */
   .cal-enrolled-text { color: #16a34a; font-weight: 700; }
 
+  /* Yours: same green outline the Hold cards use. Covers more than "tilmeldt"
+     — teaching it, or a membership that includes it, counts too. */
+  .cal-event.mine { border: 3px solid #16a34a; }
+  .cal-mobile-day .row.mine { border-left: 3px solid #16a34a; padding-left: 8px; }
+  .cal-unscheduled-list .tag.mine { border: 2px solid #16a34a; }
+
   .cal-event.notime { position: static; left: auto; right: auto; padding: 4px 8px; }
   .cal-event.notime .t { -webkit-line-clamp: 1; }
 
@@ -94,6 +100,7 @@
   use App\Support\CalendarWeek;
 
   $enrolledSet = array_flip($enrolledIds ?? []);
+  $connectedSet = array_flip($connectedIds ?? []);
   $weekdayLabels = ['mon' => 'Mandag', 'tue' => 'Tirsdag', 'wed' => 'Onsdag', 'thu' => 'Torsdag', 'fri' => 'Fredag'];
   $weekdayDates = $view === 'week' ? CalendarWeek::weekdayDates($monday) : [];
 @endphp
@@ -105,6 +112,7 @@
     'cancelledMap' => $cancelledMap,
     'routeName' => 'home.calendar',
     'enrolledSet' => $enrolledSet,
+    'connectedSet' => $connectedSet,
   ])
 @else
   @php
@@ -165,7 +173,7 @@
       <div class="cell">
         @foreach ($untimed[$key] as $ev)
           @php $c = $ev['course']; @endphp
-          <a href="{{ route('courses.show', $c) }}" class="cal-event notime {{ $ev['cancelled'] ? 'cancelled' : '' }}">
+          <a href="{{ route('courses.show', $c) }}" class="cal-event notime {{ $ev['cancelled'] ? 'cancelled' : '' }} {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}">
             <div class="t">{{ $c->title }}@if (isset($enrolledSet[$c->id])) <span class="cal-enrolled-text">Tilmeldt</span>@endif</div>
             @if ($ev['cancelled'])<div class="aflyst-badge">Aflyst</div>@endif
           </a>
@@ -186,7 +194,7 @@
         @foreach ($timed[$key] as $ev)
           @php $c = $ev['course']; @endphp
           <a href="{{ route('courses.show', $c) }}"
-             class="cal-event {{ $ev['cancelled'] ? 'cancelled' : '' }}"
+             class="cal-event {{ $ev['cancelled'] ? 'cancelled' : '' }} {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}"
              style="top: {{ $ev['top'] }}px; height: {{ $ev['height'] }}px;">
             <div class="t">{{ $c->title }}</div>
             @if ($ev['time'] || isset($enrolledSet[$c->id]))
@@ -211,7 +219,7 @@
       @endphp
       @forelse ($dayEvents as $ev)
         @php $c = $ev['course']; @endphp
-        <a href="{{ route('courses.show', $c) }}" class="row {{ $ev['cancelled'] ? 'cancelled' : '' }}" style="color:inherit;">
+        <a href="{{ route('courses.show', $c) }}" class="row {{ $ev['cancelled'] ? 'cancelled' : '' }} {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}" style="color:inherit;">
           <div class="tm">{{ $ev['time'] ?? '—' }}@if (isset($enrolledSet[$c->id])) <span class="cal-enrolled-text">Tilmeldt</span>@endif</div>
           <div class="ti">{{ $c->title }}</div>
           @if ($ev['cancelled'])<span class="aflyst-tag">Aflyst</span>@endif
@@ -229,7 +237,7 @@
     <h3>Weekend</h3>
     <div class="cal-unscheduled-list">
       @foreach ($weekendCourses as $c)
-        <a href="{{ route('courses.show', $c) }}" class="tag muted" style="padding:6px 12px;">{{ $c->title }}</a>
+        <a href="{{ route('courses.show', $c) }}" class="tag muted {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}" style="padding:6px 12px;">{{ $c->title }}</a>
       @endforeach
     </div>
   </div>
@@ -240,7 +248,7 @@
     <h3>Uden fast skema</h3>
     <div class="cal-unscheduled-list">
       @foreach ($unscheduled as $c)
-        <a href="{{ route('courses.show', $c) }}" class="tag muted" style="padding:6px 12px;">{{ $c->title }}</a>
+        <a href="{{ route('courses.show', $c) }}" class="tag muted {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}" style="padding:6px 12px;">{{ $c->title }}</a>
       @endforeach
     </div>
   </div>

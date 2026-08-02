@@ -2,17 +2,23 @@
 
 ## Testing policy
 
-Anders tests the UI himself. Keep verification cheap and scoped.
+Anders tests everything himself. Do not verify his work for him.
 
-**Run only what the change touched.** One file, or one filter:
+**Do not run tests. At all.** Not the suite, not one file, not `--filter`, not
+"just to check". Make the change, say what you changed, stop.
 
-```
-php artisan test tests/Feature/CourseScheduleTest.php
-php artisan test --filter=test_name
-```
+The only exception: Anders reports that something is broken. Then run the one
+test that covers it — and nothing else.
 
-Do not run the full suite unless explicitly asked. It locks Anders' console for
-minutes, which is far too expensive for a small change.
+Why: running PHP in this project hangs his console for a long time, and he
+cannot approve or interrupt anything while it does. The cause is not confirmed
+(Dropbox sync and Defender scanning Laravel's autoload are both suspects), so
+do not assume a command will be quick because a previous one reported a small
+number. `php artisan test` reports its own internal duration, which excludes
+PHP startup, bootstrapping and migrations — it is not what Anders waits
+through. Never quote it to him as the cost.
+
+The same caution applies to any `php artisan` command, not just tests.
 
 **Never verify UI in the browser.** No dev server, no `vite build`, no Chrome
 automation, no screenshots to confirm layout, styling, copy, or page rendering.
