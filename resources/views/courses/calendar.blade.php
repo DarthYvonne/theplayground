@@ -87,7 +87,6 @@
   @include('partials.header-actions')
 </div>
 
-@include('courses._subnav')
 
 @include('partials.calendar-header', ['view' => $view, 'monday' => $monday, 'monthAnchor' => $monthAnchor, 'routeName' => 'home.calendar'])
 

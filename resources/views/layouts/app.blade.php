@@ -66,9 +66,9 @@
   .nav-group.open .nav-group-toggle .chev { transform: rotate(180deg); }
   .nav-group-items { display: none; }
   .nav-group.open .nav-group-items { display: block; }
-  /* No icons on the children, so the indent alone has to line their labels up
-     with "Træning" above: 12px padding + 22px icon + 12px gap. */
-  .nav-group-items a { padding-left: 46px; font-weight: 500; }
+  /* No icons on the children, so the indent alone sets them apart. Sits a step
+     past where "Træning" starts its label (12px padding + 22px icon + 12px gap). */
+  .nav-group-items a { padding-left: 56px; font-weight: 500; }
 
   .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); padding: 16px 12px 6px; }
   .nav-divider { height: 1px; background: #f0f2f5; margin: 10px 12px; }
@@ -232,11 +232,12 @@
       <a href="{{ url('/feed') }}" class="{{ request()->is('feed*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-heart"></i></span> Feed</a>
 
       @php
-        $holdActive = request()->is('hold') || request()->is('hold/*') || request()->is('calendar');
+        $holdActive = request()->is('hold') || request()->is('hold/*');
         $faellesActive = request()->is('faellestraening*');
         $personligActive = request()->is('personlig-traening*');
+        $kalenderActive = request()->is('calendar');
         // Open on the pages it contains, so the current page is never hidden.
-        $traeningOpen = $holdActive || $faellesActive || $personligActive;
+        $traeningOpen = $holdActive || $faellesActive || $personligActive || $kalenderActive;
       @endphp
       <div class="nav-group {{ $traeningOpen ? 'open' : '' }}" id="navTraening">
         <button type="button" class="nav-group-toggle" aria-expanded="{{ $traeningOpen ? 'true' : 'false' }}" aria-controls="navTraeningItems">
@@ -245,9 +246,10 @@
           <i class="fa-solid fa-chevron-down chev" aria-hidden="true"></i>
         </button>
         <div class="nav-group-items" id="navTraeningItems">
-          <a href="{{ route('catalog.mine') }}" class="{{ $holdActive ? 'active' : '' }}">Hold</a>
+          <a href="{{ route('catalog') }}" class="{{ $holdActive ? 'active' : '' }}">Hold</a>
           <a href="{{ route('faellestraening.index') }}" class="{{ $faellesActive ? 'active' : '' }}">Fællestræning</a>
           <a href="{{ route('personlig.index') }}" class="{{ $personligActive ? 'active' : '' }}">Personlig træning</a>
+          <a href="{{ route('home.calendar') }}" class="{{ $kalenderActive ? 'active' : '' }}">Kalender</a>
         </div>
       </div>
 

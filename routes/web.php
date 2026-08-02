@@ -72,7 +72,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/feed', [DashboardController::class, 'feed'])->name('feed');
     // Legacy: keep /dashboard working for old bookmarks, emailed links, notifications.
     Route::get('/dashboard', fn (Request $r) => redirect('/feed'.($r->getQueryString() ? '?'.$r->getQueryString() : '')))->name('dashboard');
-    Route::get('/hold/dine', [CourseController::class, 'mine'])->name('catalog.mine');
+    // Legacy: "Dine hold" is folded into /hold, which lists joined hold first.
+    Route::get('/hold/dine', fn () => redirect()->route('catalog'));
     Route::get('/api/feed', [FeedController::class, 'list']);
     Route::post('/api/messages/{message}/view', [FeedController::class, 'recordView']);
     Route::get('/api/respekt', [RespektController::class, 'list']);

@@ -70,9 +70,10 @@ class FaellestraeningTest extends TestCase
         $this->actingAs($user)->get(route('faellestraening.index'))
             ->assertOk()
             ->assertSee('Træning')
-            ->assertSee(route('catalog.mine'))
+            ->assertSee(route('catalog'))
             ->assertSee(route('faellestraening.index'))
-            ->assertSee(route('personlig.index'));
+            ->assertSee(route('personlig.index'))
+            ->assertSee(route('home.calendar'));
     }
 
     /* --------------------------------------------------------- enrollment -- */

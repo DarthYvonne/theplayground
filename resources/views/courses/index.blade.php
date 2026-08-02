@@ -20,6 +20,9 @@
   .course-tile-price { font-weight: 700; font-size: 15px; margin-top: 10px; color: var(--text); }
   .course-tile-status { color: var(--muted); font-size: 13px; margin-top: 4px; }
   .course-tile-enrolled-badge { position: absolute; top: 10px; right: 10px; background: #16a34a; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,0.18); display: inline-flex; align-items: center; gap: 5px; }
+  /* The member's own hold are sorted to the front and ringed, so they read as a
+     group without needing a separate page. */
+  .course-tile.enrolled { border: 3px solid #16a34a; }
 
   /* Live search */
   .hold-search { position: relative; margin-bottom: 18px; max-width: 420px; }
@@ -50,8 +53,6 @@
   @include('partials.header-actions')
 </div>
 
-@include('courses._subnav')
-
 @if (!$courses->isEmpty())
   <div class="hold-search" id="holdSearch">
     <i class="fa-solid fa-magnifying-glass icon"></i>
@@ -80,9 +81,9 @@
     @foreach ($courses as $course)
       @php
         $full = $course->active_enrollments_count >= $course->max_participants;
-        $enrolled = auth()->check() && auth()->user()->enrolledIn($course);
+        $enrolled = ($enrolledIds ?? collect())->has($course->id);
       @endphp
-      <a href="{{ route('courses.show', $course) }}" class="card course-tile" data-search="{{ strtolower($course->title . ' ' . $course->trainerNames() . ' ' . ($course->scheduleLabel() ?? '')) }}" aria-label="{{ $course->title }}">
+      <a href="{{ route('courses.show', $course) }}" class="card course-tile {{ $enrolled ? 'enrolled' : '' }}" data-search="{{ strtolower($course->title . ' ' . $course->trainerNames() . ' ' . ($course->scheduleLabel() ?? '')) }}" aria-label="{{ $course->title }}">
         <div class="img-wrap">
           @include('partials.course-hero-thumb', ['course' => $course])
           @if ($enrolled)

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Course;
+use App\Models\CourseCancellation;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -57,6 +58,26 @@ class CourseScheduleTest extends TestCase
         // Monday night, after the session → Wednesday's, at Wednesday's hour.
         $now = Carbon::parse('2026-08-03 21:00:00');
         $this->assertSame('Onsdag kl. 19:00', $course->nextOccurrence($now)->label($now));
+    }
+
+    public function test_a_cancelled_date_is_skipped_when_finding_the_next_session(): void
+    {
+        $course = $this->course(['mon' => ['17:00', '18:30']]);
+        $now = Carbon::parse('2026-08-03 08:00:00');
+
+        CourseCancellation::create([
+            'course_id' => $course->id,
+            'occurrence_date' => '2026-08-03',
+            'reason' => 'Sygdom',
+        ]);
+
+        $skip = collect(CourseCancellation::mapForRange([$course->id], $now->copy()->startOfDay(), $now->copy()->addDays(14)))
+            ->map(fn ($c) => $c->occurrence_date->toDateString())
+            ->all();
+
+        $this->assertSame(['2026-08-03'], array_values($skip));
+        // Today is off, so it lands on the following Monday rather than today.
+        $this->assertSame('10.08. kl. 17:00', $course->nextOccurrence($now, $skip)->label($now));
     }
 
     public function test_two_slots_on_the_same_day_are_both_kept(): void

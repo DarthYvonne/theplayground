@@ -5,13 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\CourseCancellation;
 use App\Models\Enrollment;
-use App\Models\Message;
-use App\Models\MessageRead;
 use App\Models\User;
 use App\Payments\Gateway;
 use App\Support\CalendarWeek;
 use App\Support\ScheduleGrid;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class CourseController extends Controller
@@ -48,7 +45,17 @@ class CourseController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        return view('courses.index', compact('courses'));
+        // past_due counts as joined: a failed payment should not drop the member's
+        // own hold back into the pile. pending does not — they never finished paying.
+        $enrolledIds = $request->user()
+            ? $request->user()->enrollments()->whereIn('status', ['active', 'past_due'])->pluck('course_id')->flip()
+            : collect();
+
+        // The member's own hold float to the top; PHP's sort is stable, so the
+        // rest keep their newest-first order.
+        $courses = $courses->sortByDesc(fn (Course $c) => $enrolledIds->has($c->id))->values();
+
+        return view('courses.index', compact('courses', 'enrolledIds'));
     }
 
     public function calendar(Request $request)
@@ -80,77 +87,6 @@ class CourseController extends Controller
             'byDay', 'unscheduled', 'weekendCourses', 'enrolledIds',
             'monday', 'monthAnchor', 'view', 'cancelledMap'
         ));
-    }
-
-    public function mine(Request $request)
-    {
-        $user = $request->user();
-
-        // past_due/pending are included on purpose: a failed payment must not make
-        // the hold silently disappear from the one page the member checks.
-        $enrollments = Course::query()
-            ->with(['trainers', 'schedules'])
-            ->whereIn('id', $user->currentEnrollments()->pluck('course_id'))
-            ->get()
-            ->keyBy('id');
-
-        $statuses = $user->currentEnrollments()->pluck('status', 'course_id');
-        $courseIds = $enrollments->keys()->all();
-
-        $now = Carbon::now();
-        $cancelled = [];
-        foreach (CourseCancellation::mapForRange($courseIds, $now->copy()->startOfDay(), $now->copy()->addDays(14)) as $c) {
-            $cancelled[$c->course_id][] = $c->occurrence_date->toDateString();
-        }
-
-        $unread = $this->unreadByCourse($user, $courseIds);
-        $today = $now->copy()->startOfDay();
-
-        $tiles = $enrollments->map(function (Course $course) use ($now, $today, $cancelled, $unread, $statuses) {
-            $skip = $cancelled[$course->id] ?? [];
-            $next = $course->nextOccurrence($now, $skip);
-
-            return [
-                'course' => $course,
-                'next' => $next,
-                'next_label' => $next?->label($now),
-                'is_today' => $next && $next->start->isSameDay($today),
-                'cancelled_today' => $course->runsOn($today) && in_array($today->toDateString(), $skip, true),
-                'unread' => $unread[$course->id] ?? 0,
-                'status' => $statuses[$course->id] ?? 'active',
-            ];
-        })
-            ->sortBy(fn ($t) => $t['next']?->start->getTimestamp() ?? PHP_INT_MAX)
-            ->values();
-
-        return view('courses.mine', [
-            'tiles' => $tiles,
-            'needsPayment' => $tiles->filter(fn ($t) => $t['status'] !== 'active')->values(),
-        ]);
-    }
-
-    /**
-     * Unread course messages per course, using the same cutoff rule as
-     * User::unreadMessageCount(). One query per course, as elsewhere — a member
-     * is on a handful of holds.
-     *
-     * @param  array<int> $courseIds
-     * @return array<int, int>
-     */
-    private function unreadByCourse(User $user, array $courseIds): array
-    {
-        if (empty($courseIds)) return [];
-
-        $reads = MessageRead::where('user_id', $user->id)->whereIn('course_id', $courseIds)->pluck('last_read_at', 'course_id');
-
-        $counts = [];
-        foreach ($courseIds as $cid) {
-            $q = Message::where('channel_type', 'course')->where('course_id', $cid)->where('user_id', '!=', $user->id);
-            if ($cutoff = $reads[$cid] ?? null) $q->where('created_at', '>', $cutoff);
-            $counts[$cid] = $q->count();
-        }
-
-        return $counts;
     }
 
     public function show(Course $course, Request $request, Gateway $gateway)
