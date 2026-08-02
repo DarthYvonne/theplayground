@@ -53,6 +53,13 @@
   $memberCount = $course->exists ? $course->memberCount() : 0;
   $lockActive = $memberCount > 0 && $course->is_active;
 
+  // The type is fixed: a new training takes it from the page "+ Opret ny" was
+  // clicked on, an existing one keeps what it has. So the whole form is shaped
+  // server-side rather than toggled in the browser.
+  $formType = $course->type ?: \App\Models\Course::TYPE_HOLD;
+  $isPersonligForm = $formType === \App\Models\Course::TYPE_PERSONLIG;
+  $isFaellesForm = $formType === \App\Models\Course::TYPE_FAELLES;
+
   // The already-picked member of a personlig træning, in the same shape the
   // search endpoint returns so the picker JS has one code path.
   $oldMemberId = (int) old('member_id', $course->member_id ?? 0);
@@ -80,23 +87,20 @@
 
     <section class="card cf-card">
       <h2 class="cf-card-title">Grundlæggende</h2>
-      <div class="form-row" id="titelRow">
-        <label for="title">Titel</label>
-        <input id="title" type="text" name="title" value="{{ old('title', $course->title) }}" required>
-      </div>
-      <div class="form-row">
-        <label for="type">Type</label>
-        <select id="type" name="type">
-          @foreach (\App\Models\Course::TYPES as $value => $label)
-            <option value="{{ $value }}" {{ old('type', $course->type ?? 'hold') === $value ? 'selected' : '' }}>{{ $label }}</option>
-          @endforeach
-        </select>
-        <div class="hint">Bestemmer hvor den vises under Træning i menuen. Fællestræning er gratis for medlemmer og har hverken pris eller tilmelding.</div>
-      </div>
-      <div class="form-row" id="beskrivelseRow">
-        <label for="description">Beskrivelse</label>
-        <textarea id="description" name="description" rows="5" required>{{ old('description', $course->description) }}</textarea>
-      </div>
+      <input type="hidden" name="type" value="{{ $formType }}">
+
+      {{-- A personlig træning is named after its trainer and member, and carries
+           no description — neither is asked for. --}}
+      @unless ($isPersonligForm)
+        <div class="form-row">
+          <label for="title">Titel</label>
+          <input id="title" type="text" name="title" value="{{ old('title', $course->title) }}" required>
+        </div>
+        <div class="form-row">
+          <label for="description">Beskrivelse</label>
+          <textarea id="description" name="description" rows="5" required>{{ old('description', $course->description) }}</textarea>
+        </div>
+      @endunless
 
       <div class="cf-active">
         @if ($lockActive)
@@ -123,13 +127,16 @@
 
     <section class="card cf-card" id="traenerCard">
       <div class="cf-card-head">
-        <h2 class="cf-card-title" id="traenerCardTitle">Trænere</h2>
-        <button type="button" class="cf-link-btn" id="openTrainerPicker"><i class="fa-solid fa-magnifying-glass"></i> Find trænere</button>
+        <h2 class="cf-card-title">{{ $isPersonligForm ? 'Træner' : 'Trænere' }}</h2>
+        <button type="button" class="cf-link-btn" id="openTrainerPicker">
+          <i class="fa-solid fa-magnifying-glass"></i> {{ $isPersonligForm ? 'Find træner' : 'Find trænere' }}
+        </button>
       </div>
       <div class="trainer-list" id="trainerChips"></div>
       @error('trainer_ids')<div class="cf-error">{{ $message }}</div>@enderror
     </section>
 
+    @if ($isPersonligForm)
     <section class="card cf-card" id="medlemCard">
       <div class="cf-card-head">
         <h2 class="cf-card-title">Medlem</h2>
@@ -160,6 +167,7 @@
       @error('member_invite_email')<div class="cf-error">{{ $message }}</div>@enderror
       @error('member_invite_phone')<div class="cf-error">{{ $message }}</div>@enderror
     </section>
+    @endif
 
     <section class="card cf-card" id="skemaCard">
       <h2 class="cf-card-title">Træningstider</h2>
@@ -191,18 +199,23 @@
       @error('slots')<div class="cf-error">{{ $message }}</div>@enderror
     </section>
 
+    {{-- Fællestræning is free to members, so it has no price card at all. --}}
+    @unless ($isFaellesForm)
     <section class="card cf-card" id="prisCard">
       <h2 class="cf-card-title">Pris &amp; tilmelding</h2>
       <div class="cf-grid-2">
         <div class="form-row">
           <label for="price_kr">Pris (kr/måned)</label>
           <input id="price_kr" type="number" name="price_kr" min="0" step="0.01" value="{{ old('price_kr', $priceKrDisplay) }}" required>
-          <div class="hint">Brug 0 hvis holdet er gratis.</div>
+          <div class="hint">Brug 0 hvis {{ $isPersonligForm ? 'træningen' : 'holdet' }} er gratis.</div>
         </div>
-        <div class="form-row" id="kapacitetRow">
-          <label for="max_participants">Maks. deltagere</label>
-          <input id="max_participants" type="number" name="max_participants" min="1" value="{{ old('max_participants', $course->max_participants ?? 10) }}" required>
-        </div>
+        {{-- A 1:1 has one seat, held by name — there is nothing to cap. --}}
+        @unless ($isPersonligForm)
+          <div class="form-row">
+            <label for="max_participants">Maks. deltagere</label>
+            <input id="max_participants" type="number" name="max_participants" min="1" value="{{ old('max_participants', $course->max_participants ?? 10) }}" required>
+          </div>
+        @endunless
       </div>
       <div class="cf-switch-stack">
         <label class="switch">
@@ -212,7 +225,9 @@
         </label>
       </div>
     </section>
+    @endunless
 
+    @if ($isFaellesForm)
     <section class="card cf-card" id="faellesCard">
       <h2 class="cf-card-title">Fællestræning</h2>
       <p class="cf-section-hint">
@@ -231,7 +246,10 @@
         Slå den fra hvis træningen ikke skal have sin egen chat.
       </div>
     </section>
+    @endif
 
+    {{-- A personlig træning uploads nothing — its card is the trainer's photo. --}}
+    @unless ($isPersonligForm)
     <section class="card cf-card" id="medieCard">
       <h2 class="cf-card-title">Forsidemedie</h2>
       <p class="cf-section-hint">Upload enten et billede eller en video. En video erstatter billedet på listesider og spilles på holdets side.</p>
@@ -267,9 +285,12 @@
         </div>
       </div>
     </section>
+    @endunless
 
     <div class="cf-footer">
-      <button class="btn btn-primary" type="submit">{{ $course->exists ? 'Gem ændringer' : 'Opret hold' }}</button>
+      <button class="btn btn-primary" type="submit">
+        {{ $course->exists ? 'Gem ændringer' : ($isPersonligForm ? 'Opret personlig træning' : ($isFaellesForm ? 'Opret fællestræning' : 'Opret hold')) }}
+      </button>
       @if ($course->exists)
         <a href="{{ route('courses.show', $course) }}" class="btn btn-secondary"><i class="fa-regular fa-eye"></i> Vis</a>
         <span class="cf-footer-spacer"></span>
@@ -438,62 +459,10 @@
 
 @push('scripts')
 <script>
-// Type switch. A fællestræning has no price, no capacity and no enrollment; a
-// personlig træning additionally has no typed title, no description, no capacity
-// and no uploaded media — it wears its trainer's photo. Cards and rows appear
-// and disappear accordingly, and `required` has to come off with them because a
-// hidden required field blocks submit with no visible error.
-window.__courseType = (function () {
-  var typeSel = document.getElementById('type');
-  if (!typeSel) return { isPersonlig: function () { return false; } };
-
-  var byId = function (id) { return document.getElementById(id); };
-  var show = function (id, on) { var el = byId(id); if (el) el.hidden = !on; };
-  var req = function (id, on) { var el = byId(id); if (el) el.required = on; };
-
-  var FAELLES = '{{ \App\Models\Course::TYPE_FAELLES }}';
-  var PERSONLIG = '{{ \App\Models\Course::TYPE_PERSONLIG }}';
-  var listeners = [];
-
-  function isPersonlig() { return typeSel.value === PERSONLIG; }
-
-  function apply() {
-    var faelles = typeSel.value === FAELLES;
-    var pt = isPersonlig();
-
-    show('prisCard', !faelles);
-    show('faellesCard', faelles);
-    show('medlemCard', pt);
-    show('medieCard', !pt);
-    show('titelRow', !pt);
-    show('beskrivelseRow', !pt);
-    show('kapacitetRow', !faelles && !pt);
-
-    req('title', !pt);
-    req('description', !pt);
-    req('price_kr', !faelles);
-    req('max_participants', !faelles && !pt);
-
-    // A hidden file input still submits a chosen file, so disable rather than
-    // merely hide. The server ignores them for this type regardless.
-    ['image', 'video'].forEach(function (id) { var el = byId(id); if (el) el.disabled = pt; });
-
-    var heading = byId('traenerCardTitle');
-    if (heading) heading.textContent = pt ? 'Træner' : 'Trænere';
-
-    listeners.forEach(function (fn) { fn(pt); });
-  }
-
-  typeSel.addEventListener('change', apply);
-  // Pickers register before the first apply() below so they get the initial state.
-  setTimeout(apply, 0);
-  apply();
-
-  return {
-    isPersonlig: isPersonlig,
-    onChange: function (fn) { listeners.push(fn); fn(isPersonlig()); },
-  };
-})();
+// The type is fixed for the life of the form — the sections that belong to it
+// are rendered server-side rather than toggled here, so nothing hidden can be
+// left holding a `required` field. The pickers still need to know which it is.
+window.__courseType = { isPersonlig: {{ $isPersonligForm ? 'true' : 'false' }} };
 </script>
 <script>
 // Skema: training times are added one at a time — day, from, to — and listed
@@ -614,14 +583,8 @@ window.__courseType = (function () {
     var ids = Object.keys(selected);
     if (!ids.length) {
       chips.innerHTML = '<div class="tr-empty">' +
-        (window.__courseType.isPersonlig() ? 'Ingen træner valgt endnu.' : 'Ingen trænere valgt endnu.') + '</div>';
+        (window.__courseType.isPersonlig ? 'Ingen træner valgt endnu.' : 'Ingen trænere valgt endnu.') + '</div>';
       return;
-    }
-    // Switching to personlig træning with several already picked keeps the first.
-    if (window.__courseType.isPersonlig() && ids.length > 1) {
-      var keep = selected[ids[0]];
-      selected = {}; selected[keep.id] = keep;
-      ids = [String(keep.id)];
     }
     chips.innerHTML = ids.map(function (id) {
       var t = selected[id];
@@ -674,7 +637,7 @@ window.__courseType = (function () {
       cb.addEventListener('change', function () {
         // A personlig træning has exactly one trainer, so picking one replaces
         // the previous choice rather than adding to it.
-        if (cb.checked && window.__courseType.isPersonlig()) {
+        if (cb.checked && window.__courseType.isPersonlig) {
           pending = {};
           body.querySelectorAll('.pick-row').forEach(function (r) {
             r.classList.remove('selected');
@@ -704,8 +667,6 @@ window.__courseType = (function () {
   });
 
   renderChips();
-  // Re-render when the type flips, so the wording and the one-trainer rule follow.
-  window.__courseType.onChange(function () { renderChips(); });
 })();
 </script>
 

@@ -196,13 +196,20 @@
       </div>
 
       @auth
-        @if (auth()->user()->isOwner())
+        @php
+          // A trainer maintains what they train; only an owner may delete.
+          $canEditCourse = auth()->user()->isOwner() || $course->hasTrainer(auth()->user());
+          $editLabel = $course->isPersonlig() ? 'Rediger personlig træning' : 'Rediger hold';
+        @endphp
+        @if ($canEditCourse)
           <div class="owner-actions">
-            <a href="{{ route('admin.courses.edit', $course) }}" class="cf-iconbtn" title="Rediger hold" aria-label="Rediger hold"><i class="fa-solid fa-pen"></i></a>
-            <form method="POST" action="{{ route('admin.courses.destroy', $course) }}" onsubmit="return confirm('Slet dette hold? Det kan ikke fortrydes.');">
-              @csrf
-              <button class="cf-iconbtn danger" type="submit" title="Slet hold" aria-label="Slet hold"><i class="fa-solid fa-trash"></i></button>
-            </form>
+            <a href="{{ route('admin.courses.edit', $course) }}" class="cf-iconbtn" title="{{ $editLabel }}" aria-label="{{ $editLabel }}"><i class="fa-solid fa-pen"></i></a>
+            @if (auth()->user()->isOwner())
+              <form method="POST" action="{{ route('admin.courses.destroy', $course) }}" onsubmit="return confirm('Slet dette hold? Det kan ikke fortrydes.');">
+                @csrf
+                <button class="cf-iconbtn danger" type="submit" title="Slet hold" aria-label="Slet hold"><i class="fa-solid fa-trash"></i></button>
+              </form>
+            @endif
           </div>
         @endif
       @endauth

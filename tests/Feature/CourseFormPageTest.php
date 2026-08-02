@@ -16,27 +16,56 @@ class CourseFormPageTest extends TestCase
         return User::factory()->create(['role' => 'owner']);
     }
 
-    public function test_create_page_renders_every_card(): void
+    /**
+     * Asserted on element ids rather than headings: "Find medlem" and the like
+     * also appear in the sidebar, so prose would match the wrong thing.
+     */
+    public function test_the_hold_form_renders_its_cards_and_nothing_else(): void
     {
-        // All of them are in the markup; the type selector shows and hides them.
+        // There is no type picker any more — the form is shaped for the type it
+        // was opened with, so the other types' cards are simply not there.
         $this->actingAs($this->owner())->get(route('admin.courses.create'))
             ->assertOk()
-            ->assertSee('Grundlæggende')
-            ->assertSee('Trænere')
-            ->assertSee('Medlem')
-            ->assertSee('Træningstider')
-            ->assertSee('Pris &amp; tilmelding', false)
-            ->assertSee('Fællestræning')
-            ->assertSee('Forsidemedie');
+            ->assertSee('id="skemaCard"', false)
+            ->assertSee('id="prisCard"', false)
+            ->assertSee('id="medieCard"', false)
+            ->assertSee('id="max_participants"', false)
+            ->assertSee('id="description"', false)
+            ->assertDontSee('id="medlemCard"', false)
+            ->assertDontSee('id="faellesCard"', false);
     }
 
-    public function test_the_personlig_form_opens_with_the_member_picker(): void
+    public function test_the_personlig_form_drops_everything_it_does_not_use(): void
     {
         $this->actingAs($this->owner())->get(route('admin.courses.create', ['type' => \App\Models\Course::TYPE_PERSONLIG]))
             ->assertOk()
             ->assertSee('Ny personlig træning')
-            ->assertSee('Find medlem')
-            ->assertSee(route('admin.members.search'));
+            ->assertSee('id="medlemCard"', false)
+            ->assertSee(route('admin.members.search'))
+            ->assertSee('id="prisCard"', false)
+            // No typed title, no description, no capacity, no upload.
+            ->assertDontSee('id="title"', false)
+            ->assertDontSee('id="description"', false)
+            ->assertDontSee('id="max_participants"', false)
+            ->assertDontSee('id="medieCard"', false);
+    }
+
+    public function test_the_faellestraening_form_drops_the_price_card(): void
+    {
+        $this->actingAs($this->owner())->get(route('admin.courses.create', ['type' => \App\Models\Course::TYPE_FAELLES]))
+            ->assertOk()
+            ->assertSee('Ny fællestræning')
+            ->assertSee('id="faellesCard"', false)
+            ->assertSee('id="medieCard"', false)
+            ->assertDontSee('id="prisCard"', false)
+            ->assertDontSee('id="medlemCard"', false);
+    }
+
+    public function test_the_form_no_longer_offers_a_type_picker(): void
+    {
+        $this->actingAs($this->owner())->get(route('admin.courses.create'))
+            ->assertOk()
+            ->assertDontSee('<select id="type"', false);
     }
 
     public function test_trainer_rows_get_contact_details(): void

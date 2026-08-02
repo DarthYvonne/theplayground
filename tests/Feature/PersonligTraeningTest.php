@@ -118,15 +118,43 @@ class PersonligTraeningTest extends TestCase
         $this->actingAs($trainer)->get($response->headers->get('Location'))->assertOk();
     }
 
-    public function test_a_trainer_still_cannot_edit_or_delete(): void
+    public function test_a_trainer_can_edit_what_they_train(): void
+    {
+        $trainer = User::factory()->create(['role' => 'trainer', 'name' => 'Anders']);
+        $member = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
+        $course = $this->pt($trainer, ['member_invite_email' => 'typo@example.dk']);
+
+        $this->actingAs($trainer)->get(route('admin.courses.edit', $course))->assertOk();
+
+        // The point of letting them edit: fixing their own mistyped invite.
+        $this->actingAs($trainer)->post(route('admin.courses.update', $course), [
+            'type' => Course::TYPE_PERSONLIG,
+            'trainer_ids' => [$trainer->id],
+            'member_id' => $member->id,
+            'price_kr' => 900,
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame($member->id, $course->fresh()->member_id);
+    }
+
+    public function test_a_trainer_cannot_edit_someone_elses_training(): void
+    {
+        $trainer = User::factory()->create(['role' => 'trainer']);
+        $other = User::factory()->create(['role' => 'trainer']);
+        $course = $this->pt($other);
+
+        $this->actingAs($trainer)->get(route('admin.courses.edit', $course))->assertForbidden();
+        $this->actingAs($trainer)->post(route('admin.courses.update', $course), [])->assertForbidden();
+    }
+
+    public function test_a_trainer_still_cannot_delete_or_list_everything(): void
     {
         $trainer = User::factory()->create(['role' => 'trainer']);
         $course = $this->pt($trainer);
 
         $this->actingAs($trainer)->get(route('admin.courses.index'))->assertForbidden();
-        $this->actingAs($trainer)->get(route('admin.courses.edit', $course))->assertForbidden();
-        $this->actingAs($trainer)->post(route('admin.courses.update', $course), [])->assertForbidden();
         $this->actingAs($trainer)->post(route('admin.courses.destroy', $course))->assertForbidden();
+        $this->assertNotNull($course->fresh());
     }
 
     public function test_it_needs_a_member_or_an_invite(): void
@@ -183,22 +211,24 @@ class PersonligTraeningTest extends TestCase
         $this->assertSame($existing->id, Course::personlig()->firstOrFail()->member_id);
     }
 
-    public function test_retyping_it_to_a_hold_clears_the_member(): void
+    public function test_an_existing_training_cannot_be_converted_to_another_type(): void
     {
-        $owner = User::factory()->create(['role' => 'owner']);
-        $member = User::factory()->create(['role' => 'user']);
+        $owner = User::factory()->create(['role' => 'owner', 'name' => 'Anders']);
+        $member = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
         $course = $this->pt($owner, ['member_id' => $member->id]);
 
+        // The form has no type picker, so a submitted type is a stray field —
+        // it must not silently turn a 1:1 into a public hold.
         $this->actingAs($owner)->post(route('admin.courses.update', $course), [
-            'title' => 'Nu et hold',
             'type' => Course::TYPE_HOLD,
-            'description' => 'x',
             'trainer_ids' => [$owner->id],
+            'member_id' => $member->id,
             'price_kr' => 300,
-            'max_participants' => 12,
         ])->assertSessionHasNoErrors();
 
-        $this->assertNull($course->fresh()->member_id);
+        $course->refresh();
+        $this->assertTrue($course->isPersonlig());
+        $this->assertSame($member->id, $course->member_id);
     }
 
     /* --------------------------------------------------------------- claim -- */

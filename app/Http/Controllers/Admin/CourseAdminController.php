@@ -84,23 +84,41 @@ class CourseAdminController extends Controller
             ProcessVideoJob::dispatch(Course::class, $course->id, $videoPath, 'course_videos', true);
         }
 
-        // A trainer may create but not edit, so sending them to the edit form
-        // would 403 them out of the thing they just made.
-        $target = $request->user()->isOwner()
+        // Back to the form, unless the creator assigned somebody else as the
+        // trainer — then it is not theirs to edit and the form would 403.
+        $canEdit = $request->user()->isOwner() || $course->hasTrainer($request->user());
+        $target = $canEdit
             ? redirect()->route('admin.courses.edit', $course)
-            : redirect()->route('courses.show', $course);
+            : redirect()->route(match ($course->type) {
+                Course::TYPE_FAELLES => 'faellestraening.index',
+                Course::TYPE_PERSONLIG => 'personlig.index',
+                default => 'catalog',
+            });
 
         return $target->with('status', $this->saveMessage($course, 'oprettet'));
     }
 
-    public function edit(Course $course)
+    public function edit(Request $request, Course $course)
     {
+        $this->authorizeEdit($request, $course);
+
         return view('admin.courses.form', ['course' => $course, 'trainers' => $this->trainers()]);
+    }
+
+    /**
+     * A trainer maintains what they train — including fixing a mistyped invite on
+     * their own personlig træning. Somebody else's course is not theirs to edit.
+     */
+    private function authorizeEdit(Request $request, Course $course): void
+    {
+        $user = $request->user();
+        abort_unless($user->isOwner() || $course->hasTrainer($user), 403);
     }
 
     public function update(Request $request, Course $course): RedirectResponse
     {
-        [$data, $trainerIds, $slots] = $this->validateData($request);
+        $this->authorizeEdit($request, $course);
+        [$data, $trainerIds, $slots] = $this->validateData($request, $course);
 
         // Deactivating hides the hold and 404s its page, but billing keeps
         // running — so a member would pay for something they cannot reach.
@@ -182,14 +200,20 @@ class CourseAdminController extends Controller
         return $subject.' '.$verb.'.';
     }
 
-    private function validateData(Request $request): array
+    /**
+     * @param  Course|null $course  the one being edited; its type wins over the
+     *                              request, so an existing training cannot be
+     *                              converted into another kind by a stray field.
+     */
+    private function validateData(Request $request, ?Course $course = null): array
     {
         // Price and capacity are meaningless for a fællestræning — it is free to
         // members and nobody registers. A personlig træning has no capacity, no
-        // typed title and no description at all. The form hides each of those and
+        // typed title and no description at all. The form omits each of those, so
         // they are not required back.
-        $isFaelles = $request->input('type') === Course::TYPE_FAELLES;
-        $isPersonlig = $request->input('type') === Course::TYPE_PERSONLIG;
+        $type = $course?->type ?? $request->input('type');
+        $isFaelles = $type === Course::TYPE_FAELLES;
+        $isPersonlig = $type === Course::TYPE_PERSONLIG;
 
         $rules = [
             'title' => [Rule::requiredIf(! $isPersonlig), 'nullable', 'string', 'max:160'],
@@ -236,7 +260,7 @@ class CourseAdminController extends Controller
 
         $trainerIds = array_values(array_unique(array_map('intval', $data['trainer_ids'])));
         unset($data['trainer_ids']);
-        $data['type'] = $data['type'] ?? Course::TYPE_HOLD;
+        $data['type'] = $course?->type ?? $data['type'] ?? Course::TYPE_HOLD;
         $data['is_active'] = $request->boolean('is_active');
         $data['free_enrollment'] = $request->boolean('free_enrollment');
 
