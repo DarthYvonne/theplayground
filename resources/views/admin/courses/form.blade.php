@@ -53,6 +53,18 @@
   $memberCount = $course->exists ? $course->memberCount() : 0;
   $lockActive = $memberCount > 0 && $course->is_active;
 
+  // The already-picked member of a personlig træning, in the same shape the
+  // search endpoint returns so the picker JS has one code path.
+  $oldMemberId = (int) old('member_id', $course->member_id ?? 0);
+  $selectedMemberModel = $oldMemberId ? \App\Models\User::find($oldMemberId) : null;
+  $selectedMember = $selectedMemberModel ? [
+    'id' => $selectedMemberModel->id,
+    'label' => $selectedMemberModel->name,
+    'sub' => trim($selectedMemberModel->email.($selectedMemberModel->phone ? ' · '.$selectedMemberModel->phone : '')),
+    'picture_url' => $selectedMemberModel->pictureUrl(),
+    'initials' => $selectedMemberModel->initials(),
+  ] : null;
+
   $videoStatusLabel = [
     'pending' => 'Afventer behandling…',
     'processing' => 'Behandler…',
@@ -68,7 +80,7 @@
 
     <section class="card cf-card">
       <h2 class="cf-card-title">Grundlæggende</h2>
-      <div class="form-row">
+      <div class="form-row" id="titelRow">
         <label for="title">Titel</label>
         <input id="title" type="text" name="title" value="{{ old('title', $course->title) }}" required>
       </div>
@@ -81,7 +93,7 @@
         </select>
         <div class="hint">Bestemmer hvor den vises under Træning i menuen. Fællestræning er gratis for medlemmer og har hverken pris eller tilmelding.</div>
       </div>
-      <div class="form-row">
+      <div class="form-row" id="beskrivelseRow">
         <label for="description">Beskrivelse</label>
         <textarea id="description" name="description" rows="5" required>{{ old('description', $course->description) }}</textarea>
       </div>
@@ -109,13 +121,44 @@
       </div>
     </section>
 
-    <section class="card cf-card">
+    <section class="card cf-card" id="traenerCard">
       <div class="cf-card-head">
-        <h2 class="cf-card-title">Trænere</h2>
+        <h2 class="cf-card-title" id="traenerCardTitle">Trænere</h2>
         <button type="button" class="cf-link-btn" id="openTrainerPicker"><i class="fa-solid fa-magnifying-glass"></i> Find trænere</button>
       </div>
       <div class="trainer-list" id="trainerChips"></div>
       @error('trainer_ids')<div class="cf-error">{{ $message }}</div>@enderror
+    </section>
+
+    <section class="card cf-card" id="medlemCard">
+      <div class="cf-card-head">
+        <h2 class="cf-card-title">Medlem</h2>
+        <button type="button" class="cf-link-btn" id="openMemberPicker"><i class="fa-solid fa-magnifying-glass"></i> Find medlem</button>
+      </div>
+      <p class="cf-section-hint">Personlig træning er mellem én træner og én person.</p>
+
+      <div class="trainer-list" id="memberChip"></div>
+
+      <div class="cf-invite">
+        <div class="cf-invite-divider"><span>eller inviter en der ikke har en profil endnu</span></div>
+        <div class="cf-grid-2">
+          <div class="form-row">
+            <label for="member_invite_email">E-mail</label>
+            <input id="member_invite_email" type="email" name="member_invite_email" value="{{ old('member_invite_email', $course->member_invite_email) }}" autocomplete="off">
+          </div>
+          <div class="form-row">
+            <label for="member_invite_phone">Telefon</label>
+            <input id="member_invite_phone" type="tel" name="member_invite_phone" value="{{ old('member_invite_phone', $course->member_invite_phone) }}" autocomplete="off">
+          </div>
+        </div>
+        <div class="hint">
+          Træningen dukker op hos dem, når de opretter en profil med den samme e-mail eller telefon.
+          Bruger du en e-mail eller et telefonnummer der allerede findes, kobles den til med det samme.
+        </div>
+      </div>
+      @error('member_id')<div class="cf-error">{{ $message }}</div>@enderror
+      @error('member_invite_email')<div class="cf-error">{{ $message }}</div>@enderror
+      @error('member_invite_phone')<div class="cf-error">{{ $message }}</div>@enderror
     </section>
 
     <section class="card cf-card" id="skemaCard">
@@ -156,7 +199,7 @@
           <input id="price_kr" type="number" name="price_kr" min="0" step="0.01" value="{{ old('price_kr', $priceKrDisplay) }}" required>
           <div class="hint">Brug 0 hvis holdet er gratis.</div>
         </div>
-        <div class="form-row">
+        <div class="form-row" id="kapacitetRow">
           <label for="max_participants">Maks. deltagere</label>
           <input id="max_participants" type="number" name="max_participants" min="1" value="{{ old('max_participants', $course->max_participants ?? 10) }}" required>
         </div>
@@ -189,7 +232,7 @@
       </div>
     </section>
 
-    <section class="card cf-card">
+    <section class="card cf-card" id="medieCard">
       <h2 class="cf-card-title">Forsidemedie</h2>
       <p class="cf-section-hint">Upload enten et billede eller en video. En video erstatter billedet på listesider og spilles på holdets side.</p>
 
@@ -348,6 +391,12 @@
   .pick-empty { padding: 24px; text-align: center; color: var(--muted); font-size: 13px; }
   .pick-foot { padding: 12px 14px; border-top: 1px solid #f0f2f5; display: flex; gap: 8px; align-items: center; }
   .pick-foot .count { flex: 1; color: var(--muted); font-size: 13px; }
+
+  /* Member card: pick an existing member, or invite one who has no profile. */
+  .cf-invite { margin-top: 16px; }
+  .cf-invite-divider { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+  .cf-invite-divider::before, .cf-invite-divider::after { content: ''; flex: 1; height: 1px; background: #f0f2f5; }
+  #memberPickBody .pick-row { cursor: pointer; }
 </style>
 @endpush
 
@@ -369,28 +418,81 @@
   </div>
 </div>
 
+{{-- One member, so a click picks and closes — no staging, no Tilføj button. --}}
+<div class="pick-backdrop" id="memberPickBackdrop" role="dialog" aria-modal="true">
+  <div class="pick-modal">
+    <div class="pick-head">
+      <div class="title">Vælg medlem</div>
+      <button type="button" class="pick-close" id="memberPickClose" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <div class="pick-search">
+      <input type="text" id="memberPickSearch" placeholder="Søg på navn, e-mail eller telefon…" autocomplete="off">
+    </div>
+    <div class="pick-body" id="memberPickBody"></div>
+    <div class="pick-foot">
+      <span class="count">Klik for at vælge</span>
+      <button type="button" class="btn btn-ghost btn-sm" id="memberPickCancel">Annullér</button>
+    </div>
+  </div>
+</div>
+
 @push('scripts')
 <script>
-// Type switch: a fællestræning has no price, no capacity and no enrollment, so
-// that whole card goes away and the fællestræning options take its place.
-// `required` has to come off with it — a hidden required field blocks submit.
-(function () {
+// Type switch. A fællestræning has no price, no capacity and no enrollment; a
+// personlig træning additionally has no typed title, no description, no capacity
+// and no uploaded media — it wears its trainer's photo. Cards and rows appear
+// and disappear accordingly, and `required` has to come off with them because a
+// hidden required field blocks submit with no visible error.
+window.__courseType = (function () {
   var typeSel = document.getElementById('type');
-  var pris = document.getElementById('prisCard');
-  var faelles = document.getElementById('faellesCard');
-  if (!typeSel || !pris || !faelles) return;
+  if (!typeSel) return { isPersonlig: function () { return false; } };
 
-  var gated = [document.getElementById('price_kr'), document.getElementById('max_participants')];
+  var byId = function (id) { return document.getElementById(id); };
+  var show = function (id, on) { var el = byId(id); if (el) el.hidden = !on; };
+  var req = function (id, on) { var el = byId(id); if (el) el.required = on; };
+
+  var FAELLES = '{{ \App\Models\Course::TYPE_FAELLES }}';
+  var PERSONLIG = '{{ \App\Models\Course::TYPE_PERSONLIG }}';
+  var listeners = [];
+
+  function isPersonlig() { return typeSel.value === PERSONLIG; }
 
   function apply() {
-    var isFaelles = typeSel.value === '{{ \App\Models\Course::TYPE_FAELLES }}';
-    pris.hidden = isFaelles;
-    faelles.hidden = !isFaelles;
-    gated.forEach(function (el) { if (el) el.required = !isFaelles; });
+    var faelles = typeSel.value === FAELLES;
+    var pt = isPersonlig();
+
+    show('prisCard', !faelles);
+    show('faellesCard', faelles);
+    show('medlemCard', pt);
+    show('medieCard', !pt);
+    show('titelRow', !pt);
+    show('beskrivelseRow', !pt);
+    show('kapacitetRow', !faelles && !pt);
+
+    req('title', !pt);
+    req('description', !pt);
+    req('price_kr', !faelles);
+    req('max_participants', !faelles && !pt);
+
+    // A hidden file input still submits a chosen file, so disable rather than
+    // merely hide. The server ignores them for this type regardless.
+    ['image', 'video'].forEach(function (id) { var el = byId(id); if (el) el.disabled = pt; });
+
+    var heading = byId('traenerCardTitle');
+    if (heading) heading.textContent = pt ? 'Træner' : 'Trænere';
+
+    listeners.forEach(function (fn) { fn(pt); });
   }
 
   typeSel.addEventListener('change', apply);
+  // Pickers register before the first apply() below so they get the initial state.
+  setTimeout(apply, 0);
   apply();
+
+  return {
+    isPersonlig: isPersonlig,
+    onChange: function (fn) { listeners.push(fn); fn(isPersonlig()); },
+  };
 })();
 </script>
 <script>
@@ -511,8 +613,15 @@
   function renderChips() {
     var ids = Object.keys(selected);
     if (!ids.length) {
-      chips.innerHTML = '<div class="tr-empty">Ingen trænere valgt endnu.</div>';
+      chips.innerHTML = '<div class="tr-empty">' +
+        (window.__courseType.isPersonlig() ? 'Ingen træner valgt endnu.' : 'Ingen trænere valgt endnu.') + '</div>';
       return;
+    }
+    // Switching to personlig træning with several already picked keeps the first.
+    if (window.__courseType.isPersonlig() && ids.length > 1) {
+      var keep = selected[ids[0]];
+      selected = {}; selected[keep.id] = keep;
+      ids = [String(keep.id)];
     }
     chips.innerHTML = ids.map(function (id) {
       var t = selected[id];
@@ -563,6 +672,16 @@
       var cb = row.querySelector('input[type=checkbox]');
       var t = byId[parseInt(row.dataset.id, 10)];
       cb.addEventListener('change', function () {
+        // A personlig træning has exactly one trainer, so picking one replaces
+        // the previous choice rather than adding to it.
+        if (cb.checked && window.__courseType.isPersonlig()) {
+          pending = {};
+          body.querySelectorAll('.pick-row').forEach(function (r) {
+            r.classList.remove('selected');
+            var other = r.querySelector('input[type=checkbox]');
+            if (other !== cb) other.checked = false;
+          });
+        }
         if (cb.checked) { pending[t.id] = t; row.classList.add('selected'); }
         else { delete pending[t.id]; row.classList.remove('selected'); }
         updateCount();
@@ -585,6 +704,106 @@
   });
 
   renderChips();
+  // Re-render when the type flips, so the wording and the one-trainer rule follow.
+  window.__courseType.onChange(function () { renderChips(); });
+})();
+</script>
+
+<script>
+// Member picker (personlig træning). Unlike the trainer list — a handful of
+// people shipped inline — this searches every member in the gym, so it asks the
+// server. Name, e-mail or phone; a typed phone is normalised server-side, so
+// "+45 12 34 56 78" finds a member stored as "12345678".
+(function () {
+  var card = document.getElementById('medlemCard');
+  if (!card) return;
+
+  var SEARCH_URL = '{{ route('admin.members.search') }}';
+  var chip = document.getElementById('memberChip');
+  var openBtn = document.getElementById('openMemberPicker');
+  var emailIn = document.getElementById('member_invite_email');
+  var phoneIn = document.getElementById('member_invite_phone');
+
+  var backdrop = document.getElementById('memberPickBackdrop');
+  var closeBtn = document.getElementById('memberPickClose');
+  var cancelBtn = document.getElementById('memberPickCancel');
+  var body = document.getElementById('memberPickBody');
+  var search = document.getElementById('memberPickSearch');
+
+  var selected = @json($selectedMember);
+  var timer = null;
+
+  function escapeHtml(s) { return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+  function avatar(m, cls) {
+    return m.picture_url
+      ? '<img class="' + cls + '" src="' + escapeHtml(m.picture_url) + '" alt="">'
+      : '<div class="av sm ' + cls + '">' + escapeHtml(m.initials || '?') + '</div>';
+  }
+
+  function renderChip() {
+    if (!selected) {
+      chip.innerHTML = '<div class="tr-empty">Intet medlem valgt endnu.</div>';
+      return;
+    }
+    chip.innerHTML = '<div class="trainer-row">' +
+      avatar(selected, 'tr-av') +
+      '<div class="tr-meta"><div class="tr-name">' + escapeHtml(selected.label) + '</div>' +
+      '<div class="tr-contact">' + escapeHtml(selected.sub || '') + '</div></div>' +
+      '<button type="button" class="tr-remove" id="memberRemove" aria-label="Fjern"><i class="fa-solid fa-xmark"></i></button>' +
+      '<input type="hidden" name="member_id" value="' + selected.id + '">' +
+    '</div>';
+    document.getElementById('memberRemove').addEventListener('click', function () {
+      selected = null; renderChip();
+    });
+    // The two are alternatives, never both.
+    emailIn.value = ''; phoneIn.value = '';
+  }
+
+  function renderList(results) {
+    if (!results.length) {
+      body.innerHTML = '<div class="pick-empty">Ingen match.</div>';
+      return;
+    }
+    body.innerHTML = results.map(function (m) {
+      return '<label class="pick-row" data-id="' + m.id + '">' +
+        avatar(m, '') +
+        '<div class="meta"><div class="nm">' + escapeHtml(m.label) + '</div>' +
+        '<div class="sub">' + escapeHtml(m.sub || '') + '</div></div>' +
+      '</label>';
+    }).join('');
+    body.querySelectorAll('.pick-row').forEach(function (row) {
+      row.addEventListener('click', function () {
+        selected = results.filter(function (m) { return String(m.id) === row.dataset.id; })[0];
+        renderChip();
+        close();
+      });
+    });
+  }
+
+  function fetchList() {
+    body.innerHTML = '<div class="pick-empty">Søger …</div>';
+    fetch(SEARCH_URL + '?q=' + encodeURIComponent(search.value.trim()), { headers: { Accept: 'application/json' }})
+      .then(function (r) { return r.json(); })
+      .then(function (d) { renderList(d.results || []); })
+      .catch(function () { body.innerHTML = '<div class="pick-empty">Kunne ikke hente.</div>'; });
+  }
+
+  function open() { backdrop.classList.add('open'); search.value = ''; fetchList(); setTimeout(function () { search.focus(); }, 50); }
+  function close() { backdrop.classList.remove('open'); }
+
+  openBtn.addEventListener('click', open);
+  closeBtn.addEventListener('click', close);
+  cancelBtn.addEventListener('click', close);
+  backdrop.addEventListener('click', function (e) { if (e.target === backdrop) close(); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && backdrop.classList.contains('open')) close(); });
+  search.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(fetchList, 200); });
+
+  // Typing an invite means this is somebody without a profile — drop the pick.
+  [emailIn, phoneIn].forEach(function (el) {
+    el.addEventListener('input', function () { if (el.value.trim() && selected) { selected = null; renderChip(); } });
+  });
+
+  renderChip();
 })();
 </script>
 @endpush

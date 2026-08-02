@@ -26,14 +26,18 @@ class MembersController extends Controller
 
     public function show(Request $request, User $user)
     {
+        // A profile must not advertise this member's personlig træning to whoever
+        // happens to look them up.
         $enrolledCourses = Course::with('trainers')
             ->whereIn('id', $user->activeEnrollments()->pluck('course_id'))
+            ->visibleTo($request->user())
             ->orderBy('title')
             ->get();
 
         $trainerCourses = $user->trainerCourses()
             ->with('trainers')
             ->where('is_active', true)
+            ->visibleTo($request->user())
             ->orderBy('title')
             ->get();
 

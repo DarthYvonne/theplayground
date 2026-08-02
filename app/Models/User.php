@@ -35,6 +35,16 @@ class User extends Authenticatable
         ];
     }
 
+    /**
+     * Keeps the comparable form in step with whatever was typed, on every write
+     * path — registration, profile editing, the owner's user admin, factories.
+     */
+    public function setPhoneAttribute(?string $value): void
+    {
+        $this->attributes['phone'] = $value;
+        $this->attributes['phone_normalized'] = \App\Support\Contact::normalizePhone($value);
+    }
+
     public function enrollments(): HasMany { return $this->hasMany(Enrollment::class); }
     public function activeEnrollments(): HasMany { return $this->enrollments()->where('status', 'active'); }
     /** Enrollments the member still counts as "mine" — including ones with a payment problem. */

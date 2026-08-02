@@ -16,15 +16,27 @@ class CourseFormPageTest extends TestCase
         return User::factory()->create(['role' => 'owner']);
     }
 
-    public function test_create_page_renders_the_five_cards(): void
+    public function test_create_page_renders_every_card(): void
     {
+        // All of them are in the markup; the type selector shows and hides them.
         $this->actingAs($this->owner())->get(route('admin.courses.create'))
             ->assertOk()
             ->assertSee('Grundlæggende')
             ->assertSee('Trænere')
+            ->assertSee('Medlem')
             ->assertSee('Træningstider')
             ->assertSee('Pris &amp; tilmelding', false)
+            ->assertSee('Fællestræning')
             ->assertSee('Forsidemedie');
+    }
+
+    public function test_the_personlig_form_opens_with_the_member_picker(): void
+    {
+        $this->actingAs($this->owner())->get(route('admin.courses.create', ['type' => \App\Models\Course::TYPE_PERSONLIG]))
+            ->assertOk()
+            ->assertSee('Ny personlig træning')
+            ->assertSee('Find medlem')
+            ->assertSee(route('admin.members.search'));
     }
 
     public function test_trainer_rows_get_contact_details(): void

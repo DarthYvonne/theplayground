@@ -8,11 +8,13 @@ use App\Models\Course;
 use App\Models\CourseCancellation;
 use App\Models\User;
 use App\Support\CalendarWeek;
+use App\Support\Contact;
 use App\Support\ScheduleGrid;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
@@ -62,11 +64,14 @@ class CourseAdminController extends Controller
     public function store(Request $request): RedirectResponse
     {
         [$data, $trainerIds, $slots] = $this->validateData($request);
-        if ($request->hasFile('image')) {
+        // A personlig træning shows its trainer's photo, so an upload would only
+        // ever be dead weight — the form disables the inputs, this enforces it.
+        $isPersonlig = ($data['type'] ?? null) === Course::TYPE_PERSONLIG;
+        if (! $isPersonlig && $request->hasFile('image')) {
             $data['image_path'] = $request->file('image')->store('courses', 'public');
         }
         $videoPath = null;
-        if ($request->hasFile('video')) {
+        if (! $isPersonlig && $request->hasFile('video')) {
             $videoPath = $this->storeCourseVideo($request->file('video'));
             $data['video_path'] = $videoPath;
             $data['video_processing_status'] = 'pending';
@@ -74,11 +79,18 @@ class CourseAdminController extends Controller
         $course = Course::create($data);
         $course->trainers()->sync($trainerIds);
         $this->syncSchedules($course, $slots);
+        $course->refreshPersonligTitle();
         if ($videoPath) {
             ProcessVideoJob::dispatch(Course::class, $course->id, $videoPath, 'course_videos', true);
         }
 
-        return redirect()->route('admin.courses.edit', $course)->with('status', $this->saveMessage($course, 'oprettet'));
+        // A trainer may create but not edit, so sending them to the edit form
+        // would 403 them out of the thing they just made.
+        $target = $request->user()->isOwner()
+            ? redirect()->route('admin.courses.edit', $course)
+            : redirect()->route('courses.show', $course);
+
+        return $target->with('status', $this->saveMessage($course, 'oprettet'));
     }
 
     public function edit(Course $course)
@@ -123,6 +135,7 @@ class CourseAdminController extends Controller
         $course->update($data);
         $course->trainers()->sync($trainerIds);
         $this->syncSchedules($course, $slots);
+        $course->refreshPersonligTitle();
         if ($newVideoPath) {
             ProcessVideoJob::dispatch(Course::class, $course->id, $newVideoPath, 'course_videos', true);
         }
@@ -172,15 +185,17 @@ class CourseAdminController extends Controller
     private function validateData(Request $request): array
     {
         // Price and capacity are meaningless for a fællestræning — it is free to
-        // members and nobody registers — so the form hides them and they are not
-        // required back.
+        // members and nobody registers. A personlig træning has no capacity, no
+        // typed title and no description at all. The form hides each of those and
+        // they are not required back.
         $isFaelles = $request->input('type') === Course::TYPE_FAELLES;
+        $isPersonlig = $request->input('type') === Course::TYPE_PERSONLIG;
 
-        $data = $request->validate([
-            'title' => ['required', 'string', 'max:160'],
+        $rules = [
+            'title' => [Rule::requiredIf(! $isPersonlig), 'nullable', 'string', 'max:160'],
             'type' => ['nullable', Rule::in(array_keys(Course::TYPES))],
-            'description' => ['required', 'string', 'max:4000'],
-            'trainer_ids' => ['required', 'array', 'min:1'],
+            'description' => [Rule::requiredIf(! $isPersonlig), 'nullable', 'string', 'max:4000'],
+            'trainer_ids' => ['required', 'array', $isPersonlig ? 'size:1' : 'min:1'],
             // Role-checked, not just exists: the picker only offers trainers/owners,
             // and a course trainer list holding anyone else leaves them with a stale
             // "Træner" badge and a broadcast button that fails.
@@ -189,7 +204,7 @@ class CourseAdminController extends Controller
             'video' => ['nullable', 'file', 'mimes:mp4,mov,avi,webm,m4v,mkv', 'max:512000'],
             'remove_video' => ['nullable', 'boolean'],
             'price_kr' => [Rule::requiredIf(! $isFaelles), 'nullable', 'numeric', 'min:0', 'max:100000'],
-            'max_participants' => [Rule::requiredIf(! $isFaelles), 'nullable', 'integer', 'min:1', 'max:1000'],
+            'max_participants' => [Rule::requiredIf(! $isFaelles && ! $isPersonlig), 'nullable', 'integer', 'min:1', 'max:1000'],
             'is_active' => ['nullable', 'boolean'],
             'free_enrollment' => ['nullable', 'boolean'],
             'chat_enabled' => ['nullable', 'boolean'],
@@ -197,7 +212,28 @@ class CourseAdminController extends Controller
             'slots.*.weekday' => ['required', 'in:mon,tue,wed,thu,fri,sat,sun'],
             'slots.*.start' => ['nullable', 'date_format:H:i'],
             'slots.*.end' => ['nullable', 'date_format:H:i'],
-        ]);
+        ];
+
+        if ($isPersonlig) {
+            $rules['member_id'] = ['nullable', 'integer', 'exists:users,id'];
+            $rules['member_invite_email'] = ['nullable', 'email', 'max:255'];
+            $rules['member_invite_phone'] = ['nullable', 'string', 'max:40'];
+        }
+
+        $validator = Validator::make($request->all(), $rules);
+        if ($isPersonlig) {
+            $validator->after(function ($v) use ($request) {
+                if (! $request->filled('member_id') && ! $request->filled('member_invite_email') && ! $request->filled('member_invite_phone')) {
+                    $v->errors()->add('member_id', 'Vælg et medlem, eller skriv en e-mail eller et telefonnummer.');
+                }
+                $trainerIds = array_map('intval', (array) $request->input('trainer_ids', []));
+                if ($request->filled('member_id') && in_array((int) $request->input('member_id'), $trainerIds, true)) {
+                    $v->errors()->add('member_id', 'Træneren kan ikke også være medlemmet.');
+                }
+            });
+        }
+        $data = $validator->validate();
+
         $trainerIds = array_values(array_unique(array_map('intval', $data['trainer_ids'])));
         unset($data['trainer_ids']);
         $data['type'] = $data['type'] ?? Course::TYPE_HOLD;
@@ -216,10 +252,79 @@ class CourseAdminController extends Controller
         }
         unset($data['price_kr']);
 
+        if ($isPersonlig) {
+            // One seat, held by name — written truthfully rather than left to the
+            // column default. The title is generated once the trainer is synced.
+            $data['max_participants'] = 1;
+            $data['description'] = '';
+            $data['title'] = Course::PERSONLIG_TITLE;
+            [$data['member_id'], $data['member_invite_email'], $data['member_invite_phone']] = $this->resolveMember($request);
+        } else {
+            // Retyping away from personlig must not leave a stray member behind.
+            $data['member_id'] = null;
+            $data['member_invite_email'] = null;
+            $data['member_invite_phone'] = null;
+        }
+
         $slots = $this->slotsFrom($data['slots'] ?? []);
         unset($data['video'], $data['remove_video'], $data['slots']);
 
         return [$data, $trainerIds, $slots];
+    }
+
+    /**
+     * Who the personlig træning belongs to.
+     *
+     * A typed e-mail that already belongs to a user links immediately, so an
+     * existing member never sits in the pending state where a claim could race.
+     * A phone is stored as typed alongside its comparable form.
+     *
+     * @return array{0: ?int, 1: ?string, 2: ?string}
+     */
+    private function resolveMember(Request $request): array
+    {
+        $memberId = $request->filled('member_id') ? (int) $request->input('member_id') : null;
+        $email = Contact::normalizeEmail($request->input('member_invite_email'));
+        $phone = Contact::normalizePhone($request->input('member_invite_phone'));
+
+        if (! $memberId && $email) {
+            $memberId = User::whereRaw('lower(email) = ?', [$email])->value('id');
+        }
+        if (! $memberId && $phone) {
+            // Only when it is unambiguous — a shared household number must not
+            // pick someone at random.
+            $matches = User::where('phone_normalized', $phone)->pluck('id');
+            if ($matches->count() === 1) {
+                $memberId = (int) $matches->first();
+            }
+        }
+
+        return [$memberId, $email, $phone];
+    }
+
+    /** Member picker for the personlig-træning form. Name, e-mail or phone. */
+    public function memberSearch(Request $request)
+    {
+        $q = trim((string) $request->query('q', ''));
+        $phone = Contact::normalizePhone($q);
+        $email = Contact::normalizeEmail($q);
+
+        $users = User::query()
+            ->when($q !== '', fn ($u) => $u->where(fn ($u) => $u
+                ->where('name', 'like', "%{$q}%")
+                ->orWhereRaw('lower(email) like ?', ["%{$email}%"])
+                ->when($phone, fn ($u) => $u->orWhere('phone_normalized', 'like', "%{$phone}%"))))
+            ->orderBy('name')
+            ->limit(20)
+            ->get();
+
+        return response()->json(['results' => $users->map(fn (User $u) => [
+            'id' => $u->id,
+            'label' => $u->name,
+            'sub' => trim($u->email.($u->phone ? ' · '.$u->phone : '')),
+            'picture_url' => $u->pictureUrl(),
+            'initials' => $u->initials(),
+        ])->all()]);
     }
 
     /**

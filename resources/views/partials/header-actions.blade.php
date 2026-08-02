@@ -2,7 +2,7 @@
 <div class="feed-actions">
   {{-- Pages that list a training type pass $createType; sits inside .feed-actions
        so it stays left of the icons when the mobile script moves the group. --}}
-  @if (isset($createType) && auth()->user()->isOwner())
+  @if (isset($createType) && auth()->user()->isTrainer())
     <a href="{{ route('admin.courses.create', ['type' => $createType]) }}" class="btn btn-primary hdr-create">
       <i class="fa-solid fa-plus"></i> <span class="lbl">Opret ny</span>
     </a>

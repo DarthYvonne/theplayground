@@ -71,10 +71,11 @@
           <div class="hero-video-pending"><i class="fa-solid fa-spinner fa-spin"></i><span>Videobillede på vej</span></div>
         @endif
       </div>
-    @elseif ($course->image_path)
-      <img src="{{ $course->imageUrl() }}" alt="" class="hero-img">
+    @elseif ($course->heroImageUrl())
+      {{-- A personlig træning has no upload of its own — this is its trainer. --}}
+      <img src="{{ $course->heroImageUrl() }}" alt="" class="hero-img">
     @else
-      <div class="hero-ph"><i class="fa-solid fa-dumbbell"></i></div>
+      <div class="hero-ph"><i class="fa-solid {{ $course->isPersonlig() ? 'fa-user-ninja' : 'fa-dumbbell' }}"></i></div>
     @endif
 
     <div class="course-body">
@@ -92,8 +93,18 @@
         @if ($course->scheduleLabel())
           <span class="item"><i class="fa-regular fa-clock"></i>{{ $course->scheduleLabel() }}</span>
         @endif
-        {{-- Nobody registers for a fællestræning, so there is no count to show. --}}
-        @if (! $course->isFaellestraening())
+        {{-- Nobody registers for a fællestræning, and a 1:1 has one named seat
+             rather than a count, so neither shows a tally. --}}
+        @if ($course->isPersonlig())
+          <span class="item">
+            <i class="fa-regular fa-user"></i>
+            @if ($course->member)
+              Med <strong>{{ $course->member->name }}</strong>
+            @else
+              <span style="color:#92400e;font-weight:600;">Afventer {{ $course->member_invite_email ?: $course->member_invite_phone }}</span>
+            @endif
+          </span>
+        @elseif (! $course->isFaellestraening())
           <span class="item">
             <i class="fa-regular fa-user"></i>
             <strong>{{ $course->activeCount() }}/{{ $course->max_participants }}</strong> tilmeldt
@@ -142,6 +153,17 @@
               <button class="afmeld" type="button" onclick="document.getElementById('afmeldModal').classList.add('open')">Afmeld</button>
               <span class="enrolled-note"><i class="fa-solid fa-circle-check"></i> Du er tilmeldt</span>
             @endif
+          @elseif ($course->isPersonlig() && ! $canEnroll)
+            {{-- A trainer or owner looking at somebody else's arrangement, or a
+                 forløb whose member has not claimed their profile yet. --}}
+            <span class="needs-membership">
+              <i class="fa-solid fa-circle-info"></i>
+              @if (! $course->member_id)
+                Afventer at {{ $course->member_invite_email ?: $course->member_invite_phone }} opretter en profil.
+              @else
+                {{ $course->member?->name }} har ikke betalt endnu.
+              @endif
+            </span>
           @elseif ($course->isFull())
             <button class="btn btn-secondary" disabled>Holdet er fuldt</button>
           @elseif ($mobilePayAvailable)

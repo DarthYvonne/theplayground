@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\PersonligClaim;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,6 +46,10 @@ class AuthController extends Controller
 
         RateLimiter::clear($throttleKey);
         $request->session()->regenerate();
+        // Catches someone who already had an account when a trainer set up a
+        // personlig træning for their e-mail or phone.
+        PersonligClaim::claimFor(Auth::user());
+
         return redirect()->intended('/feed');
     }
 
@@ -65,6 +70,8 @@ class AuthController extends Controller
             'phone' => $data['phone'] ?? null,
             'role' => 'user',
         ]);
+        // A personlig træning may already be waiting on this e-mail or phone.
+        PersonligClaim::claimFor($user);
         Auth::login($user);
         $request->session()->regenerate();
         return redirect()->intended('/feed');

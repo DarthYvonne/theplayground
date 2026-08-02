@@ -182,8 +182,12 @@ class EnrollmentController extends Controller
     {
         abort_unless($course->is_active, 404);
         // There is nothing to sign up for: a fællestræning is included in a
-        // membership, and anyone else buys a single session off-platform.
+        // membership, anyone else buys a single session off-platform, and a
+        // personlig træning has no buyer until a member is assigned.
         abort_unless($course->allowsEnrollment(), 404);
+        // A personlig træning's one seat belongs to a named person; nobody else
+        // may buy their way into someone else's arrangement.
+        abort_unless($course->isEnrollableBy($request->user()), 403);
         if ($request->user()->enrolledIn($course)) {
             return redirect()->route('courses.show', $course)->with('status', 'Du er allerede tilmeldt.');
         }

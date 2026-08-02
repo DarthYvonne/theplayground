@@ -91,8 +91,12 @@ class UserAdminController extends Controller
         $replacement = User::find((int) $data['trainer_id']);
         $course->trainers()->detach($user->id);
         $course->trainers()->syncWithoutDetaching([$replacement->id]);
+        // A personlig træning is named after its trainer, so the title has to
+        // follow — this path bypasses the course form entirely.
+        $previousTitle = $course->title;
+        $course->refreshPersonligTitle();
 
-        return back()->with('status', $replacement->name . ' er nu træner på ' . $course->title . ' i stedet for ' . $user->name . '.');
+        return back()->with('status', $replacement->name . ' er nu træner på ' . $previousTitle . ' i stedet for ' . $user->name . '.');
     }
 
     public function destroy(Request $request, User $user): RedirectResponse {
@@ -106,6 +110,10 @@ class UserAdminController extends Controller
             return back()->withErrors(['delete' => $user->name . ' underviser stadig på et eller flere hold. Flyt holdene til en anden træner først.']);
         }
         $name = $user->name;
+        // courses.member_id carries no database-level foreign key (see the
+        // migration — adding one rebuilds the table on SQLite and cascades into
+        // course_schedules), so the dangling reference is cleared here instead.
+        Course::where('member_id', $user->id)->update(['member_id' => null, 'member_claimed_at' => null]);
         $user->delete();
         return redirect()->route('admin.users.index')->with('status', $name . ' er slettet.');
     }

@@ -48,7 +48,9 @@ class FaellestraeningTest extends TestCase
         $user = User::factory()->create(['role' => 'user']);
         $this->course('Almindeligt hold', Course::TYPE_HOLD);
         $this->course('Fælles morgentræning', Course::TYPE_FAELLES);
-        $this->course('En-til-en forløb', Course::TYPE_PERSONLIG);
+        // A personlig træning is private, so it only appears for its own member.
+        $pt = $this->course('En-til-en forløb', Course::TYPE_PERSONLIG);
+        $pt->update(['member_id' => $user->id, 'title' => 'En-til-en forløb']);
 
         $this->actingAs($user)->get(route('faellestraening.index'))
             ->assertOk()->assertSee('Fælles morgentræning')
@@ -78,27 +80,28 @@ class FaellestraeningTest extends TestCase
 
     /* ------------------------------------------------------ create button -- */
 
-    public function test_owners_get_a_create_button_on_each_training_page(): void
+    public function test_owners_and_trainers_get_a_create_button_on_each_training_page(): void
     {
-        $owner = User::factory()->create(['role' => 'owner']);
-
         $pages = [
             'catalog' => Course::TYPE_HOLD,
             'faellestraening.index' => Course::TYPE_FAELLES,
             'personlig.index' => Course::TYPE_PERSONLIG,
         ];
 
-        foreach ($pages as $route => $type) {
-            $this->actingAs($owner)->get(route($route))
-                ->assertOk()
-                ->assertSee('Opret ny')
-                ->assertSee(route('admin.courses.create', ['type' => $type]));
+        foreach (['owner', 'trainer'] as $role) {
+            $actor = User::factory()->create(['role' => $role]);
+            foreach ($pages as $route => $type) {
+                $this->actingAs($actor)->get(route($route))
+                    ->assertOk()
+                    ->assertSee('Opret ny')
+                    ->assertSee(route('admin.courses.create', ['type' => $type]));
+            }
         }
     }
 
-    public function test_members_and_trainers_never_see_the_create_button(): void
+    public function test_members_never_see_the_create_button(): void
     {
-        foreach (['user', 'trainer', 'assistant'] as $role) {
+        foreach (['user', 'assistant'] as $role) {
             $actor = User::factory()->create(['role' => $role]);
             foreach (['catalog', 'faellestraening.index', 'personlig.index'] as $route) {
                 $this->actingAs($actor)->get(route($route))
@@ -298,20 +301,22 @@ class FaellestraeningTest extends TestCase
 
     public function test_owner_can_create_personlig_traening(): void
     {
-        $owner = User::factory()->create(['role' => 'owner']);
+        $owner = User::factory()->create(['role' => 'owner', 'name' => 'Anders']);
+        $member = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
 
+        // No title, no description, no capacity — a personlig træning carries none.
         $this->actingAs($owner)->post(route('admin.courses.store'), [
-            'title' => 'PT hos Anders',
             'type' => Course::TYPE_PERSONLIG,
-            'description' => 'x',
             'trainer_ids' => [$owner->id],
+            'member_id' => $member->id,
             'price_kr' => 900,
-            'max_participants' => 1,
         ])->assertSessionHasNoErrors();
 
-        $course = Course::where('title', 'PT hos Anders')->firstOrFail();
-        $this->assertTrue($course->isPersonlig());
+        $course = Course::personlig()->firstOrFail();
+        $this->assertSame('Personlig træning — Anders & Mette', $course->title);
         $this->assertSame(90000, $course->price_cents);
+        $this->assertSame($member->id, $course->member_id);
+        $this->assertSame(1, $course->max_participants);
     }
 
     public function test_an_unknown_type_is_rejected(): void

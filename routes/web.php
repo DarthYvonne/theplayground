@@ -156,12 +156,18 @@ Route::middleware('auth')->group(function () {
         Route::delete('/courses/{course}/cancellations', [TrainerController::class, 'destroyCancellation'])->name('cancellations.destroy');
     });
 
+    // Creating is open to trainers so they can set up their own forløb.
+    // Everything that touches an existing course stays the owner's.
+    Route::middleware('role:trainer,owner')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/courses/create', [CourseAdminController::class, 'create'])->name('courses.create');
+        Route::post('/courses', [CourseAdminController::class, 'store'])->name('courses.store');
+        Route::get('/api/members/search', [CourseAdminController::class, 'memberSearch'])->name('members.search');
+    });
+
     // Owner admin
     Route::middleware('role:owner')->prefix('admin')->name('admin.')->group(function () {
         Route::get('/courses', [CourseAdminController::class, 'index'])->name('courses.index');
         Route::get('/courses/calendar', [CourseAdminController::class, 'calendar'])->name('courses.calendar');
-        Route::get('/courses/create', [CourseAdminController::class, 'create'])->name('courses.create');
-        Route::post('/courses', [CourseAdminController::class, 'store'])->name('courses.store');
         Route::get('/courses/{course}/edit', [CourseAdminController::class, 'edit'])->name('courses.edit');
         Route::post('/courses/{course}', [CourseAdminController::class, 'update'])->name('courses.update');
         Route::post('/courses/{course}/delete', [CourseAdminController::class, 'destroy'])->name('courses.destroy');
