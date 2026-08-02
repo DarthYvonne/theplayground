@@ -32,17 +32,19 @@
   /* Shared playlist player — used when a playlist is shared in the feed or on a Hold */
   .tp-playlist { background: #fff; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
   .tp-playlist .tpl-cover { display: block; width: 100%; height: 120px; object-fit: cover; background: #f0f2f5; }
-  .tp-playlist .tpl-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid #f0f2f5; }
-  .tp-playlist .tpl-play { width: 36px; height: 36px; border: none; border-radius: 50%; background: linear-gradient(135deg, #4d97ff 0%, #1664d8 100%); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex: 0 0 auto; box-shadow: 0 2px 8px rgba(24,119,242,0.35); transition: transform 0.12s; }
-  .tp-playlist .tpl-play:hover { transform: scale(1.07); }
+  /* Inverted header — matches the Mediebibliotek playlist cards. The play button
+     flips to white so it stays visible against the blue. */
+  .tp-playlist .tpl-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: linear-gradient(135deg, #4d97ff 0%, #1664d8 100%); color: #fff; }
+  .tp-playlist .tpl-play { width: 36px; height: 36px; border: none; border-radius: 50%; background: #fff; color: #1664d8; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; flex: 0 0 auto; box-shadow: 0 2px 8px rgba(0,0,0,0.20); transition: transform 0.12s, box-shadow 0.12s; }
+  .tp-playlist .tpl-play:hover { transform: scale(1.07); box-shadow: 0 4px 12px rgba(0,0,0,0.28); }
   .tp-playlist .tpl-play i { margin-left: 2px; }
   .tp-playlist .tpl-play i.fa-pause { margin-left: 0; }
   .tp-playlist .tpl-name { font-weight: 700; font-size: 14px; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .tp-playlist .tpl-name .cnt { color: var(--muted); font-weight: 600; }
+  .tp-playlist .tpl-name .cnt { color: rgba(255,255,255,0.75); font-weight: 600; }
   .tp-playlist .tpl-tracks { display: flex; flex-direction: column; padding: 6px; }
-  .tp-playlist .tpl-track { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: none; background: none; border-radius: 8px; font: inherit; text-align: left; cursor: pointer; color: var(--text); width: 100%; text-decoration: none; }
+  .tp-playlist .tpl-track { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: none; background: none; border-radius: 0; font: inherit; text-align: left; cursor: pointer; color: var(--text); width: 100%; text-decoration: none; }
   .tp-playlist .tpl-track:hover { background: var(--hover); }
-  .tp-playlist .tpl-track + .tpl-track { border-top: 1px solid #f0f2f5; border-radius: 0; }
+  .tp-playlist .tpl-track + .tpl-track { border-top: 1px solid #f0f2f5; }
   .tp-playlist .tpl-track .ticon { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 10px; flex: 0 0 auto; }
   .tp-playlist .tpl-track .tthumb { width: 42px; height: 26px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; background: #f0f2f5; display: block; }
   .tp-playlist .tpl-track .t { flex: 1; min-width: 0; font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

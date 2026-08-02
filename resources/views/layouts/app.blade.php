@@ -230,6 +230,8 @@
     </div>
     <nav class="nav">
       <a href="{{ url('/feed') }}" class="{{ request()->is('feed*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-heart"></i></span> Feed</a>
+      @php $beskederUnread = auth()->user()->unreadDirectMessageCount(); @endphp
+      <a href="{{ route('beskeder.index') }}" class="{{ request()->is('beskeder*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Beskeder @if ($beskederUnread > 0)<span class="badge-pill">{{ $beskederUnread > 99 ? '99+' : $beskederUnread }}</span>@endif</a>
 
       @php
         $holdActive = request()->is('hold') || request()->is('hold/*');
@@ -254,19 +256,15 @@
       </div>
 
       <a href="{{ route('floating.index') }}" class="{{ request()->is('floating*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-water"></i></span> Floating</a>
-      @php $beskederUnread = auth()->user()->unreadDirectMessageCount(); @endphp
-      <a href="{{ route('beskeder.index') }}" class="{{ request()->is('beskeder*') ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-envelope"></i></span> Beskeder @if ($beskederUnread > 0)<span class="badge-pill">{{ $beskederUnread > 99 ? '99+' : $beskederUnread }}</span>@endif</a>
       <a href="{{ url('/medlemmer') }}" class="{{ request()->is('medlemmer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-circle-user"></i></span> Find medlem</a>
-      {{-- Staff tool: members have no reason to browse the raw library. --}}
-      @if (auth()->user()->isTrainer() || auth()->user()->isOwner())
-        <a href="{{ route('media.index') }}" class="{{ request()->is('mediebibliotek*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-photo-film"></i></span> Mediebibliotek</a>
-      @endif
 
       @if (auth()->user()->isTrainer() || auth()->user()->isOwner())
         <div class="nav-divider"></div>
         @if (auth()->user()->isTrainer())
           <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> Trænerside</a>
         @endif
+        {{-- Staff tool: members have no reason to browse the raw library. --}}
+        <a href="{{ route('media.index') }}" class="{{ request()->is('mediebibliotek*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-photo-film"></i></span> Mediebibliotek</a>
         @if (auth()->user()->isOwner())
           <a href="{{ route('admin.settings.revenue') }}" class="{{ request()->is('admin/settings*') || request()->is('admin/users*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
         @endif
