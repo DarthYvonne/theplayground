@@ -10,10 +10,13 @@ Anders tests everything himself. Do not verify his work for him.
 The only exception: Anders reports that something is broken. Then run the one
 test that covers it — and nothing else.
 
-Why: running PHP in this project hangs his console for a long time, and he
-cannot approve or interrupt anything while it does. The cause is not confirmed
-(Dropbox sync and Defender scanning Laravel's autoload are both suspects), so
-do not assume a command will be quick because a previous one reported a small
+Why: shelling out is what makes this slow for Anders — his console locks while
+it runs and he cannot interrupt it. A session that only reads and edits files
+feels instant to him; one that runs commands does not. The project lives in a
+Dropbox folder, but that is NOT the cause — tested 2026-08-02, still in
+Dropbox, fast. The cost is the shell call itself.
+
+Do not assume a command will be quick because a previous one reported a small
 number. `php artisan test` reports its own internal duration, which excludes
 PHP startup, bootstrapping and migrations — it is not what Anders waits
 through. Never quote it to him as the cost.
