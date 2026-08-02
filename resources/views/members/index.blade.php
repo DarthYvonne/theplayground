@@ -26,19 +26,30 @@
     color: var(--text); transition: transform 0.1s, box-shadow 0.1s;
   }
   .member-card:hover { transform: translateY(-2px); box-shadow: 0 6px 14px rgba(0,0,0,0.08); }
-  .member-card .info { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 18px 14px 14px; }
+  .member-card .info { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 18px 14px 10px; color: inherit; text-decoration: none; }
   .member-card .name { font-weight: 700; font-size: 14px; line-height: 1.25; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .member-card .meta { color: var(--muted); font-size: 12px; }
+  .member-card .info:hover .name { color: var(--accent); }
+
+  /* The hold this person is on — each one its own link, so a card doubles as a
+     way in. Pushes the role band to the bottom on short cards. */
+  .member-card .holds { display: flex; flex-direction: column; gap: 1px; padding: 0 10px 12px; flex: 1; }
+  .member-card .hold-link, .member-card .hold-more { font-size: 12px; text-align: center; padding: 3px 6px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: none; }
+  .member-card .hold-link { color: var(--accent); }
+  .member-card .hold-link:hover { background: var(--accent-soft); }
+  .member-card .hold-more { color: var(--muted); }
+  .member-card .hold-more:hover { color: var(--text); }
+  /* Nothing to list — the role band still needs pushing down. */
+  .member-card .info:last-of-type { flex: 1; }
   /* Outline rather than border: a border would resize the card against its
      neighbours in the grid. */
   .member-card.you { outline: 2px solid var(--accent); outline-offset: -2px; }
 
   /* Role footer — one flat colour band per role, readable at a glance. */
   .role-foot { padding: 7px 10px; text-align: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-  .role-foot.owner     { background: #fef3c7; color: #92400e; }
+  .role-foot.member    { background: #dcfce7; color: #166534; }
   .role-foot.trainer   { background: #dbeafe; color: #1d4ed8; }
+  .role-foot.owner     { background: #f1f5f9; color: #475569; }
   .role-foot.assistant { background: #ede9fe; color: #6d28d9; }
-  .role-foot.member    { background: #f1f5f9; color: #475569; }
 
   .members-empty { background: #fff; border-radius: 12px; padding: 40px 20px; text-align: center; color: var(--muted); display: none; }
   .members-empty.show { display: block; }
@@ -64,28 +75,35 @@
       $roleLabel = ['owner' => 'Ejer', 'trainer' => 'Træner', 'assistant' => 'Assistent'][$u->role] ?? 'Medlem';
       $roleClass = ['owner' => 'owner', 'trainer' => 'trainer', 'assistant' => 'assistant'][$u->role] ?? 'member';
 
-      // Whichever they have: hold they train, else hold they attend.
-      $holdCount = $u->trainer_courses_count > 0 ? $u->trainer_courses_count : $u->active_enrollments_count;
-
-      $courseIds = $u->activeEnrollments->pluck('course_id')
+      $courseIdList = $u->activeEnrollments->pluck('course_id')
         ->concat($u->trainerCourses->pluck('id'))
         ->unique()
-        ->values()
-        ->implode(',');
+        ->values();
+
+      // Resolved against the lookup, which drops anything inactive or private.
+      $hold = $courseIdList->map(fn ($id) => $courses[$id] ?? null)->filter()->values();
+      $shown = $hold->take(4);
+      $extra = $hold->count() - $shown->count();
     @endphp
-    <a href="{{ route('members.show', $u) }}"
-       class="member-card {{ $u->id === auth()->id() ? 'you' : '' }}"
-       data-search="{{ strtolower($u->name) }}"
-       data-courses="{{ $courseIds }}">
-      <div class="info">
+    <div class="member-card {{ $u->id === auth()->id() ? 'you' : '' }}"
+         data-search="{{ strtolower($u->name) }}"
+         data-courses="{{ $courseIdList->implode(',') }}">
+      <a href="{{ route('members.show', $u) }}" class="info">
         @include('partials.avatar', ['u' => $u, 'size' => 'lg'])
         <div class="name">{{ $u->name }} @if ($u->id === auth()->id())<span style="color:var(--accent);font-weight:600;">(dig)</span>@endif</div>
-        @if ($holdCount > 0)
-          <div class="meta">{{ $holdCount }} hold</div>
-        @endif
-      </div>
+      </a>
+      @if ($shown->isNotEmpty())
+        <div class="holds">
+          @foreach ($shown as $c)
+            <a href="{{ route('courses.show', $c) }}" class="hold-link">{{ $c->title }}</a>
+          @endforeach
+          @if ($extra > 0)
+            <a href="{{ route('members.show', $u) }}" class="hold-more">+{{ $extra }} mere</a>
+          @endif
+        </div>
+      @endif
       <div class="role-foot {{ $roleClass }}">{{ $roleLabel }}</div>
-    </a>
+    </div>
   @endforeach
 </div>
 

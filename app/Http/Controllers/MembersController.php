@@ -19,7 +19,14 @@ class MembersController extends Controller
             ])
             ->get();
 
-        $courses = Course::where('is_active', true)->orderBy('title')->get(['id', 'title']);
+        // Titles for the hold listed on each card. Personlig træning is left out
+        // deliberately: it is a private arrangement between two named people and
+        // nobody else could join it, so it has no business on a public card.
+        $courses = Course::where('is_active', true)
+            ->where('type', '!=', Course::TYPE_PERSONLIG)
+            ->orderBy('title')
+            ->get(['id', 'title'])
+            ->keyBy('id');
 
         return view('members.index', compact('users', 'courses'));
     }
