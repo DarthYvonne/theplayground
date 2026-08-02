@@ -51,22 +51,29 @@ class CourseController extends Controller
 
     public function index(Request $request)
     {
+        // Drafts are staff-only — an unpublished hold is not something a member
+        // should be able to find, let alone try to join.
+        $user = $request->user();
+        $seesDrafts = $user && $user->isTrainer();
+
         $courses = Course::with(['trainers', 'schedules'])
             ->hold()
-            ->where('is_active', true)
+            ->when(! $seesDrafts, fn ($q) => $q->where('is_active', true))
             ->withCount(['enrollments as active_enrollments_count' => fn ($q) => $q->where('status', 'active')])
             ->orderByDesc('created_at')
             ->get();
 
         // past_due counts as joined: a failed payment should not drop the member's
         // own hold back into the pile. pending does not — they never finished paying.
-        $enrolledIds = $request->user()
-            ? $request->user()->enrollments()->whereIn('status', ['active', 'past_due'])->pluck('course_id')->flip()
+        $enrolledIds = $user
+            ? $user->enrollments()->whereIn('status', ['active', 'past_due'])->pluck('course_id')->flip()
             : collect();
 
-        // The member's own hold float to the top; PHP's sort is stable, so the
-        // rest keep their newest-first order.
-        $courses = $courses->sortByDesc(fn (Course $c) => $enrolledIds->has($c->id))->values();
+        // Drafts sink to the bottom, the member's own hold float to the top, and
+        // PHP's stable sort leaves the rest newest-first inside each band.
+        $courses = $courses
+            ->sortByDesc(fn (Course $c) => ($c->is_active ? 2 : 0) + ($enrolledIds->has($c->id) ? 1 : 0))
+            ->values();
 
         return view('courses.index', compact('courses', 'enrolledIds'));
     }

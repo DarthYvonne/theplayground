@@ -24,6 +24,13 @@
      group without needing a separate page. */
   .course-tile.enrolled { border: 3px solid #16a34a; }
 
+  /* Kladde — visible to staff only, parked at the bottom and drained of colour
+     so it never competes with a published hold. Hovering restores it, since you
+     still need to read one properly before opening it. */
+  .course-tile.draft { opacity: 0.55; filter: grayscale(0.75); }
+  .course-tile.draft:hover { opacity: 1; filter: none; }
+  .course-tile-draft-badge { position: absolute; top: 10px; left: 10px; background: #64748b; color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; box-shadow: 0 2px 6px rgba(0,0,0,0.18); display: inline-flex; align-items: center; gap: 5px; }
+
   /* Live search */
   .hold-search { position: relative; margin-bottom: 18px; max-width: 420px; }
   .hold-search input[type=search] {
@@ -83,9 +90,12 @@
         $full = $course->active_enrollments_count >= $course->max_participants;
         $enrolled = ($enrolledIds ?? collect())->has($course->id);
       @endphp
-      <a href="{{ route('courses.show', $course) }}" class="card course-tile {{ $enrolled ? 'enrolled' : '' }}" data-search="{{ strtolower($course->title . ' ' . $course->trainerNames() . ' ' . ($course->scheduleLabel() ?? '')) }}" aria-label="{{ $course->title }}">
+      <a href="{{ route('courses.show', $course) }}" class="card course-tile {{ $enrolled ? 'enrolled' : '' }} {{ $course->is_active ? '' : 'draft' }}" data-search="{{ strtolower($course->title . ' ' . $course->trainerNames() . ' ' . ($course->scheduleLabel() ?? '')) }}" aria-label="{{ $course->title }}">
         <div class="img-wrap">
           @include('partials.course-hero-thumb', ['course' => $course])
+          @if (! $course->is_active)
+            <span class="course-tile-draft-badge"><i class="fa-solid fa-pen-ruler"></i> Kladde</span>
+          @endif
           @if ($enrolled)
             <span class="course-tile-enrolled-badge"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>
           @endif

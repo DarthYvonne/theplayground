@@ -11,7 +11,7 @@
 
 <nav class="trainer-tabs" aria-label="Træner">
   <a href="{{ route('trainer.index') }}" class="{{ request()->routeIs('trainer.index') ? 'active' : '' }}">
-    <i class="fa-solid fa-dumbbell"></i> Hold
+    <i class="fa-solid fa-dumbbell"></i> Træning
   </a>
   <a href="{{ route('trainer.calendar') }}" class="{{ request()->routeIs('trainer.calendar') ? 'active' : '' }}">
     <i class="fa-regular fa-calendar"></i> Kalender

@@ -27,11 +27,26 @@ class TrainerController extends Controller
         $user = $request->user();
         $ctx = CalendarWeek::resolveContext($request);
 
-        $courses = $user->trainerCourses()
-            ->with(['trainers', 'schedules'])
+        // Everything this trainer is connected to, not only what they teach: a
+        // trainer is also a member, and their own hold, fællestræning and 1:1
+        // belong on their week too.
+        $joined = array_flip($user->enrollments()->where('status', 'active')->withinPeriod()->pluck('course_id')->all());
+        $paid = $user->hasPaidMembership();
+
+        $courses = Course::with(['trainers', 'schedules'])
             ->where('is_active', true)
+            ->visibleTo($user)
             ->orderBy('title')
-            ->get();
+            ->get()
+            ->filter(fn (Course $c) => $c->trainers->contains('id', $user->id)
+                || isset($joined[$c->id])
+                || ($c->isFaellestraening() && $paid)
+                || ($c->isPersonlig() && $c->member_id === $user->id))
+            ->values();
+
+        // Green marks what they are responsible for, separating a session they
+        // run from one they merely turn up to.
+        $connectedIds = $courses->filter(fn (Course $c) => $c->trainers->contains('id', $user->id))->pluck('id')->all();
 
         $byDay = ScheduleGrid::byDay($courses, array_keys(Course::WEEKDAYS));
         $unscheduled = $courses->filter(fn ($c) => empty($c->weekdaysList()))->values();
@@ -45,7 +60,7 @@ class TrainerController extends Controller
 
         return view('trainer.calendar', compact(
             'byDay', 'unscheduled', 'weekendCourses', 'monday', 'monthAnchor',
-            'view', 'cancelledMap'
+            'view', 'cancelledMap', 'connectedIds'
         ));
     }
 

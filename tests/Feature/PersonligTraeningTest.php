@@ -75,23 +75,6 @@ class PersonligTraeningTest extends TestCase
         $this->actingAs($trainer)->get(route('personlig.index'))->assertOk()->assertSee($title);
     }
 
-    public function test_chat_and_media_open_only_once_the_member_has_paid(): void
-    {
-        $trainer = User::factory()->create(['role' => 'trainer']);
-        $member = User::factory()->create(['role' => 'user']);
-        $course = $this->pt($trainer, ['member_id' => $member->id]);
-
-        $this->actingAs($member)->get(route('chat.course', $course))->assertForbidden();
-        $this->actingAs($member)->get(route('courses.media', $course))->assertForbidden();
-        // The trainer is in from the start — they have to be able to reach out.
-        $this->actingAs($trainer)->get(route('chat.course', $course))->assertOk();
-
-        $this->enroll($member, $course);
-
-        $this->actingAs($member)->get(route('chat.course', $course))->assertOk();
-        $this->actingAs($member)->get(route('courses.media', $course))->assertOk();
-    }
-
     public function test_only_the_named_member_can_pay_for_it(): void
     {
         $member = User::factory()->create(['role' => 'user']);

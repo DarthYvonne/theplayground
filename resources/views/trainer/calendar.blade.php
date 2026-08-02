@@ -44,10 +44,16 @@
   /* For the trainer calendar we wrap each event in a position:absolute container
      so the action button (a sibling <form>) can sit on top of the link. */
   .cal-event-wrap { position: absolute; left: 4px; right: 4px; }
-  .cal-event { display: flex; flex-direction: column; gap: 2px; background: var(--accent-soft); color: var(--text); border-radius: 8px; padding: 6px 8px; padding-right: 26px; border-left: 3px solid var(--accent); overflow: hidden; transition: background 0.1s; height: 100%; }
-  .cal-event:hover { background: #dbe6fb; }
+  /* Matches the shared calendar: neutral by default, green outlined when it is
+     one of yours. Here "yours" means you teach it, which separates a session you
+     run from one you only attend. */
+  .cal-event { display: flex; flex-direction: column; gap: 2px; background: #f5f7fa; color: var(--text); border-radius: 8px; padding: 6px 8px; padding-right: 26px; border: 2px solid transparent; overflow: hidden; transition: background 0.1s, border-color 0.1s; height: 100%; }
+  .cal-event:hover { background: #eaeef3; }
   .cal-event-wrap:hover { z-index: 5; }
-  .cal-event.cancelled { background: #f5f7fa; border-left-color: #cbd0d6; }
+  .cal-event.cancelled { background: #f5f7fa; border-color: transparent; }
+  .cal-event.mine { border: 3px solid #16a34a; }
+  .cal-mobile-day .row.mine { border-left: 3px solid #16a34a; padding-left: 8px; }
+  .cal-unscheduled-list .tag.mine { border: 2px solid #16a34a; }
   .cal-event.cancelled .t { text-decoration: line-through; color: var(--muted); }
   .cal-event .t { font-weight: 700; font-size: 12px; line-height: 1.2; word-break: break-word; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .cal-event .tm { color: var(--muted); font-size: 10px; line-height: 1.1; }
@@ -90,7 +96,7 @@
 @endpush
 
 <div class="view-header">
-  <h1>Mine hold</h1>
+  <h1><i class="fa-regular fa-calendar" style="color:var(--text);margin-right:8px;"></i>Kalender</h1>
   @include('partials.header-actions')
 </div>
 
@@ -103,6 +109,7 @@
 
   $weekdayLabels = ['mon' => 'Mandag', 'tue' => 'Tirsdag', 'wed' => 'Onsdag', 'thu' => 'Torsdag', 'fri' => 'Fredag'];
   $weekdayDates = $view === 'week' ? CalendarWeek::weekdayDates($monday) : [];
+  $connectedSet = array_flip($connectedIds ?? []);
 
   $canCancelFor = function ($course) {
       $u = auth()->user();
@@ -116,6 +123,7 @@
     'byDay' => $byDay,
     'cancelledMap' => $cancelledMap,
     'routeName' => 'trainer.calendar',
+    'connectedSet' => $connectedSet,
   ])
 @else
   @php
@@ -177,7 +185,7 @@
         @foreach ($untimed[$key] as $ev)
           @php $c = $ev['course']; @endphp
           <div class="cal-event-wrap" style="position:relative;">
-            <a href="{{ route('courses.show', $c) }}" class="cal-event notime {{ $ev['cancelled'] ? 'cancelled' : '' }}">
+            <a href="{{ route('courses.show', $c) }}" class="cal-event notime {{ $ev['cancelled'] ? 'cancelled' : '' }} {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}">
               <div class="t">{{ $c->title }}</div>
               @if ($ev['cancelled'])<div class="aflyst-badge">Aflyst</div>@endif
             </a>
@@ -202,7 +210,7 @@
         @foreach ($timed[$key] as $ev)
           @php $c = $ev['course']; @endphp
           <div class="cal-event-wrap" style="top: {{ $ev['top'] }}px; height: {{ $ev['height'] }}px;">
-            <a href="{{ route('courses.show', $c) }}" class="cal-event {{ $ev['cancelled'] ? 'cancelled' : '' }}">
+            <a href="{{ route('courses.show', $c) }}" class="cal-event {{ $ev['cancelled'] ? 'cancelled' : '' }} {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}">
               <div class="t">{{ $c->title }}</div>
               @if ($ev['time'])<div class="tm">{{ $ev['time'] }}</div>@endif
               @if ($ev['cancelled'])<div class="aflyst-badge">Aflyst</div>@endif
@@ -226,7 +234,7 @@
       @php $dayEvents = collect($timed[$key])->concat($untimed[$key]); @endphp
       @forelse ($dayEvents as $ev)
         @php $c = $ev['course']; @endphp
-        <div class="row {{ $ev['cancelled'] ? 'cancelled' : '' }}">
+        <div class="row {{ $ev['cancelled'] ? 'cancelled' : '' }} {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}">
           <a href="{{ route('courses.show', $c) }}" style="color:inherit;display:flex;gap:10px;align-items:center;flex:1;">
             <div class="tm">{{ $ev['time'] ?? '—' }}</div>
             <div class="ti">{{ $c->title }}</div>
@@ -261,7 +269,7 @@
     <h3>Weekend</h3>
     <div class="cal-unscheduled-list">
       @foreach ($weekendCourses as $c)
-        <a href="{{ route('courses.show', $c) }}" class="tag muted" style="padding:6px 12px;">{{ $c->title }}</a>
+        <a href="{{ route('courses.show', $c) }}" class="tag muted {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}" style="padding:6px 12px;">{{ $c->title }}</a>
       @endforeach
     </div>
   </div>
@@ -272,7 +280,7 @@
     <h3>Uden fast skema</h3>
     <div class="cal-unscheduled-list">
       @foreach ($unscheduled as $c)
-        <a href="{{ route('courses.show', $c) }}" class="tag muted" style="padding:6px 12px;">{{ $c->title }}</a>
+        <a href="{{ route('courses.show', $c) }}" class="tag muted {{ isset($connectedSet[$c->id]) ? 'mine' : '' }}" style="padding:6px 12px;">{{ $c->title }}</a>
       @endforeach
     </div>
   </div>
