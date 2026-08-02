@@ -5,6 +5,19 @@
 <style>
   .feed-shell { }
 
+  /* "Næste" strip — deliberately quiet; it sits above the composer and must not
+     compete with it. Dismissed per browser session, never per account. */
+  .next-up { display: flex; align-items: center; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 4px 6px 4px 12px; margin-bottom: 14px; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  .next-up .nu-link { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; color: inherit; text-decoration: none; padding: 6px 4px; border-radius: 8px; }
+  .next-up .nu-ico { width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; font-size: 12px; flex: 0 0 auto; }
+  .next-up .nu-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+  .next-up .nu-kind { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; color: var(--muted); }
+  .next-up .nu-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .next-up .nu-link:hover .nu-title { color: var(--accent); }
+  .next-up .nu-chev { color: var(--muted); font-size: 11px; flex: 0 0 auto; margin-left: auto; padding-left: 8px; }
+  .next-up .nu-close { background: none; border: none; color: var(--muted); cursor: pointer; padding: 8px 9px; border-radius: 6px; font-size: 13px; flex: 0 0 auto; line-height: 1; }
+  .next-up .nu-close:hover { background: var(--hover); color: var(--text); }
+
   /* Composer */
   .composer { margin-bottom: 18px; }
   .composer textarea {
@@ -163,6 +176,39 @@
 @include('partials.audio-player')
 
 <div class="feed-shell">
+  @if ($next)
+    <div class="next-up" id="nextUp">
+      <a href="{{ $next->url }}" class="nu-link">
+        <span class="nu-ico"><i class="fa-regular fa-clock"></i></span>
+        <span class="nu-text">
+          <span class="nu-kind">Næste: {{ $next->kind }}</span>
+          <span class="nu-title">{{ $next->title }} &middot; {{ $next->when }}</span>
+        </span>
+        <i class="fa-solid fa-chevron-right nu-chev"></i>
+      </a>
+      <button type="button" class="nu-close" id="nextUpClose" aria-label="Skjul">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    {{-- Inline and synchronous: runs before the strip is ever painted, so a
+         dismissed card does not flash on every page load. --}}
+    <script>
+      (function () {
+        var box = document.getElementById('nextUp');
+        var KEY = 'tpNextUpDismissed';
+        var store = null;
+        try { store = window.sessionStorage; } catch (e) { /* private mode — just show it */ }
+
+        if (store && store.getItem(KEY) === '1') { box.style.display = 'none'; return; }
+
+        document.getElementById('nextUpClose').addEventListener('click', function () {
+          box.style.display = 'none';
+          try { if (store) store.setItem(KEY, '1'); } catch (e) {}
+        });
+      })();
+    </script>
+  @endif
+
   <form id="feedComposer" class="composer" autocomplete="off">
     @csrf
     <textarea id="feedComposerInput" name="body" placeholder="Hvad sker der, {{ explode(' ', trim($user->name))[0] }}?" maxlength="2000" rows="1"></textarea>
