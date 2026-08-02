@@ -63,7 +63,7 @@ class NextActivity
 
     private static function nextCourse(User $user, Carbon $now): ?self
     {
-        $courses = Course::with(['schedules', 'trainers'])
+        $courses = Course::with(['schedules', 'trainers', 'member'])
             ->where('is_active', true)
             ->visibleTo($user)
             ->get();
@@ -111,11 +111,28 @@ class NextActivity
 
         return new self(
             kind: $course->typeLabel(),
-            title: $course->title,
+            title: self::titleFor($course, $user),
             when: $occurrence->label($now),
             url: route('courses.show', $course),
             start: $occurrence->start,
         );
+    }
+
+    /**
+     * A personlig træning stores its type in its own title ("Personlig træning —
+     * Anders & Mette"), which reads as a stutter under a "Næste: Personlig
+     * træning" heading. Name the other person instead — you already know you are
+     * the one attending.
+     */
+    private static function titleFor(Course $course, User $user): string
+    {
+        if (! $course->isPersonlig()) return $course->title;
+
+        $other = $course->trainers->contains('id', $user->id)
+            ? $course->member?->name
+            : $course->primaryTrainer()?->name;
+
+        return $other ? 'Med '.$other : $course->title;
     }
 
     /** "I dag kl. 17:00" / "I morgen kl. 17:00" / "Onsdag kl. 17:00" / "12.08. kl. 17:00". */
