@@ -69,7 +69,9 @@
   /* Children carry their own icons, indented a step past the parent's. 22px puts
      the icon there and lands the label at 56px — exactly where it sat when the
      children were icon-less, so the text column does not move. */
-  .nav-group-items a { padding-left: 22px; font-weight: 500; }
+  .nav-group-items a { padding-left: 22px; font-weight: 400; }
+  /* Still marked, but a step below the parent's 600 so the group stays lighter. */
+  .nav-group-items a.active { font-weight: 500; }
   .nav-group-items .ico { font-size: 13px; }
 
   .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); padding: 16px 12px 6px; }
