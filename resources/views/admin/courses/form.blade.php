@@ -104,22 +104,24 @@
   <form method="POST" action="{{ $course->exists ? route('admin.courses.update', $course) : route('admin.courses.store') }}" enctype="multipart/form-data" class="course-form">
     @csrf
 
+    <input type="hidden" name="type" value="{{ $formType }}">
+
+    {{-- Skipped whole for a personlig træning: it is named after its trainer and
+         member, carries no description, and is always active — agreed with one
+         named person and holding a timeslot, so there is nothing to hold back.
+         Everything in this card would be blank. --}}
+    @unless ($isPersonligForm)
     <section class="card cf-card">
       <h2 class="cf-card-title">Grundlæggende</h2>
-      <input type="hidden" name="type" value="{{ $formType }}">
 
-      {{-- A personlig træning is named after its trainer and member, and carries
-           no description — neither is asked for. --}}
-      @unless ($isPersonligForm)
-        <div class="form-row">
-          <label for="title">Titel</label>
-          <input id="title" type="text" name="title" value="{{ old('title', $course->title) }}" required>
-        </div>
-        <div class="form-row">
-          <label for="description">Beskrivelse</label>
-          <textarea id="description" name="description" rows="5" required>{{ old('description', $course->description) }}</textarea>
-        </div>
-      @endunless
+      <div class="form-row">
+        <label for="title">Titel</label>
+        <input id="title" type="text" name="title" value="{{ old('title', $course->title) }}" required>
+      </div>
+      <div class="form-row">
+        <label for="description">Beskrivelse</label>
+        <textarea id="description" name="description" rows="5" required>{{ old('description', $course->description) }}</textarea>
+      </div>
 
       <div class="cf-active">
         @if ($lockActive)
@@ -147,6 +149,7 @@
         @error('is_active')<div class="cf-error">{{ $message }}</div>@enderror
       </div>
     </section>
+    @endunless
 
     <section class="card cf-card" id="traenerCard">
       <div class="cf-card-head">
@@ -454,17 +457,24 @@
 <div class="pick-backdrop" id="trainerPickBackdrop" role="dialog" aria-modal="true">
   <div class="pick-modal">
     <div class="pick-head">
-      <div class="title">Vælg trænere</div>
+      <div class="title">{{ $isPersonligForm ? 'Vælg træner' : 'Vælg trænere' }}</div>
       <button type="button" class="pick-close" id="trainerPickClose" aria-label="Luk"><i class="fa-solid fa-xmark"></i></button>
     </div>
     <div class="pick-search">
       <input type="text" id="trainerPickSearch" placeholder="Søg…" autocomplete="off">
     </div>
     <div class="pick-body" id="trainerPickBody"></div>
+    {{-- One trainer means nothing to stage: the click is the choice, so there is
+         no count and no Tilføj — same footer as the member picker. --}}
     <div class="pick-foot">
-      <span class="count" id="trainerPickCount">0 valgt</span>
-      <button type="button" class="btn btn-ghost btn-sm" id="trainerPickCancel">Annullér</button>
-      <button type="button" class="btn btn-primary btn-sm" id="trainerPickAdd">Tilføj</button>
+      @if ($isPersonligForm)
+        <span class="count">Klik for at vælge</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="trainerPickCancel">Annullér</button>
+      @else
+        <span class="count" id="trainerPickCount">0 valgt</span>
+        <button type="button" class="btn btn-ghost btn-sm" id="trainerPickCancel">Annullér</button>
+        <button type="button" class="btn btn-primary btn-sm" id="trainerPickAdd">Tilføj</button>
+      @endif
     </div>
   </div>
 </div>
@@ -606,6 +616,9 @@ window.__courseType = { isPersonlig: {{ $isPersonligForm ? 'true' : 'false' }} }
   var body = document.getElementById('trainerPickBody');
   var search = document.getElementById('trainerPickSearch');
   var countEl = document.getElementById('trainerPickCount');
+  // A personlig træning takes exactly one trainer, so the picker drops the
+  // checkboxes and the Tilføj step and behaves like the member picker.
+  var SINGLE = window.__courseType.isPersonlig;
 
   var selected = {};
   initial.forEach(function (id) { if (byId[id]) selected[id] = byId[id]; });
@@ -669,28 +682,31 @@ window.__courseType = { isPersonlig: {{ $isPersonligForm ? 'true' : 'false' }} }
     body.innerHTML = matches.map(function (t) {
       var isSel = !!pending[t.id];
       var left = t.picture_url
-        ? '<div class="av sm"><img src="' + escapeHtml(t.picture_url) + '"></div>'
+        ? '<div class="av sm"><img src="' + escapeHtml(t.picture_url) + '" alt=""></div>'
         : '<div class="av sm">' + escapeHtml(t.initials || '?') + '</div>';
       return '<label class="pick-row ' + (isSel ? 'selected' : '') + '" data-id="' + t.id + '">' +
-        '<input type="checkbox" ' + (isSel ? 'checked' : '') + '>' +
+        (SINGLE ? '' : '<input type="checkbox" ' + (isSel ? 'checked' : '') + '>') +
         left +
         '<div class="meta"><div class="nm">' + escapeHtml(t.name) + '</div><div class="sub">' + escapeHtml(t.role) + (t.email ? ' · ' + escapeHtml(t.email) : '') + '</div></div>' +
         '</label>';
     }).join('');
     body.querySelectorAll('.pick-row').forEach(function (row) {
-      var cb = row.querySelector('input[type=checkbox]');
       var t = byId[parseInt(row.dataset.id, 10)];
+
+      // Exactly one trainer: nothing to stage, so a click picks and closes and
+      // replaces whoever was there — the member picker's behaviour.
+      if (SINGLE) {
+        row.addEventListener('click', function () {
+          selected = {};
+          selected[t.id] = t;
+          renderChips();
+          closePicker();
+        });
+        return;
+      }
+
+      var cb = row.querySelector('input[type=checkbox]');
       cb.addEventListener('change', function () {
-        // A personlig træning has exactly one trainer, so picking one replaces
-        // the previous choice rather than adding to it.
-        if (cb.checked && window.__courseType.isPersonlig) {
-          pending = {};
-          body.querySelectorAll('.pick-row').forEach(function (r) {
-            r.classList.remove('selected');
-            var other = r.querySelector('input[type=checkbox]');
-            if (other !== cb) other.checked = false;
-          });
-        }
         if (cb.checked) { pending[t.id] = t; row.classList.add('selected'); }
         else { delete pending[t.id]; row.classList.remove('selected'); }
         updateCount();
@@ -698,7 +714,7 @@ window.__courseType = { isPersonlig: {{ $isPersonligForm ? 'true' : 'false' }} }
     });
   }
 
-  function updateCount() { countEl.textContent = Object.keys(pending).length + ' valgt'; }
+  function updateCount() { if (countEl) countEl.textContent = Object.keys(pending).length + ' valgt'; }
 
   openBtn.addEventListener('click', openPicker);
   closeBtn.addEventListener('click', closePicker);
@@ -706,11 +722,13 @@ window.__courseType = { isPersonlig: {{ $isPersonligForm ? 'true' : 'false' }} }
   backdrop.addEventListener('click', function (e) { if (e.target === backdrop) closePicker(); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && backdrop.classList.contains('open')) closePicker(); });
   search.addEventListener('input', renderList);
-  addBtn.addEventListener('click', function () {
-    selected = Object.assign({}, pending);
-    renderChips();
-    closePicker();
-  });
+  if (addBtn) {
+    addBtn.addEventListener('click', function () {
+      selected = Object.assign({}, pending);
+      renderChips();
+      closePicker();
+    });
+  }
 
   renderChips();
 })();

@@ -125,7 +125,7 @@ class CourseAdminController extends Controller
         $members = $course->memberCount();
         if ($course->is_active && ! $data['is_active'] && $members > 0) {
             return back()
-                ->withErrors(['is_active' => 'Holdet har ' . $members . ' ' . ($members === 1 ? 'medlem' : 'medlemmer') . ' og kan ikke gøres inaktivt. Afmeld medlemmerne først.'])
+                ->withErrors(['is_active' => 'Holdet har ' . $members . ' ' . ($members === 1 ? 'medlem' : 'medlemmer') . ' og kan ikke sættes på passiv. Afmeld medlemmerne først.'])
                 ->withInput();
         }
         if ($request->hasFile('image')) {
@@ -282,6 +282,11 @@ class CourseAdminController extends Controller
             $data['max_participants'] = 1;
             $data['description'] = '';
             $data['title'] = Course::PERSONLIG_TITLE;
+            // A 1:1 has no catalogue entry to hold back — it is agreed with one
+            // named person and it books a slot. "Passive but scheduled" is not a
+            // state it can meaningfully be in, so the form omits the switch and
+            // it is always active. Delete it instead.
+            $data['is_active'] = true;
             [$data['member_id'], $data['member_invite_email'], $data['member_invite_phone']] = $this->resolveMember($request);
         } else {
             // Retyping away from personlig must not leave a stray member behind.
