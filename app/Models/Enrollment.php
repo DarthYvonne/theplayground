@@ -35,6 +35,20 @@ class Enrollment extends Model
         return $this->hasMany(Payment::class);
     }
 
+    /**
+     * Not yet lapsed. "Afmeld" deliberately leaves status = active so the member
+     * keeps what they paid for until current_period_end — but nothing ever
+     * sweeps those rows afterwards (ChargeDueMemberships skips them by design),
+     * so without this the row stays active forever and access never expires.
+     * A cancellation with no period end has nothing left to honour.
+     */
+    public function scopeWithinPeriod($q)
+    {
+        return $q->where(fn ($q) => $q
+            ->where('cancel_at_period_end', false)
+            ->orWhere('current_period_end', '>', now()));
+    }
+
     /** A MobilePay recurring membership the scheduler should charge each period. */
     public function isRecurringMembership(): bool
     {

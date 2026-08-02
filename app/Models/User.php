@@ -94,7 +94,7 @@ class User extends Authenticatable
 
     public function enrolledIn(Course $course): bool
     {
-        return $this->enrollments()->where('course_id', $course->id)->where('status', 'active')->exists();
+        return $this->enrollments()->where('course_id', $course->id)->where('status', 'active')->withinPeriod()->exists();
     }
 
     /**
@@ -109,6 +109,7 @@ class User extends Authenticatable
     {
         return $this->enrollments()
             ->whereIn('status', ['active', 'past_due'])
+            ->withinPeriod()
             ->whereHas('course', fn ($q) => $q->paidMembership())
             ->exists();
     }
