@@ -18,7 +18,7 @@
 
 <div class="view-header">
   <h1><i class="fa-solid fa-user-ninja" style="color:var(--text);margin-right:8px;"></i>Personlig træning</h1>
-  @include('partials.header-actions')
+  @include('partials.header-actions', ['createType' => \App\Models\Course::TYPE_PERSONLIG])
 </div>
 
 <p class="pt-intro">Træning på egne præmisser, tæt på en træner. Klik på et forløb for at se tider og pris.</p>

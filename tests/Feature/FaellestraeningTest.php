@@ -76,6 +76,56 @@ class FaellestraeningTest extends TestCase
             ->assertSee(route('home.calendar'));
     }
 
+    /* ------------------------------------------------------ create button -- */
+
+    public function test_owners_get_a_create_button_on_each_training_page(): void
+    {
+        $owner = User::factory()->create(['role' => 'owner']);
+
+        $pages = [
+            'catalog' => Course::TYPE_HOLD,
+            'faellestraening.index' => Course::TYPE_FAELLES,
+            'personlig.index' => Course::TYPE_PERSONLIG,
+        ];
+
+        foreach ($pages as $route => $type) {
+            $this->actingAs($owner)->get(route($route))
+                ->assertOk()
+                ->assertSee('Opret ny')
+                ->assertSee(route('admin.courses.create', ['type' => $type]));
+        }
+    }
+
+    public function test_members_and_trainers_never_see_the_create_button(): void
+    {
+        foreach (['user', 'trainer', 'assistant'] as $role) {
+            $actor = User::factory()->create(['role' => $role]);
+            foreach (['catalog', 'faellestraening.index', 'personlig.index'] as $route) {
+                $this->actingAs($actor)->get(route($route))
+                    ->assertOk()
+                    ->assertDontSee('Opret ny');
+            }
+        }
+    }
+
+    public function test_the_create_form_opens_on_the_type_it_was_started_from(): void
+    {
+        $owner = User::factory()->create(['role' => 'owner']);
+
+        $this->actingAs($owner)->get(route('admin.courses.create', ['type' => Course::TYPE_FAELLES]))
+            ->assertOk()
+            ->assertSee('Ny fællestræning');
+
+        $this->actingAs($owner)->get(route('admin.courses.create', ['type' => Course::TYPE_PERSONLIG]))
+            ->assertOk()
+            ->assertSee('Ny personlig træning');
+
+        // A junk type falls back rather than blowing up.
+        $this->actingAs($owner)->get(route('admin.courses.create', ['type' => 'nonsense']))
+            ->assertOk()
+            ->assertSee('Nyt hold');
+    }
+
     /* --------------------------------------------------------- enrollment -- */
 
     public function test_nobody_can_enroll_in_a_faellestraening(): void

@@ -1,5 +1,12 @@
 @auth
 <div class="feed-actions">
+  {{-- Pages that list a training type pass $createType; sits inside .feed-actions
+       so it stays left of the icons when the mobile script moves the group. --}}
+  @if (isset($createType) && auth()->user()->isOwner())
+    <a href="{{ route('admin.courses.create', ['type' => $createType]) }}" class="btn btn-primary hdr-create">
+      <i class="fa-solid fa-plus"></i> <span class="lbl">Opret ny</span>
+    </a>
+  @endif
   <a href="{{ route('beskeder.index') }}" class="feed-iconbtn" title="Beskeder" aria-label="Beskeder">
     <i class="fa-regular fa-envelope"></i>
     <span class="badge" id="hdrMessagesBadge">0</span>
@@ -20,6 +27,18 @@
     </div>
   </div>
 </div>
+
+@push('styles')
+<style>
+  /* Matches the 40px icon buttons it sits beside. */
+  .feed-actions .hdr-create { height: 40px; white-space: nowrap; flex-shrink: 0; }
+  @media (max-width: 767px) {
+    .feed-actions .hdr-create { height: 38px; }
+    /* The label is the first thing to go when the topbar gets tight. */
+    .feed-actions .hdr-create .lbl { display: none; }
+  }
+</style>
+@endpush
 
 @push('scripts')
 <script>

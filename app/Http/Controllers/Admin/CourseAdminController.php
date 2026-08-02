@@ -46,9 +46,17 @@ class CourseAdminController extends Controller
         ));
     }
 
-    public function create()
+    public function create(Request $request)
     {
-        return view('admin.courses.form', ['course' => new Course(['is_active' => false, 'max_participants' => 10, 'chat_enabled' => true]), 'trainers' => $this->trainers()]);
+        // "+ Opret ny" carries the type of the page it was clicked from, so the
+        // form opens on the right kind rather than always defaulting to Hold.
+        $type = $request->query('type');
+        $type = isset(Course::TYPES[$type]) ? $type : Course::TYPE_HOLD;
+
+        return view('admin.courses.form', [
+            'course' => new Course(['is_active' => false, 'max_participants' => 10, 'chat_enabled' => true, 'type' => $type]),
+            'trainers' => $this->trainers(),
+        ]);
     }
 
     public function store(Request $request): RedirectResponse

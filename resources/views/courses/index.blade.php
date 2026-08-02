@@ -50,7 +50,7 @@
 @auth
 <div class="view-header">
   <h1><i class="fa-solid fa-dumbbell" style="color:var(--text);margin-right:8px;"></i>Hold</h1>
-  @include('partials.header-actions')
+  @include('partials.header-actions', ['createType' => \App\Models\Course::TYPE_HOLD])
 </div>
 
 @if (!$courses->isEmpty())

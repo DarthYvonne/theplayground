@@ -15,7 +15,7 @@
 
 <div class="view-header">
   <h1><i class="fa-solid fa-people-group" style="color:var(--text);margin-right:8px;"></i>Fællestræning</h1>
-  @include('partials.header-actions')
+  @include('partials.header-actions', ['createType' => \App\Models\Course::TYPE_FAELLES])
 </div>
 
 @php $covered = auth()->check() && auth()->user()->hasPaidMembership(); @endphp
