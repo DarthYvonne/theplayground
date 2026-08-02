@@ -265,10 +265,9 @@
       @if (auth()->user()->isTrainer() || auth()->user()->isOwner())
         <div class="nav-divider"></div>
         @if (auth()->user()->isTrainer())
-          <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> Hold du træner</a>
+          <a href="{{ route('trainer.index') }}" class="{{ request()->is('trainer*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-chalkboard-user"></i></span> Trænerside</a>
         @endif
         @if (auth()->user()->isOwner())
-          <a href="{{ route('admin.courses.index') }}" class="{{ request()->is('admin/courses*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-clipboard-list"></i></span> Alle hold</a>
           <a href="{{ route('admin.settings.revenue') }}" class="{{ request()->is('admin/settings*') || request()->is('admin/users*') ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-gear"></i></span> Indstillinger</a>
         @endif
       @endif

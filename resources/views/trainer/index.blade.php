@@ -10,7 +10,7 @@
 @endpush
 
 <div class="view-header">
-  <h1>Hold du træner</h1>
+  <h1>Trænerside</h1>
   @include('partials.header-actions')
 </div>
 
