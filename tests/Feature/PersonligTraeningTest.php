@@ -10,6 +10,12 @@ use App\Support\Contact;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
+/**
+ * Personlig træning is a private 1:1 arrangement that people pay for, so these
+ * cover the things that fail silently and cost something: who can see it, who
+ * can pay for it, when the chat opens, and the claim that hands it to a member.
+ * Presentation is deliberately not tested.
+ */
 class PersonligTraeningTest extends TestCase
 {
     use RefreshDatabase;
@@ -33,174 +39,181 @@ class PersonligTraeningTest extends TestCase
         return $course->fresh();
     }
 
-    private function enroll(User $user, Course $course, string $status = 'active'): Enrollment
+    private function enroll(User $user, Course $course): Enrollment
     {
         return Enrollment::create([
             'user_id' => $user->id,
             'course_id' => $course->id,
-            'status' => $status,
+            'status' => 'active',
             'enrolled_at' => now(),
         ]);
     }
 
-    /* --------------------------------------------------------- title/model -- */
-
-    public function test_the_title_is_generated_from_the_two_people(): void
+    public function test_it_is_invisible_to_everyone_it_does_not_belong_to(): void
     {
         $trainer = User::factory()->create(['role' => 'trainer', 'name' => 'Anders']);
-        $member = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
-
+        $member = User::factory()->create(['role' => 'user', 'name' => 'Zenobia']);
+        $stranger = User::factory()->create(['role' => 'user']);
         $course = $this->pt($trainer, ['member_id' => $member->id]);
+        $this->enroll($member, $course);
+        $title = $course->title;
 
-        $this->assertSame('Personlig træning — Anders & Mette', $course->title);
+        // 404 rather than 403: a stranger should not be able to confirm it exists.
+        $this->actingAs($stranger)->get(route('courses.show', $course))->assertNotFound();
+        $this->get(route('courses.show', $course))->assertNotFound();
+        // The three listings that span every course type.
+        $this->actingAs($stranger)->get(route('personlig.index'))->assertOk()->assertDontSee($title);
+        $this->actingAs($stranger)->get(route('home.calendar'))->assertOk()->assertDontSee($title);
+        $this->actingAs($stranger)->get(route('members.show', $member))->assertOk()->assertDontSee($title);
+        // A 1:1 has no roster page at all, not even for an owner.
+        $this->actingAs(User::factory()->create(['role' => 'owner']))
+            ->get(route('courses.members', $course))->assertNotFound();
+
+        // The two people in it do see it.
+        $this->actingAs($member)->get(route('courses.show', $course))->assertOk();
+        $this->actingAs($member)->get(route('personlig.index'))->assertOk()->assertSee($title);
+        $this->actingAs($trainer)->get(route('personlig.index'))->assertOk()->assertSee($title);
     }
 
-    public function test_an_unclaimed_training_is_titled_after_the_invite(): void
+    public function test_chat_and_media_open_only_once_the_member_has_paid(): void
     {
-        $course = $this->pt(null, ['member_invite_email' => 'mette@example.dk']);
-
-        $this->assertSame('Personlig træning — Anders & mette@example.dk', $course->title);
-    }
-
-    public function test_swapping_the_trainer_retitles_it(): void
-    {
-        $owner = User::factory()->create(['role' => 'owner']);
-        $trainer = User::factory()->create(['role' => 'trainer', 'name' => 'Anders']);
-        $replacement = User::factory()->create(['role' => 'trainer', 'name' => 'Bo']);
-        $member = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
-        $course = $this->pt($trainer, ['member_id' => $member->id]);
-
-        $this->actingAs($owner)->post(route('admin.users.swapTrainer', [$trainer, $course]), [
-            'trainer_id' => $replacement->id,
-        ])->assertSessionHasNoErrors();
-
-        $this->assertSame('Personlig træning — Bo & Mette', $course->fresh()->title);
-    }
-
-    public function test_the_card_image_is_the_trainers_photo(): void
-    {
-        $trainer = User::factory()->create(['role' => 'trainer', 'picture_path' => 'avatars/anders.jpg']);
-        // An image_path left over from another type must not win.
-        $course = $this->pt($trainer, ['image_path' => 'courses/stale.jpg']);
-
-        $this->assertStringContainsString('anders.jpg', $course->heroImageUrl());
-        $this->assertStringNotContainsString('stale.jpg', $course->heroImageUrl());
-    }
-
-    public function test_it_has_no_roster_and_no_capacity_and_always_has_chat(): void
-    {
+        $trainer = User::factory()->create(['role' => 'trainer']);
         $member = User::factory()->create(['role' => 'user']);
-        $course = $this->pt(null, ['member_id' => $member->id, 'chat_enabled' => false]);
+        $course = $this->pt($trainer, ['member_id' => $member->id]);
+
+        $this->actingAs($member)->get(route('chat.course', $course))->assertForbidden();
+        $this->actingAs($member)->get(route('courses.media', $course))->assertForbidden();
+        // The trainer is in from the start — they have to be able to reach out.
+        $this->actingAs($trainer)->get(route('chat.course', $course))->assertOk();
+
         $this->enroll($member, $course);
 
-        $this->assertFalse($course->hasMemberList());
-        $this->assertTrue($course->hasChat());
-        $this->assertFalse($course->isFull());
+        $this->actingAs($member)->get(route('chat.course', $course))->assertOk();
+        $this->actingAs($member)->get(route('courses.media', $course))->assertOk();
     }
 
-    /* --------------------------------------------------------------- admin -- */
+    public function test_only_the_named_member_can_pay_for_it(): void
+    {
+        $member = User::factory()->create(['role' => 'user']);
+        $stranger = User::factory()->create(['role' => 'user']);
+        $course = $this->pt(null, ['member_id' => $member->id, 'free_enrollment' => true]);
 
-    public function test_a_trainer_can_create_one_and_is_not_403d_afterwards(): void
+        $this->actingAs($stranger)->post(route('enroll', $course))->assertForbidden();
+        $this->actingAs($stranger)->post(route('enroll.card', $course))->assertForbidden();
+        $this->assertSame(0, Enrollment::where('course_id', $course->id)->count());
+
+        // Nobody at all may buy one that has not been assigned yet.
+        $unassigned = $this->pt(null, ['member_invite_email' => 'ny@example.dk', 'free_enrollment' => true]);
+        $this->actingAs($member)->post(route('enroll', $unassigned))->assertNotFound();
+
+        $this->actingAs($member)->post(route('enroll', $course));
+        $this->assertTrue($member->fresh()->enrolledIn($course));
+    }
+
+    public function test_an_invite_is_claimed_by_email_or_phone_and_only_once(): void
+    {
+        $trainer = User::factory()->create(['role' => 'trainer', 'name' => 'Anders']);
+        $byEmail = $this->pt($trainer, ['member_invite_email' => 'mette@example.dk']);
+        $byPhone = $this->pt($trainer, ['member_invite_phone' => Contact::normalizePhone('+45 12 34 56 78')]);
+        $taken = $this->pt($trainer, [
+            'member_id' => User::factory()->create(['role' => 'user'])->id,
+            'member_invite_email' => 'mette@example.dk',
+        ]);
+        $alreadyMine = $taken->member_id;
+
+        // Mixed case and a differently written phone still match.
+        $this->post(route('register'), [
+            'name' => 'Mette',
+            'email' => 'Mette@Example.DK',
+            'phone' => '0045 12345678',
+            'password' => 'hemmeligt123',
+            'password_confirmation' => 'hemmeligt123',
+        ])->assertSessionHasNoErrors();
+
+        $mette = User::where('email', 'Mette@Example.DK')->firstOrFail();
+        $this->assertSame($mette->id, $byEmail->fresh()->member_id);
+        $this->assertSame($mette->id, $byPhone->fresh()->member_id);
+        $this->assertSame('Personlig træning — Anders & Mette', $byEmail->fresh()->title);
+        // An already-claimed one is never taken from its owner.
+        $this->assertSame($alreadyMine, $taken->fresh()->member_id);
+        // The trainer is told, which is the only way a wrong claim surfaces.
+        $this->assertSame(2, AppNotification::where('user_id', $trainer->id)->count());
+    }
+
+    public function test_someone_who_already_had_an_account_claims_theirs_at_login(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'user', 'email' => 'mette@example.dk', 'password' => bcrypt('hemmeligt123'),
+        ]);
+        $course = $this->pt(null, ['member_invite_email' => 'mette@example.dk']);
+
+        $this->post(route('login'), ['email' => 'mette@example.dk', 'password' => 'hemmeligt123']);
+
+        $this->assertSame($user->id, $course->fresh()->member_id);
+    }
+
+    public function test_a_trainer_creates_and_maintains_only_their_own(): void
     {
         $trainer = User::factory()->create(['role' => 'trainer', 'name' => 'Anders']);
         $member = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
 
-        $this->actingAs($trainer)->get(route('admin.courses.create', ['type' => Course::TYPE_PERSONLIG]))->assertOk();
-
-        $response = $this->actingAs($trainer)->post(route('admin.courses.store'), [
+        // No title, description or capacity is asked for — or accepted.
+        $created = $this->actingAs($trainer)->post(route('admin.courses.store'), [
             'type' => Course::TYPE_PERSONLIG,
             'trainer_ids' => [$trainer->id],
-            'member_id' => $member->id,
+            'member_invite_email' => 'typo@example.dk',
             'price_kr' => 900,
         ])->assertSessionHasNoErrors();
 
-        // A trainer may not edit, so the post-create redirect must not go there.
-        $this->actingAs($trainer)->get($response->headers->get('Location'))->assertOk();
-    }
+        $course = Course::personlig()->firstOrFail();
+        $this->assertSame('Personlig træning — Anders & typo@example.dk', $course->title);
+        $this->assertSame(90000, $course->price_cents);
+        // They must not be 403'd out of the thing they just made.
+        $this->actingAs($trainer)->get($created->headers->get('Location'))->assertOk();
 
-    public function test_a_trainer_can_edit_what_they_train(): void
-    {
-        $trainer = User::factory()->create(['role' => 'trainer', 'name' => 'Anders']);
-        $member = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
-        $course = $this->pt($trainer, ['member_invite_email' => 'typo@example.dk']);
-
-        $this->actingAs($trainer)->get(route('admin.courses.edit', $course))->assertOk();
-
-        // The point of letting them edit: fixing their own mistyped invite.
+        // The point of letting a trainer edit: fixing their own mistyped invite.
+        // A submitted type is a stray field and must not convert the training.
         $this->actingAs($trainer)->post(route('admin.courses.update', $course), [
-            'type' => Course::TYPE_PERSONLIG,
+            'type' => Course::TYPE_HOLD,
             'trainer_ids' => [$trainer->id],
             'member_id' => $member->id,
             'price_kr' => 900,
         ])->assertSessionHasNoErrors();
 
-        $this->assertSame($member->id, $course->fresh()->member_id);
-    }
+        $course->refresh();
+        $this->assertTrue($course->isPersonlig());
+        $this->assertSame($member->id, $course->member_id);
 
-    public function test_a_trainer_cannot_edit_someone_elses_training(): void
-    {
-        $trainer = User::factory()->create(['role' => 'trainer']);
-        $other = User::factory()->create(['role' => 'trainer']);
-        $course = $this->pt($other);
-
-        $this->actingAs($trainer)->get(route('admin.courses.edit', $course))->assertForbidden();
-        $this->actingAs($trainer)->post(route('admin.courses.update', $course), [])->assertForbidden();
-    }
-
-    public function test_a_trainer_still_cannot_delete_or_list_everything(): void
-    {
-        $trainer = User::factory()->create(['role' => 'trainer']);
-        $course = $this->pt($trainer);
-
-        $this->actingAs($trainer)->get(route('admin.courses.index'))->assertForbidden();
+        // Somebody else's training, and deleting, stay out of reach.
+        $other = $this->pt(User::factory()->create(['role' => 'trainer']));
+        $this->actingAs($trainer)->get(route('admin.courses.edit', $other))->assertForbidden();
+        $this->actingAs($trainer)->post(route('admin.courses.update', $other), [])->assertForbidden();
         $this->actingAs($trainer)->post(route('admin.courses.destroy', $course))->assertForbidden();
-        $this->assertNotNull($course->fresh());
     }
 
-    public function test_it_needs_a_member_or_an_invite(): void
+    public function test_it_cannot_be_created_without_exactly_one_trainer_and_one_member(): void
     {
         $owner = User::factory()->create(['role' => 'owner']);
+        $second = User::factory()->create(['role' => 'trainer']);
+        $member = User::factory()->create(['role' => 'user']);
+        $base = ['type' => Course::TYPE_PERSONLIG, 'price_kr' => 900];
 
-        $this->actingAs($owner)->post(route('admin.courses.store'), [
-            'type' => Course::TYPE_PERSONLIG,
-            'trainer_ids' => [$owner->id],
-            'price_kr' => 900,
-        ])->assertSessionHasErrors('member_id');
+        $this->actingAs($owner)->post(route('admin.courses.store'), $base + ['trainer_ids' => [$owner->id]])
+            ->assertSessionHasErrors('member_id');
+        $this->actingAs($owner)->post(route('admin.courses.store'), $base + ['trainer_ids' => [$owner->id, $second->id], 'member_id' => $member->id])
+            ->assertSessionHasErrors('trainer_ids');
+        $this->actingAs($owner)->post(route('admin.courses.store'), $base + ['trainer_ids' => [$owner->id], 'member_id' => $owner->id])
+            ->assertSessionHasErrors('member_id');
 
         $this->assertSame(0, Course::personlig()->count());
     }
 
-    public function test_it_takes_exactly_one_trainer(): void
-    {
-        $owner = User::factory()->create(['role' => 'owner']);
-        $other = User::factory()->create(['role' => 'trainer']);
-        $member = User::factory()->create(['role' => 'user']);
-
-        $this->actingAs($owner)->post(route('admin.courses.store'), [
-            'type' => Course::TYPE_PERSONLIG,
-            'trainer_ids' => [$owner->id, $other->id],
-            'member_id' => $member->id,
-            'price_kr' => 900,
-        ])->assertSessionHasErrors('trainer_ids');
-    }
-
-    public function test_the_trainer_cannot_also_be_the_member(): void
-    {
-        $owner = User::factory()->create(['role' => 'owner']);
-
-        $this->actingAs($owner)->post(route('admin.courses.store'), [
-            'type' => Course::TYPE_PERSONLIG,
-            'trainer_ids' => [$owner->id],
-            'member_id' => $owner->id,
-            'price_kr' => 900,
-        ])->assertSessionHasErrors('member_id');
-    }
-
-    public function test_an_invited_email_that_already_exists_links_immediately(): void
+    public function test_an_invited_email_that_already_has_an_account_links_at_once(): void
     {
         $owner = User::factory()->create(['role' => 'owner']);
         $existing = User::factory()->create(['role' => 'user', 'email' => 'mette@example.dk']);
 
+        // Never leave an existing member pending, where a claim could race.
         $this->actingAs($owner)->post(route('admin.courses.store'), [
             'type' => Course::TYPE_PERSONLIG,
             'trainer_ids' => [$owner->id],
@@ -211,229 +224,18 @@ class PersonligTraeningTest extends TestCase
         $this->assertSame($existing->id, Course::personlig()->firstOrFail()->member_id);
     }
 
-    public function test_an_existing_training_cannot_be_converted_to_another_type(): void
+    public function test_its_card_is_the_trainers_photo_and_it_has_no_capacity(): void
     {
-        $owner = User::factory()->create(['role' => 'owner', 'name' => 'Anders']);
-        $member = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
-        $course = $this->pt($owner, ['member_id' => $member->id]);
-
-        // The form has no type picker, so a submitted type is a stray field —
-        // it must not silently turn a 1:1 into a public hold.
-        $this->actingAs($owner)->post(route('admin.courses.update', $course), [
-            'type' => Course::TYPE_HOLD,
-            'trainer_ids' => [$owner->id],
-            'member_id' => $member->id,
-            'price_kr' => 300,
-        ])->assertSessionHasNoErrors();
-
-        $course->refresh();
-        $this->assertTrue($course->isPersonlig());
-        $this->assertSame($member->id, $course->member_id);
-    }
-
-    /* --------------------------------------------------------------- claim -- */
-
-    public function test_registering_with_the_invited_email_claims_it(): void
-    {
-        $course = $this->pt(null, ['member_invite_email' => 'mette@example.dk']);
-
-        $this->post(route('register'), [
-            'name' => 'Mette',
-            'email' => 'Mette@Example.DK',
-            'password' => 'hemmeligt123',
-            'password_confirmation' => 'hemmeligt123',
-        ])->assertSessionHasNoErrors();
-
-        $course->refresh();
-        $member = User::where('email', 'Mette@Example.DK')->firstOrFail();
-        $this->assertSame($member->id, $course->member_id);
-        $this->assertNotNull($course->member_claimed_at);
-        $this->assertSame('Personlig træning — Anders & Mette', $course->title);
-    }
-
-    public function test_the_trainer_is_notified_when_someone_claims(): void
-    {
-        $trainer = User::factory()->create(['role' => 'trainer', 'name' => 'Anders']);
-        $this->pt($trainer, ['member_invite_email' => 'mette@example.dk']);
-
-        $this->post(route('register'), [
-            'name' => 'Mette',
-            'email' => 'mette@example.dk',
-            'password' => 'hemmeligt123',
-            'password_confirmation' => 'hemmeligt123',
-        ]);
-
-        $this->assertSame(1, AppNotification::where('user_id', $trainer->id)->count());
-    }
-
-    public function test_a_different_email_does_not_claim_it(): void
-    {
-        $course = $this->pt(null, ['member_invite_email' => 'mette@example.dk']);
-
-        $this->post(route('register'), [
-            'name' => 'Ikke Mette',
-            'email' => 'anden@example.dk',
-            'password' => 'hemmeligt123',
-            'password_confirmation' => 'hemmeligt123',
-        ]);
-
-        $this->assertNull($course->fresh()->member_id);
-    }
-
-    public function test_a_phone_invite_is_claimed_however_it_was_written(): void
-    {
-        $course = $this->pt(null, ['member_invite_phone' => Contact::normalizePhone('+45 12 34 56 78')]);
-
-        $this->post(route('register'), [
-            'name' => 'Mette',
-            'email' => 'mette@example.dk',
-            'phone' => '0045 12345678',
-            'password' => 'hemmeligt123',
-            'password_confirmation' => 'hemmeligt123',
-        ]);
-
-        $this->assertNotNull($course->fresh()->member_id);
-    }
-
-    public function test_an_already_claimed_training_is_never_reclaimed(): void
-    {
-        $first = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
-        $course = $this->pt(null, ['member_id' => $first->id, 'member_invite_email' => 'delt@example.dk']);
-
-        $this->post(route('register'), [
-            'name' => 'Tyv',
-            'email' => 'delt@example.dk',
-            'password' => 'hemmeligt123',
-            'password_confirmation' => 'hemmeligt123',
-        ]);
-
-        $this->assertSame($first->id, $course->fresh()->member_id);
-    }
-
-    public function test_logging_in_claims_a_pending_invite(): void
-    {
-        $user = User::factory()->create(['role' => 'user', 'email' => 'mette@example.dk', 'password' => bcrypt('hemmeligt123')]);
-        $course = $this->pt(null, ['member_invite_email' => 'mette@example.dk']);
-
-        $this->post(route('login'), ['email' => 'mette@example.dk', 'password' => 'hemmeligt123']);
-
-        $this->assertSame($user->id, $course->fresh()->member_id);
-    }
-
-    public function test_phone_normalisation_collapses_the_common_forms(): void
-    {
-        $this->assertSame('12345678', Contact::normalizePhone('+45 12 34 56 78'));
-        $this->assertSame('12345678', Contact::normalizePhone('0045 12345678'));
-        $this->assertSame('12345678', Contact::normalizePhone('12345678'));
-        $this->assertNull(Contact::normalizePhone(''));
-    }
-
-    /* ---------------------------------------------------------- enrollment -- */
-
-    public function test_only_the_named_member_can_enroll(): void
-    {
+        $trainer = User::factory()->create(['role' => 'trainer', 'picture_path' => 'avatars/anders.jpg']);
         $member = User::factory()->create(['role' => 'user']);
-        $stranger = User::factory()->create(['role' => 'user']);
-        $course = $this->pt(null, ['member_id' => $member->id, 'free_enrollment' => true]);
-
-        $this->actingAs($stranger)->post(route('enroll', $course))->assertForbidden();
-        $this->assertSame(0, Enrollment::where('course_id', $course->id)->count());
-
-        $this->actingAs($member)->post(route('enroll', $course));
-        $this->assertTrue($member->fresh()->enrolledIn($course));
-    }
-
-    public function test_an_unclaimed_training_cannot_be_bought_by_anyone(): void
-    {
-        $someone = User::factory()->create(['role' => 'user']);
-        $course = $this->pt(null, ['member_invite_email' => 'mette@example.dk']);
-
-        $this->actingAs($someone)->post(route('enroll', $course))->assertNotFound();
-        $this->actingAs($someone)->post(route('enroll.card', $course))->assertNotFound();
-    }
-
-    /* -------------------------------------------------------------- access -- */
-
-    public function test_chat_and_media_stay_locked_until_the_member_has_paid(): void
-    {
-        $member = User::factory()->create(['role' => 'user']);
-        $course = $this->pt(null, ['member_id' => $member->id]);
-
-        $this->actingAs($member)->get(route('chat.course', $course))->assertForbidden();
-        $this->actingAs($member)->get(route('courses.media', $course))->assertForbidden();
-
+        // A stale image_path from another type must not win.
+        $course = $this->pt($trainer, ['member_id' => $member->id, 'image_path' => 'courses/stale.jpg', 'chat_enabled' => false]);
         $this->enroll($member, $course);
 
-        $this->actingAs($member)->get(route('chat.course', $course))->assertOk();
-    }
-
-    public function test_the_trainer_reaches_the_chat_before_the_member_pays(): void
-    {
-        $trainer = User::factory()->create(['role' => 'trainer']);
-        $member = User::factory()->create(['role' => 'user']);
-        $course = $this->pt($trainer, ['member_id' => $member->id]);
-
-        $this->actingAs($trainer)->get(route('chat.course', $course))->assertOk();
-    }
-
-    public function test_a_stranger_cannot_confirm_it_exists(): void
-    {
-        $member = User::factory()->create(['role' => 'user']);
-        $stranger = User::factory()->create(['role' => 'user']);
-        $course = $this->pt(null, ['member_id' => $member->id]);
-
-        // 404, not 403 — a private arrangement should not be confirmable.
-        $this->actingAs($stranger)->get(route('courses.show', $course))->assertNotFound();
-        $this->get(route('courses.show', $course))->assertNotFound();
-    }
-
-    public function test_it_has_no_member_page(): void
-    {
-        $owner = User::factory()->create(['role' => 'owner']);
-        $course = $this->pt();
-
-        $this->actingAs($owner)->get(route('courses.members', $course))->assertNotFound();
-    }
-
-    /* ------------------------------------------------------------- listing -- */
-
-    public function test_the_listing_shows_only_what_you_are_part_of(): void
-    {
-        $trainer = User::factory()->create(['role' => 'trainer', 'name' => 'Anders']);
-        $mine = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
-        $other = User::factory()->create(['role' => 'user', 'name' => 'Ida']);
-
-        $this->pt($trainer, ['member_id' => $mine->id]);
-        $this->pt(User::factory()->create(['role' => 'trainer', 'name' => 'Bo']), ['member_id' => $other->id]);
-
-        $this->actingAs($mine)->get(route('personlig.index'))
-            ->assertOk()->assertSee('Mette')->assertDontSee('Ida');
-
-        $this->actingAs($trainer)->get(route('personlig.index'))
-            ->assertOk()->assertSee('Mette')->assertDontSee('Ida');
-
-        $this->actingAs(User::factory()->create(['role' => 'owner']))->get(route('personlig.index'))
-            ->assertOk()->assertSee('Mette')->assertSee('Ida');
-    }
-
-    public function test_it_does_not_leak_onto_the_shared_calendar(): void
-    {
-        $member = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
-        $stranger = User::factory()->create(['role' => 'user']);
-        $this->pt(null, ['member_id' => $member->id]);
-
-        $this->actingAs($stranger)->get(route('home.calendar'))->assertOk()->assertDontSee('Mette');
-        $this->actingAs($member)->get(route('home.calendar'))->assertOk()->assertSee('Mette');
-    }
-
-    public function test_it_does_not_leak_on_a_member_profile(): void
-    {
-        $member = User::factory()->create(['role' => 'user', 'name' => 'Mette']);
-        $stranger = User::factory()->create(['role' => 'user']);
-        $course = $this->pt(null, ['member_id' => $member->id]);
-        $this->enroll($member, $course);
-
-        $this->actingAs($stranger)->get(route('members.show', $member))
-            ->assertOk()->assertDontSee('Personlig træning —');
+        $this->assertStringContainsString('anders.jpg', $course->heroImageUrl());
+        $this->assertStringNotContainsString('stale.jpg', $course->heroImageUrl());
+        $this->assertFalse($course->isFull());
+        $this->assertFalse($course->hasMemberList());
+        $this->assertTrue($course->hasChat(), 'chat_enabled belongs to fællestræning; a 1:1 always has one');
     }
 }

@@ -137,7 +137,7 @@ class CourseFormPageTest extends TestCase
 
         $this->actingAs($owner)->get(route('admin.courses.edit', $course))
             ->assertOk()
-            ->assertSee('kan ikke gøres inaktivt')
+            ->assertSee('kan ikke sættes på passiv')
             ->assertSee('disabled', false);
 
         // And the guard holds even if the disabled attribute is bypassed.

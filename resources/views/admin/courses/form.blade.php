@@ -60,6 +60,25 @@
   $isPersonligForm = $formType === \App\Models\Course::TYPE_PERSONLIG;
   $isFaellesForm = $formType === \App\Models\Course::TYPE_FAELLES;
 
+  // Definite form of the noun, for sentences that talk about this training.
+  // Only a TYPE_HOLD is a "hold" — the other two must not be called that.
+  $theNoun = match ($formType) {
+    \App\Models\Course::TYPE_FAELLES => 'fællestræningen',
+    \App\Models\Course::TYPE_PERSONLIG => 'den personlige træning',
+    default => 'holdet',
+  };
+
+  // An unchecked box submits nothing, so on a failed submit `old('is_active')`
+  // is absent and would fall back to the saved value — showing "Aktiv" for a
+  // switch the user had just turned off. Trust old input whenever there is any.
+  $isActive = (bool) (session()->hasOldInput() ? old('is_active') : $course->is_active);
+  $activeHintOn = match ($formType) {
+    \App\Models\Course::TYPE_FAELLES => 'Fællestræningen er synlig og står i kalenderen.',
+    \App\Models\Course::TYPE_PERSONLIG => 'Træningen er synlig for medlemmet og træneren.',
+    default => 'Holdet udbydes og kan tilmeldes.',
+  };
+  $activeHintOff = 'Kun synlig for ejere — '.$theNoun.' er skjult for alle andre.';
+
   // The already-picked member of a personlig træning, in the same shape the
   // search endpoint returns so the picker JS has one code path.
   $oldMemberId = (int) old('member_id', $course->member_id ?? 0);
@@ -108,18 +127,22 @@
           <input type="hidden" name="is_active" value="1">
         @endif
         <label class="switch {{ $lockActive ? 'locked' : '' }}">
-          <input type="checkbox" name="is_active" value="1" {{ old('is_active', $course->is_active) ? 'checked' : '' }} @disabled($lockActive)>
+          <input type="checkbox" name="is_active" value="1" {{ $isActive ? 'checked' : '' }} @disabled($lockActive)
+            data-active-toggle
+            data-hint-on="{{ $activeHintOn }}"
+            data-hint-off="{{ $activeHintOff }}">
           <span class="knob"></span>
-          <span>Aktivt &mdash; holdet udbydes</span>
+          {{-- The word is the state, not a command: it reads "Aktiv" only when on. --}}
+          <span class="cf-active-state" data-state-on="Aktiv" data-state-off="Passiv">{{ $isActive ? 'Aktiv' : 'Passiv' }}</span>
         </label>
         @if ($lockActive)
           <div class="hint">
             <i class="fa-solid fa-lock"></i>
-            Holdet har {{ $memberCount }} {{ $memberCount === 1 ? 'medlem' : 'medlemmer' }} og kan ikke gøres inaktivt.
+            {{ ucfirst($theNoun) }} har {{ $memberCount }} {{ $memberCount === 1 ? 'medlem' : 'medlemmer' }} og kan ikke sættes på passiv.
             Medlemmerne betaler stadig, så de skal afmeldes først.
           </div>
         @else
-          <div class="hint">Som kladde kan ingen se holdet eller tilmelde sig &mdash; det er kun synligt for ejere.</div>
+          <div class="hint" data-active-hint>{{ $isActive ? $activeHintOn : $activeHintOff }}</div>
         @endif
         @error('is_active')<div class="cf-error">{{ $message }}</div>@enderror
       </div>
@@ -297,8 +320,9 @@
         {{-- Submits the form below, not this one: a <form> nested in a <form> is
              dropped by the parser, which sent this button to update instead. --}}
         <button class="btn btn-danger" type="submit" form="delete-course-form"
-          onclick="return confirm('Slet holdet og alle relaterede tilmeldinger?');">
-          <i class="fa-solid fa-trash"></i> Slet hold
+          onclick="return confirm('Slet {{ $theNoun }} og alle relaterede tilmeldinger?');">
+          <i class="fa-solid fa-trash"></i>
+          {{ $isPersonligForm ? 'Slet træning' : ($isFaellesForm ? 'Slet fællestræning' : 'Slet hold') }}
         </button>
       @endif
     </div>
@@ -333,10 +357,16 @@
   .cf-active { margin-top: 4px; padding-top: 14px; border-top: 1px solid #f0f2f5; }
   .cf-active .hint { margin-top: 6px; }
   .cf-active .hint .fa-lock { margin-right: 4px; }
+  /* The state word carries the meaning, so it is weighted and coloured to match
+     the knob — grey "Passiv" when off, green "Aktiv" when on. */
+  .cf-active-state { font-weight: 700; color: var(--muted); }
+  .switch input:checked ~ .cf-active-state { color: #166534; }
+
   /* Locked: still legible as "on", but plainly not yours to change. */
   .switch.locked { cursor: not-allowed; color: var(--muted); }
   .switch.locked .knob { background: #ccd0d5; opacity: 0.55; }
   .switch.locked input:checked + .knob { background: #9aa4b0; }
+  .switch.locked input:checked ~ .cf-active-state { color: var(--muted); }
 
   .cf-media-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   @media (max-width: 600px) { .cf-media-grid { grid-template-columns: 1fr; } }
@@ -463,6 +493,22 @@
 // are rendered server-side rather than toggled here, so nothing hidden can be
 // left holding a `required` field. The pickers still need to know which it is.
 window.__courseType = { isPersonlig: {{ $isPersonligForm ? 'true' : 'false' }} };
+</script>
+<script>
+// The active switch says what it currently is, not what clicking it would do,
+// so both the state word and the hint under it follow the checkbox. Server
+// renders the initial pair; this only keeps them in step after a click.
+(function () {
+  var cb = document.querySelector('[data-active-toggle]');
+  if (!cb) return;
+  var state = document.querySelector('.cf-active-state');
+  var hint = document.querySelector('[data-active-hint]');
+
+  cb.addEventListener('change', function () {
+    state.textContent = cb.checked ? state.dataset.stateOn : state.dataset.stateOff;
+    if (hint) hint.textContent = cb.checked ? cb.dataset.hintOn : cb.dataset.hintOff;
+  });
+})();
 </script>
 <script>
 // Skema: training times are added one at a time — day, from, to — and listed
