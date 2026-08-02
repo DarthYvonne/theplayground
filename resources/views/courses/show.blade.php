@@ -51,7 +51,7 @@
 
 <div class="view-header">
   <h1>
-    <a href="{{ url('/') }}" style="color:inherit;"><i class="fa-solid fa-arrow-left" style="font-size:16px;margin-right:8px;"></i></a>
+    <a href="{{ route($course->indexRouteName()) }}" style="color:inherit;"><i class="fa-solid fa-arrow-left" style="font-size:16px;margin-right:8px;"></i></a>
     {{ $course->title }}
   </h1>
   @include('partials.header-actions')

@@ -257,6 +257,16 @@ class Course extends Model
     /** Nothing to pay — so nothing can be "awaiting payment" either. */
     public function isFree(): bool { return $this->price_cents <= 0; }
 
+    /** The listing this training belongs to — where a "back" arrow goes. */
+    public function indexRouteName(): string
+    {
+        return match ($this->type) {
+            self::TYPE_FAELLES => 'faellestraening.index',
+            self::TYPE_PERSONLIG => 'personlig.index',
+            default => 'catalog',
+        };
+    }
+
     public function isFaellestraening(): bool { return $this->type === self::TYPE_FAELLES; }
     public function isPersonlig(): bool { return $this->type === self::TYPE_PERSONLIG; }
     public function typeLabel(): string { return self::TYPES[$this->type] ?? self::TYPES[self::TYPE_HOLD]; }

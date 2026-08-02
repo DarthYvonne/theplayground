@@ -90,11 +90,7 @@ class CourseAdminController extends Controller
         $canEdit = $request->user()->isOwner() || $course->hasTrainer($request->user());
         $target = $canEdit
             ? redirect()->route('admin.courses.edit', $course)
-            : redirect()->route(match ($course->type) {
-                Course::TYPE_FAELLES => 'faellestraening.index',
-                Course::TYPE_PERSONLIG => 'personlig.index',
-                default => 'catalog',
-            });
+            : redirect()->route($course->indexRouteName());
 
         return $target->with('status', $this->saveMessage($course, 'oprettet'));
     }
