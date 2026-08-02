@@ -8,12 +8,10 @@
   .course-back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; font-weight: 600; margin-bottom: 14px; }
   .course-back:hover { color: var(--text); }
 
-  .members-head { padding: 18px 22px; border-bottom: 1px solid #f0f2f5; }
-  .members-head h2 { font-size: 18px; font-weight: 700; line-height: 1.2; }
+  .members-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 18px; border-bottom: 1px solid #f0f2f5; }
+  .members-head h2 { font-size: 16px; font-weight: 700; line-height: 1.2; }
   .members-head .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
-
-  .broadcast-divider { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 13px 16px; background: var(--accent-soft); color: var(--accent); font-weight: 700; font-size: 14px; border-top: 1px solid #e3edfc; border-bottom: 1px solid #e3edfc; }
-  .broadcast-divider:hover { background: #dbe6fb; }
+  .members-head .btn { padding: 8px 14px; font-size: 13px; display: inline-flex; align-items: center; gap: 7px; }
 
   .member-row { display: flex; gap: 12px; align-items: center; padding: 12px 18px; color: inherit; text-decoration: none; border-top: 1px solid #f0f2f5; transition: background 0.1s; }
   .member-row:first-of-type { border-top: none; }
@@ -45,6 +43,19 @@
       $u = auth()->user();
       $canBroadcastHere = $u && ($course->hasTrainer($u) || $u->isOwner());
     @endphp
+
+    <div class="members-head">
+      <div>
+        <h2>Deltagere</h2>
+        <div class="sub">{{ $members->count() }} {{ $members->count() === 1 ? 'tilmeldt' : 'tilmeldte' }}</div>
+      </div>
+      @if ($canBroadcastHere)
+        <a href="{{ route('beskeder.index', ['hold' => $course->id]) }}" class="btn btn-secondary">
+          <i class="fa-solid fa-envelope"></i> Send besked til alle
+        </a>
+      @endif
+    </div>
+
     @foreach ($course->trainers as $trainer)
       <a href="{{ route('members.show', $trainer) }}" class="member-row">
         @include('partials.avatar', ['u' => $trainer])
@@ -60,12 +71,6 @@
         <i class="fa-solid fa-chevron-right chev"></i>
       </a>
     @endforeach
-
-    @if ($canBroadcastHere)
-      <a href="{{ route('beskeder.index', ['hold' => $course->id]) }}" class="broadcast-divider">
-        <i class="fa-solid fa-envelope"></i> Send besked til alle
-      </a>
-    @endif
 
     @if ($members->isEmpty())
       <div class="empty">Ingen tilmeldte endnu.</div>
