@@ -66,9 +66,11 @@
   .nav-group.open .nav-group-toggle .chev { transform: rotate(180deg); }
   .nav-group-items { display: none; }
   .nav-group.open .nav-group-items { display: block; }
-  /* No icons on the children, so the indent alone sets them apart. Sits a step
-     past where "Træning" starts its label (12px padding + 22px icon + 12px gap). */
-  .nav-group-items a { padding-left: 56px; font-weight: 500; }
+  /* Children carry their own icons, indented a step past the parent's. 22px puts
+     the icon there and lands the label at 56px — exactly where it sat when the
+     children were icon-less, so the text column does not move. */
+  .nav-group-items a { padding-left: 22px; font-weight: 500; }
+  .nav-group-items .ico { font-size: 13px; }
 
   .nav-section { font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); padding: 16px 12px 6px; }
   .nav-divider { height: 1px; background: #f0f2f5; margin: 10px 12px; }
@@ -248,10 +250,10 @@
           <i class="fa-solid fa-chevron-down chev" aria-hidden="true"></i>
         </button>
         <div class="nav-group-items" id="navTraeningItems">
-          <a href="{{ route('catalog') }}" class="{{ $holdActive ? 'active' : '' }}">Hold</a>
-          <a href="{{ route('faellestraening.index') }}" class="{{ $faellesActive ? 'active' : '' }}">Fællestræning</a>
-          <a href="{{ route('personlig.index') }}" class="{{ $personligActive ? 'active' : '' }}">Personlig træning</a>
-          <a href="{{ route('home.calendar') }}" class="{{ $kalenderActive ? 'active' : '' }}">Kalender</a>
+          <a href="{{ route('catalog') }}" class="{{ $holdActive ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-dumbbell"></i></span> Hold</a>
+          <a href="{{ route('faellestraening.index') }}" class="{{ $faellesActive ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-people-group"></i></span> Fællestræning</a>
+          <a href="{{ route('personlig.index') }}" class="{{ $personligActive ? 'active' : '' }}"><span class="ico"><i class="fa-solid fa-user-ninja"></i></span> Personlig træning</a>
+          <a href="{{ route('home.calendar') }}" class="{{ $kalenderActive ? 'active' : '' }}"><span class="ico"><i class="fa-regular fa-calendar"></i></span> Kalender</a>
         </div>
       </div>
 
