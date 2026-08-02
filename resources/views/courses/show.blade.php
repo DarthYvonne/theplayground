@@ -71,9 +71,10 @@
           <div class="hero-video-pending"><i class="fa-solid fa-spinner fa-spin"></i><span>Videobillede på vej</span></div>
         @endif
       </div>
-    @elseif ($course->heroImageUrl())
-      {{-- A personlig træning has no upload of its own — this is its trainer. --}}
-      <img src="{{ $course->heroImageUrl() }}" alt="" class="hero-img">
+    @elseif ($course->heroImageUrlFor(auth()->user()))
+      {{-- A personlig træning has no upload of its own — it wears the face of
+           whichever of its two people is not looking at it. --}}
+      <img src="{{ $course->heroImageUrlFor(auth()->user()) }}" alt="" class="hero-img">
     @else
       <div class="hero-ph"><i class="fa-solid {{ $course->isPersonlig() ? 'fa-user-ninja' : 'fa-dumbbell' }}"></i></div>
     @endif
@@ -156,14 +157,18 @@
           @elseif ($course->isPersonlig() && ! $canEnroll)
             {{-- A trainer or owner looking at somebody else's arrangement, or a
                  forløb whose member has not claimed their profile yet. --}}
-            <span class="needs-membership">
-              <i class="fa-solid fa-circle-info"></i>
-              @if (! $course->member_id)
+            @if (! $course->member_id)
+              <span class="needs-membership">
+                <i class="fa-solid fa-circle-info"></i>
                 Afventer at {{ $course->member_invite_email ?: $course->member_invite_phone }} opretter en profil.
-              @else
+              </span>
+            @elseif (! $course->isFree())
+              {{-- A free forløb has no payment to wait for, so it says nothing. --}}
+              <span class="needs-membership">
+                <i class="fa-solid fa-circle-info"></i>
                 {{ $course->member?->name }} har ikke betalt endnu.
-              @endif
-            </span>
+              </span>
+            @endif
           @elseif ($course->isFull())
             <button class="btn btn-secondary" disabled>Holdet er fuldt</button>
           @elseif ($mobilePayAvailable)

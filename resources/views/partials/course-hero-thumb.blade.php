@@ -1,6 +1,6 @@
 @php
   /** @var \App\Models\Course $course */
-  $heroUrl = $course->heroImageUrl();
+  $heroUrl = $course->heroImageUrlFor(auth()->user());
   $placeholderIcon = $placeholderIcon ?? 'fa-dumbbell';
   $imgClass = $imgClass ?? 'course-tile-img';
   $phClass = $phClass ?? 'course-tile-img course-tile-img-ph';

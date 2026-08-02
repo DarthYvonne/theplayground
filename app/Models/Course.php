@@ -234,11 +234,28 @@ class Course extends Model
         return $this->videoThumbnailUrl() ?? $this->imageUrl();
     }
 
+    /**
+     * A personlig træning is two people, so its tile shows whoever the viewer is
+     * not: the trainer sees their member, the member sees their trainer. Anyone
+     * else looking in — an owner — keeps the trainer's face, as before.
+     */
+    public function heroImageUrlFor(?User $viewer): ?string
+    {
+        if (! $this->isPersonlig()) return $this->heroImageUrl();
+
+        $isTrainer = $viewer && $this->trainers->contains('id', $viewer->id);
+
+        return $isTrainer ? $this->member?->pictureUrl() : $this->primaryTrainer()?->pictureUrl();
+    }
+
     public function price(): string
     {
         $amt = number_format($this->price_cents / 100, $this->price_cents % 100 === 0 ? 0 : 2, ',', '.');
         return $amt . ' kr/md';
     }
+
+    /** Nothing to pay — so nothing can be "awaiting payment" either. */
+    public function isFree(): bool { return $this->price_cents <= 0; }
 
     public function isFaellestraening(): bool { return $this->type === self::TYPE_FAELLES; }
     public function isPersonlig(): bool { return $this->type === self::TYPE_PERSONLIG; }

@@ -11,8 +11,8 @@ php artisan test tests/Feature/CourseScheduleTest.php
 php artisan test --filter=test_name
 ```
 
-Do not run the full suite unless explicitly asked. (For reference: the whole
-suite is ~8s and the Unit suite ~2.4s — speed is not the problem, scope is.)
+Do not run the full suite unless explicitly asked. It locks Anders' console for
+minutes, which is far too expensive for a small change.
 
 **Never verify UI in the browser.** No dev server, no `vite build`, no Chrome
 automation, no screenshots to confirm layout, styling, copy, or page rendering.

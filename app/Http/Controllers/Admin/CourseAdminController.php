@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Support\CalendarWeek;
 use App\Support\Contact;
 use App\Support\ScheduleGrid;
+use App\Support\TrainerClash;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -256,6 +257,16 @@ class CourseAdminController extends Controller
                 }
             });
         }
+        // Every type shares one calendar: a trainer running a hold is unavailable
+        // for a fællestræning or a 1:1 at the same hour, and vice versa.
+        $validator->after(function ($v) use ($request, $course) {
+            $clash = TrainerClash::find(
+                array_values(array_unique(array_map('intval', (array) $request->input('trainer_ids', [])))),
+                $this->slotsFrom((array) $request->input('slots', [])),
+                $course
+            );
+            if ($clash) $v->errors()->add('slots', $clash);
+        });
         $data = $validator->validate();
 
         $trainerIds = array_values(array_unique(array_map('intval', $data['trainer_ids'])));

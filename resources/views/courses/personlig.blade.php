@@ -52,6 +52,8 @@
               <span class="tag muted">Afventer {{ $course->member_invite_email ?: $course->member_invite_phone }}</span>
             @elseif ($enrolled)
               <span class="tag success"><i class="fa-solid fa-circle-check"></i> Tilmeldt</span>
+            @elseif ($course->isFree())
+              {{-- Koster ingenting: der er ingen betaling at vente på. --}}
             @elseif ($manages)
               <span class="tag muted">Afventer betaling &mdash; {{ $course->member?->name }}</span>
             @else
