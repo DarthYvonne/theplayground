@@ -18,9 +18,9 @@
   .thread-stream .empty { margin: auto; text-align: center; color: var(--muted); padding: 40px 20px; }
   .thread-stream .empty i { font-size: 30px; color: #c8cfd8; display: block; margin-bottom: 10px; }
 
-  .dmsg { display: flex; gap: 8px; align-items: flex-end; max-width: min(80%, 560px); }
+  .dmsg { display: flex; gap: 8px; align-items: flex-start; max-width: min(80%, 560px); }
   .dmsg.mine { align-self: flex-end; }
-  /* Bottom of a run carries the avatar; the rest hold the column open. */
+  /* Top of a run carries the avatar; the rest hold the column open. */
   .dmsg .av-slot { width: 32px; flex-shrink: 0; }
   .dmsg .dmsg-body { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
   .dmsg.mine .dmsg-body { align-items: flex-end; }
@@ -121,7 +121,7 @@
         @endif
         <div class="dmsg {{ $mine ? 'mine' : '' }} {{ $startsRun ? 'run-start' : '' }} {{ $endsRun ? 'run-end' : '' }}">
           @unless ($mine)
-            @if ($endsRun)
+            @if ($startsRun)
               @include('partials.avatar', ['u' => $other, 'size' => 'sm'])
             @else
               <div class="av-slot"></div>
