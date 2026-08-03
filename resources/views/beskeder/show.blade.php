@@ -22,6 +22,9 @@
   .dmsg.mine { align-self: flex-end; }
   /* Top of a run carries the avatar; the rest hold the column open. */
   .dmsg .av-slot { width: 32px; flex-shrink: 0; }
+  /* Optically nudged down: a circle flush with the bubble's square top edge
+     reads as sitting too high, because its mass starts below its bounding box. */
+  .dmsg > .av { margin-top: 5px; }
   .dmsg .dmsg-body { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
   .dmsg.mine .dmsg-body { align-items: flex-end; }
   .dmsg.run-end { margin-bottom: 10px; }
